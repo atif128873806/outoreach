@@ -22,20 +22,27 @@ const PUBLIC_PREFIXES = [
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const authed =
+    verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value) != null;
+
+  // Marketing landing: public for visitors; signed-in users go to their dashboard.
+  if (pathname === "/") {
+    return authed
+      ? NextResponse.redirect(new URL("/dashboard", request.url))
+      : NextResponse.next();
+  }
 
   if (PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
-  if (verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value) != null) {
-    return NextResponse.next();
-  }
+  if (authed) return NextResponse.next();
 
   if (pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const login = new URL("/login", request.url);
-  if (pathname !== "/") login.searchParams.set("next", pathname);
+  login.searchParams.set("next", pathname);
   return NextResponse.redirect(login);
 }
 

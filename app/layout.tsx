@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Sidebar from "./components/Sidebar";
+import AppShell from "./components/AppShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Outreach Studio",
-  description: "AI-powered business outreach automation",
+  title: {
+    default: "Outreach Studio — AI outreach that finds, writes, and follows up",
+    template: "%s · Outreach Studio",
+  },
+  description:
+    "Find business leads with emails included, let AI write personalized email, Instagram, and LinkedIn outreach, and track opens, clicks, and replies — all in one tool.",
 };
 
 export default function RootLayout({
@@ -29,12 +33,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <div className="flex min-h-screen">
-          <Sidebar />
-          <main className="flex-1 min-w-0">
-            <div className="mx-auto w-full max-w-6xl px-8 py-8">{children}</div>
-          </main>
-        </div>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

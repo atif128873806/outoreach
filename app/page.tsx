@@ -1,232 +1,433 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Card, PageHeader, StatusBadge, fmtDate } from "./components/ui";
-import ActivityChart, { type DayPoint } from "./components/ActivityChart";
 
-interface DashboardData {
-  stats: {
-    contacts: number;
-    unsubscribed: number;
-    campaigns: number;
-    activeCampaigns: number;
-    sent: number;
-    failed: number;
-    pending: number;
-    readyDrafts: number;
-    opened: number;
-    clicked: number;
-    replies: number;
-    bounced: number;
-  };
-  recentEmails: {
-    id: number;
-    subject: string;
-    status: string;
-    via: string;
-    sent_at: string | null;
-    campaign_id: number;
-    contact_email: string;
-    business_name: string;
-    campaign_name: string;
-  }[];
-  upcoming: { id: number; name: string; scheduled_at: string; status: string }[];
-  daily: DayPoint[];
-  setup: { aiConfigured: boolean; smtpConfigured: boolean; hasContacts: boolean };
-}
+/**
+ * Public marketing landing page. Signed-in visitors never see this —
+ * the proxy sends them straight to /dashboard.
+ */
 
-export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
+const FEATURES = [
+  {
+    title: "Lead Finder with emails included",
+    body: "Search any niche in any city. AI web search returns businesses with email addresses, phone numbers, Instagram and LinkedIn profiles already attached — plus OpenStreetMap and Google Places sources.",
+    icon: "M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z",
+  },
+  {
+    title: "AI writes every message",
+    body: "No mail-merge templates. The AI writes a unique message per contact from their business name, industry, and company intel — in your voice and tone, grounded in what your company does.",
+    icon: "M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z",
+  },
+  {
+    title: "Follow-ups that stop on reply",
+    body: "Up to three automatic follow-ups, days apart, written with the context of the earlier email. The moment someone replies, their sequence stops. Bounces stop everything.",
+    icon: "M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-14.5-3M4 15a8 8 0 0014.5 3",
+  },
+  {
+    title: "Reply triage with suggested answers",
+    body: "Your inbox is watched for answers. Each reply is classified — interested, question, not interested, out of office — and the AI drafts a response in your voice, ready to send.",
+    icon: "M8 12h8M8 8h8M8 16h4M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+  },
+  {
+    title: "Deliverability built in",
+    body: "Daily send caps, a warm-up ramp for new domains, business-hours send windows, an SPF/DKIM/DMARC checker, and a spam-filter lint on every message before you schedule it.",
+    icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  },
+  {
+    title: "Numbers you can act on",
+    body: "Open, click, and reply rates per campaign. A/B subject-line testing with per-arm results. A 14-day activity chart on your dashboard. Know what works, double down.",
+    icon: "M3 3v18h18M7 15l4-4 3 3 5-6",
+  },
+];
 
-  useEffect(() => {
-    const load = () =>
-      fetch("/api/stats")
-        .then((r) => r.json())
-        .then(setData)
-        .catch(() => {});
-    load();
-    const t = setInterval(load, 10_000);
-    return () => clearInterval(t);
-  }, []);
+const STEPS = [
+  {
+    n: "1",
+    title: "Find your leads",
+    body: "Type a niche and a city — \"dentists in Austin\". Get a list with emails, socials, and company intel, or import your own CSV. One click finds the owner behind each business.",
+  },
+  {
+    n: "2",
+    title: "Describe your offer",
+    body: "One paragraph about what you sell and what you want. The AI assistant sharpens it, writes a sample message, and checks it against spam filters before anything sends.",
+  },
+  {
+    n: "3",
+    title: "Send, track, reply",
+    body: "Emails go out on schedule at a human pace. Instagram and LinkedIn drafts wait for one-click manual sending. Opens, clicks, and replies flow back to your dashboard.",
+  },
+];
 
-  if (!data) {
-    return <div className="text-zinc-400 text-sm py-20 text-center">Loading…</div>;
-  }
+const FAQS = [
+  {
+    q: "Do I need my own email server?",
+    a: "You connect any mailbox over SMTP — Google Workspace, Zoho, cPanel mail, anything. Until you do, sends are simulated so you can test the whole pipeline safely. Reply detection works over IMAP with the same credentials.",
+  },
+  {
+    q: "Which AI does the writing?",
+    a: "Your choice: Groq (free tier available) or Anthropic Claude — you bring your own API key, so there's no per-message markup. Without a key, a built-in template engine with rotating variants takes over.",
+  },
+  {
+    q: "Is the Instagram and LinkedIn outreach safe for my accounts?",
+    a: "Yes, by design. Those platforms ban automated cold DMs, so Outreach Studio never sends them for you. It drafts a personalized message per contact and gives you copy → open profile → mark sent. Your account behaves like a human, because it is one.",
+  },
+  {
+    q: "Is this compliant with anti-spam laws?",
+    a: "The tooling is built for it: every email carries a one-click unsubscribe link and List-Unsubscribe header, opt-outs are enforced forever, and bounced addresses are excluded automatically. You remain responsible for using it on appropriate business contacts under the laws that apply to you (CAN-SPAM, GDPR, PECR…).",
+  },
+  {
+    q: "Where does my data live?",
+    a: "In your own Postgres database, on infrastructure you choose — the product ships with a one-command Docker deploy including nightly backups. SMTP passwords and API keys are encrypted at rest.",
+  },
+];
 
-  const { stats, setup } = data;
-  const setupSteps = [
-    { done: setup.aiConfigured, label: "Add an AI API key (Groq or Anthropic)", href: "/settings", detail: "Powers AI-personalized messages" },
-    { done: setup.smtpConfigured, label: "Configure SMTP delivery", href: "/settings", detail: "Until then, sends are simulated (logged, not delivered)" },
-    { done: setup.hasContacts, label: "Import contacts from CSV", href: "/contacts", detail: "Email + business name + category" },
-  ];
-  const incomplete = setupSteps.filter((s) => !s.done);
-
+function Icon({ d }: { d: string }) {
   return (
-    <div>
-      <PageHeader
-        title="Dashboard"
-        subtitle="Overview of your outreach activity"
-      />
-
-      {stats.readyDrafts > 0 && (
-        <Card className="mb-6 p-4 border-purple-200 bg-purple-50 flex items-center justify-between">
-          <div className="text-sm text-purple-900">
-            <span className="font-medium">{stats.readyDrafts} Instagram DM draft{stats.readyDrafts === 1 ? "" : "s"}</span>{" "}
-            waiting for you to send.
-          </div>
-          <Link
-            href="/messages"
-            className="text-sm font-medium text-purple-700 underline hover:text-purple-900 shrink-0"
-          >
-            Open Message Center →
-          </Link>
-        </Card>
-      )}
-
-      {incomplete.length > 0 && (
-        <Card className="mb-6 p-5 border-amber-200 bg-amber-50">
-          <div className="font-medium text-amber-900 mb-2">Finish setting up</div>
-          <ul className="space-y-1.5">
-            {incomplete.map((s) => (
-              <li key={s.label} className="text-sm text-amber-800">
-                <Link href={s.href} className="underline font-medium hover:text-amber-950">
-                  {s.label}
-                </Link>{" "}
-                <span className="text-amber-700/70">— {s.detail}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        <Stat label="Contacts" value={stats.contacts} sub={`${stats.unsubscribed} unsubscribed`} />
-        <Stat label="Active campaigns" value={stats.activeCampaigns} sub={`${stats.campaigns} total`} />
-        <Stat label="Emails sent" value={stats.sent} sub={`${stats.pending} queued`} />
-        <Stat label="Failed" value={stats.failed} sub={stats.failed > 0 ? "check campaign logs" : "all good"} />
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <Stat
-          label="Open rate"
-          value={`${pct(stats.opened, stats.sent)}%`}
-          sub={`${stats.opened} opened`}
-        />
-        <Stat
-          label="Click rate"
-          value={`${pct(stats.clicked, stats.sent)}%`}
-          sub={`${stats.clicked} clicked`}
-        />
-        <Stat
-          label="Replies"
-          value={stats.replies}
-          sub={stats.replies > 0 ? "follow-ups auto-stopped" : "waiting"}
-          accent="emerald"
-        />
-        <Stat
-          label="Bounced"
-          value={stats.bounced}
-          sub={stats.bounced > 0 ? "auto-excluded" : "none"}
-          accent={stats.bounced > 0 ? "red" : undefined}
-        />
-      </div>
-
-      <Card className="p-5 mb-6">
-        <h2 className="font-medium mb-3">Last 14 days</h2>
-        <ActivityChart data={data.daily ?? []} />
-      </Card>
-
-      <div className="grid md:grid-cols-5 gap-6">
-        <Card className="md:col-span-3 p-5">
-          <h2 className="font-medium mb-4">Recent activity</h2>
-          {data.recentEmails.length === 0 ? (
-            <p className="text-sm text-zinc-400 py-6 text-center">
-              No emails processed yet. Create a campaign to get started.
-            </p>
-          ) : (
-            <ul className="divide-y divide-zinc-100">
-              {data.recentEmails.map((e) => (
-                <li key={e.id} className="py-2.5 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-sm truncate">
-                      <span className="font-medium">{e.business_name || e.contact_email}</span>
-                      <span className="text-zinc-400"> · {e.subject || "(no subject)"}</span>
-                    </div>
-                    <div className="text-xs text-zinc-400">
-                      <Link href={`/campaigns/${e.campaign_id}`} className="hover:underline">
-                        {e.campaign_name}
-                      </Link>{" "}
-                      · {fmtDate(e.sent_at)}
-                      {e.via.includes("simulated") && " · simulated"}
-                    </div>
-                  </div>
-                  <StatusBadge status={e.status} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
-        <Card className="md:col-span-2 p-5">
-          <h2 className="font-medium mb-4">Upcoming & active</h2>
-          {data.upcoming.length === 0 ? (
-            <p className="text-sm text-zinc-400 py-6 text-center">
-              Nothing scheduled.{" "}
-              <Link href="/campaigns" className="underline">
-                Create a campaign
-              </Link>
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {data.upcoming.map((c) => (
-                <li key={c.id} className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <Link
-                      href={`/campaigns/${c.id}`}
-                      className="text-sm font-medium hover:underline truncate block"
-                    >
-                      {c.name}
-                    </Link>
-                    <div className="text-xs text-zinc-400">{fmtDate(c.scheduled_at)}</div>
-                  </div>
-                  <StatusBadge status={c.status} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      </div>
-    </div>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden
+    >
+      <path d={d} />
+    </svg>
   );
 }
 
-function pct(part: number, whole: number): number {
-  return whole > 0 ? Math.round((part / whole) * 100) : 0;
-}
-
-function Stat({
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  label: string;
-  value: number | string;
-  sub?: string;
-  accent?: "emerald" | "red";
-}) {
-  const color =
-    accent === "emerald"
-      ? "text-emerald-600"
-      : accent === "red"
-        ? "text-red-500"
-        : "";
+export default function LandingPage() {
   return (
-    <Card className="p-5">
-      <div className="text-sm text-zinc-500">{label}</div>
-      <div className={`text-3xl font-semibold mt-1 tabular-nums ${color}`}>{value}</div>
-      {sub && <div className="text-xs text-zinc-400 mt-1">{sub}</div>}
-    </Card>
+    <div className="bg-white text-zinc-900 antialiased">
+      {/* Nav */}
+      <header className="sticky top-0 z-40 border-b border-zinc-100 bg-white/80 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+          <Link href="/" className="font-semibold tracking-tight">
+            Outreach<span className="text-zinc-400">Studio</span>
+          </Link>
+          <nav className="hidden items-center gap-7 text-sm text-zinc-500 md:flex">
+            <a href="#features" className="hover:text-zinc-900">Features</a>
+            <a href="#how" className="hover:text-zinc-900">How it works</a>
+            <a href="#channels" className="hover:text-zinc-900">Channels</a>
+            <a href="#pricing" className="hover:text-zinc-900">Pricing</a>
+            <a href="#faq" className="hover:text-zinc-900">FAQ</a>
+          </nav>
+          <div className="flex items-center gap-3">
+            <Link href="/login" className="text-sm font-medium text-zinc-600 hover:text-zinc-900">
+              Sign in
+            </Link>
+            <Link
+              href="/signup"
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+            >
+              Get started free
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-[480px]"
+          style={{
+            background:
+              "radial-gradient(60% 60% at 50% 0%, #eef4fd 0%, rgba(255,255,255,0) 100%)",
+          }}
+        />
+        <div className="relative mx-auto max-w-6xl px-6 pt-20 pb-16 text-center">
+          <p className="mx-auto mb-5 inline-block rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-500">
+            Email · Instagram · LinkedIn — one pipeline
+          </p>
+          <h1 className="mx-auto max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
+            Outreach that finds the leads,
+            <br className="hidden sm:block" /> writes the words, and follows up
+          </h1>
+          <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-zinc-500">
+            Outreach Studio discovers businesses with contact emails included, has AI
+            write a genuinely personal message to each one, sends at a human pace,
+            and watches your inbox for replies — so you only step in to close.
+          </p>
+          <div className="mt-8 flex items-center justify-center gap-3">
+            <Link
+              href="/signup"
+              className="rounded-lg bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+            >
+              Start free — no card needed
+            </Link>
+            <a
+              href="#how"
+              className="rounded-lg border border-zinc-200 px-6 py-3 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+            >
+              See how it works
+            </a>
+          </div>
+
+          {/* Product mock */}
+          <div className="relative mx-auto mt-14 max-w-4xl">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-5 text-left shadow-xl shadow-zinc-900/5">
+              <div className="mb-4 flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-zinc-200" />
+                <span className="h-2.5 w-2.5 rounded-full bg-zinc-200" />
+                <span className="h-2.5 w-2.5 rounded-full bg-zinc-200" />
+                <span className="ml-3 text-xs text-zinc-400">outreach dashboard</span>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {[
+                  { label: "Emails sent", value: "412", sub: "38 queued" },
+                  { label: "Open rate", value: "61%", sub: "252 opened" },
+                  { label: "Replies", value: "34", sub: "12 interested" },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-xl border border-zinc-100 p-4">
+                    <div className="text-xs text-zinc-400">{s.label}</div>
+                    <div className="mt-1 text-2xl font-semibold tabular-nums">{s.value}</div>
+                    <div className="mt-0.5 text-xs text-zinc-400">{s.sub}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-5">
+                <div className="rounded-xl border border-zinc-100 p-4 sm:col-span-3">
+                  <div className="mb-2 text-xs font-medium text-zinc-500">Last 14 days</div>
+                  <svg viewBox="0 0 300 80" className="w-full" aria-hidden>
+                    <line x1="0" y1="70" x2="300" y2="70" stroke="#e4e4e7" />
+                    <path
+                      d="M0,62 L23,58 L46,60 L69,49 L92,52 L115,40 L138,44 L161,30 L184,34 L207,22 L230,27 L253,14 L276,18 L300,8"
+                      fill="none" stroke="#2a78d6" strokeWidth="2"
+                    />
+                    <path
+                      d="M0,68 L23,66 L46,67 L69,60 L92,63 L115,54 L138,58 L161,47 L184,51 L207,41 L230,46 L253,34 L276,39 L300,28"
+                      fill="none" stroke="#1baf7a" strokeWidth="2"
+                    />
+                  </svg>
+                </div>
+                <div className="rounded-xl border border-zinc-100 p-4 sm:col-span-2">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                      interested
+                    </span>
+                    <span className="text-xs text-zinc-400">reply · Joe&apos;s Pizza</span>
+                  </div>
+                  <p className="text-xs leading-relaxed text-zinc-600">
+                    “Sounds interesting — can you send pricing?”
+                  </p>
+                  <div className="mt-3 rounded-lg bg-violet-50 p-2.5 text-xs leading-relaxed text-zinc-600">
+                    <span className="font-medium text-violet-700">✨ Suggested reply drafted</span>
+                    {" "}— happy to! The fastest way is a quick call…
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section id="how" className="border-t border-zinc-100 bg-zinc-50/60">
+        <div className="mx-auto max-w-6xl px-6 py-20">
+          <h2 className="text-center text-3xl font-semibold tracking-tight">
+            From “who do I even contact?” to booked replies
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-zinc-500">
+            Three steps. The first campaign takes about ten minutes.
+          </p>
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {STEPS.map((s) => (
+              <div key={s.n} className="rounded-2xl border border-zinc-200 bg-white p-6">
+                <div className="mb-4 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-sm font-semibold text-white">
+                  {s.n}
+                </div>
+                <h3 className="font-medium">{s.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-500">{s.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="features" className="mx-auto max-w-6xl px-6 py-20">
+        <h2 className="text-center text-3xl font-semibold tracking-tight">
+          Everything between a niche and a signed client
+        </h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-zinc-500">
+          Not another mail-merge tool — a full pipeline with intelligence at every step.
+        </p>
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map((f) => (
+            <div
+              key={f.title}
+              className="rounded-2xl border border-zinc-200 p-6 transition-colors hover:border-zinc-300"
+            >
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700">
+                <Icon d={f.icon} />
+              </div>
+              <h3 className="font-medium">{f.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-500">{f.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Channels */}
+      <section id="channels" className="border-t border-zinc-100 bg-zinc-950 text-zinc-300">
+        <div className="mx-auto max-w-6xl px-6 py-20">
+          <h2 className="text-center text-3xl font-semibold tracking-tight text-white">
+            Three channels, one compliance-first pipeline
+          </h2>
+          <p className="mx-auto mt-3 max-w-2xl text-center text-zinc-400">
+            Automate what platforms allow. Draft what they don&apos;t. Never risk your accounts.
+          </p>
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+              <span className="inline-block rounded-full bg-sky-500/15 px-2.5 py-0.5 text-xs font-medium text-sky-400">
+                Email
+              </span>
+              <h3 className="mt-4 font-medium text-white">Fully automatic</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                Sent on schedule through your own SMTP, throttled to a human pace, with
+                open/click tracking, unsubscribe handling, and automatic follow-ups.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+              <span className="inline-block rounded-full bg-pink-500/15 px-2.5 py-0.5 text-xs font-medium text-pink-400">
+                Instagram DM
+              </span>
+              <h3 className="mt-4 font-medium text-white">Drafted, sent by you</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                Instagram bans automated cold DMs — accounts that try get banned. The AI
+                drafts each DM; you copy, open the profile, paste, mark sent. Ban-safe.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+              <span className="inline-block rounded-full bg-blue-500/15 px-2.5 py-0.5 text-xs font-medium text-blue-400">
+                LinkedIn
+              </span>
+              <h3 className="mt-4 font-medium text-white">Drafted, sent by you</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                Same protection for your professional identity. Profiles are found
+                automatically — including the owner behind each business — and messages
+                are written in a professional register.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" className="mx-auto max-w-6xl px-6 py-20">
+        <h2 className="text-center text-3xl font-semibold tracking-tight">
+          Simple pricing
+        </h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-zinc-500">
+          Free while in beta. Bring your own AI key and mailbox — no per-message markup, ever.
+        </p>
+        <div className="mx-auto mt-12 grid max-w-3xl gap-6 md:grid-cols-2">
+          <div className="rounded-2xl border-2 border-zinc-900 p-8">
+            <div className="flex items-baseline justify-between">
+              <h3 className="font-semibold">Beta</h3>
+              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                available now
+              </span>
+            </div>
+            <div className="mt-4 text-4xl font-semibold">
+              $0<span className="text-base font-normal text-zinc-400"> / month</span>
+            </div>
+            <ul className="mt-6 space-y-2.5 text-sm text-zinc-600">
+              {[
+                "Unlimited contacts & campaigns",
+                "All three channels",
+                "Lead Finder + decision-maker search",
+                "Reply triage with AI-suggested answers",
+                "A/B testing & analytics",
+              ].map((x) => (
+                <li key={x} className="flex gap-2">
+                  <span className="text-emerald-600">✓</span> {x}
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/signup"
+              className="mt-8 block rounded-lg bg-zinc-900 px-4 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+            >
+              Create your account
+            </Link>
+          </div>
+          <div className="rounded-2xl border border-zinc-200 p-8">
+            <div className="flex items-baseline justify-between">
+              <h3 className="font-semibold">Pro</h3>
+              <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-500">
+                coming soon
+              </span>
+            </div>
+            <div className="mt-4 text-4xl font-semibold text-zinc-400">$—</div>
+            <p className="mt-6 text-sm leading-relaxed text-zinc-500">
+              Teams, higher sending volumes, priority support, and managed AI (no key
+              needed). Beta users get grandfathered pricing when Pro launches.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="border-t border-zinc-100 bg-zinc-50/60">
+        <div className="mx-auto max-w-3xl px-6 py-20">
+          <h2 className="text-center text-3xl font-semibold tracking-tight">
+            Questions, answered
+          </h2>
+          <div className="mt-10 space-y-3">
+            {FAQS.map((f) => (
+              <details
+                key={f.q}
+                className="group rounded-xl border border-zinc-200 bg-white p-5 open:shadow-sm"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between font-medium">
+                  {f.q}
+                  <span className="ml-4 text-zinc-400 transition-transform group-open:rotate-45">
+                    +
+                  </span>
+                </summary>
+                <p className="mt-3 text-sm leading-relaxed text-zinc-500">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="mx-auto max-w-6xl px-6 py-20 text-center">
+        <h2 className="text-3xl font-semibold tracking-tight">
+          Your next client hasn&apos;t heard from you yet
+        </h2>
+        <p className="mx-auto mt-3 max-w-xl text-zinc-500">
+          Set up in ten minutes. Test everything in simulation mode before a single
+          real email leaves your mailbox.
+        </p>
+        <Link
+          href="/signup"
+          className="mt-8 inline-block rounded-lg bg-zinc-900 px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+        >
+          Get started free
+        </Link>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-zinc-100">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-10 text-sm text-zinc-400 md:flex-row">
+          <div>
+            <span className="font-semibold text-zinc-600">Outreach Studio</span> · AI
+            outreach automation
+          </div>
+          <div className="flex items-center gap-6">
+            <a href="#features" className="hover:text-zinc-600">Features</a>
+            <a href="#pricing" className="hover:text-zinc-600">Pricing</a>
+            <Link href="/login" className="hover:text-zinc-600">Sign in</Link>
+          </div>
+          <div className="max-w-xs text-center text-xs md:text-right">
+            Built for legitimate business outreach. Honor opt-outs and the anti-spam
+            laws that apply to you.
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }
