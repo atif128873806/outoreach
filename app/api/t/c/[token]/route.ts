@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { q, q1 } from "@/lib/db";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
@@ -21,16 +21,14 @@ export async function GET(
   let known = false;
   if (token && /^[a-f0-9]{16,64}$/.test(token)) {
     try {
-      const db = getDb();
-      known = Boolean(
-        db.prepare("SELECT 1 FROM emails WHERE open_token = ?").get(token)
-      );
+      known = Boolean(await q1("SELECT 1 FROM emails WHERE open_token = $1", [token]));
       if (known) {
-        const now = new Date().toISOString();
         // A click implies an open too (pixel may have been blocked)
-        db.prepare(
-          "UPDATE emails SET clicked_at = COALESCE(clicked_at, ?), opened_at = COALESCE(opened_at, ?) WHERE open_token = ?"
-        ).run(now, now, token);
+        await q(
+          `UPDATE emails SET clicked_at = COALESCE(clicked_at, now()),
+             opened_at = COALESCE(opened_at, now()) WHERE open_token = $1`,
+          [token]
+        );
       }
     } catch {
       // never block the redirect for a legitimate token

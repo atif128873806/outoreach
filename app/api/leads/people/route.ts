@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchExaPeople } from "@/lib/exa";
+import { getUserId } from "@/lib/auth";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
@@ -7,6 +8,9 @@ export const maxDuration = 60;
 
 /** Decision-maker finder: the people (LinkedIn) behind a business. */
 export async function POST(req: NextRequest) {
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   if (!rateLimit(`people:${clientIp(req)}`, 20, 60_000)) {
     return NextResponse.json(
       { error: "Too many lookups — wait a minute and try again" },

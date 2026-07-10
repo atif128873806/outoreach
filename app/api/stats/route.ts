@@ -1,71 +1,72 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { q, q1 } from "@/lib/db";
 import { getSettings, isSmtpConfigured, getAiConfig } from "@/lib/settings";
+import { getUserId } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const db = getDb();
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const count = (sql: string) =>
-    (db.prepare(sql).get() as { n: number }).n;
+  const count = async (sql: string, params: unknown[] = []) =>
+    Number((await q1<{ n: string | number }>(sql, [userId, ...params]))?.n ?? 0);
 
   const stats = {
-    contacts: count("SELECT COUNT(*) n FROM contacts"),
-    unsubscribed: count("SELECT COUNT(*) n FROM contacts WHERE unsubscribed = 1"),
-    campaigns: count("SELECT COUNT(*) n FROM campaigns"),
-    activeCampaigns: count(
-      "SELECT COUNT(*) n FROM campaigns WHERE status IN ('scheduled', 'running')"
+    contacts: await count("SELECT COUNT(*) n FROM contacts WHERE user_id = $1"),
+    unsubscribed: await count(
+      "SELECT COUNT(*) n FROM contacts WHERE user_id = $1 AND unsubscribed = 1"
     ),
-    sent: count("SELECT COUNT(*) n FROM emails WHERE status = 'sent'"),
-    failed: count("SELECT COUNT(*) n FROM emails WHERE status = 'failed'"),
-    pending: count("SELECT COUNT(*) n FROM emails WHERE status = 'pending'"),
-    readyDrafts: count("SELECT COUNT(*) n FROM emails WHERE status = 'ready'"),
-    opened: count("SELECT COUNT(*) n FROM emails WHERE opened_at IS NOT NULL"),
-    clicked: count("SELECT COUNT(*) n FROM emails WHERE clicked_at IS NOT NULL"),
-    replies: count("SELECT COUNT(*) n FROM contacts WHERE replied = 1"),
-    bounced: count("SELECT COUNT(*) n FROM contacts WHERE bounced = 1"),
+    campaigns: await count("SELECT COUNT(*) n FROM campaigns WHERE user_id = $1"),
+    activeCampaigns: await count(
+      "SELECT COUNT(*) n FROM campaigns WHERE user_id = $1 AND status IN ('scheduled', 'running')"
+    ),
+    sent: await count("SELECT COUNT(*) n FROM emails WHERE user_id = $1 AND status = 'sent'"),
+    failed: await count("SELECT COUNT(*) n FROM emails WHERE user_id = $1 AND status = 'failed'"),
+    pending: await count("SELECT COUNT(*) n FROM emails WHERE user_id = $1 AND status = 'pending'"),
+    readyDrafts: await count("SELECT COUNT(*) n FROM emails WHERE user_id = $1 AND status = 'ready'"),
+    opened: await count("SELECT COUNT(*) n FROM emails WHERE user_id = $1 AND opened_at IS NOT NULL"),
+    clicked: await count("SELECT COUNT(*) n FROM emails WHERE user_id = $1 AND clicked_at IS NOT NULL"),
+    replies: await count("SELECT COUNT(*) n FROM contacts WHERE user_id = $1 AND replied = 1"),
+    bounced: await count("SELECT COUNT(*) n FROM contacts WHERE user_id = $1 AND bounced = 1"),
   };
 
-  const recentEmails = db
-    .prepare(
-      `SELECT e.id, e.subject, e.status, e.via, e.sent_at, e.campaign_id,
-              c.email AS contact_email, c.business_name,
-              cp.name AS campaign_name
-       FROM emails e
-       JOIN contacts c ON c.id = e.contact_id
-       JOIN campaigns cp ON cp.id = e.campaign_id
-       WHERE e.status NOT IN ('pending', 'ready')
-       ORDER BY e.sent_at DESC, e.id DESC
-       LIMIT 10`
-    )
-    .all();
+  const recentEmails = await q(
+    `SELECT e.id, e.subject, e.status, e.via, e.sent_at, e.campaign_id,
+            c.email AS contact_email, c.business_name,
+            cp.name AS campaign_name
+     FROM emails e
+     JOIN contacts c ON c.id = e.contact_id
+     JOIN campaigns cp ON cp.id = e.campaign_id
+     WHERE e.user_id = $1 AND e.status NOT IN ('pending', 'ready')
+     ORDER BY e.sent_at DESC NULLS LAST, e.id DESC
+     LIMIT 10`,
+    [userId]
+  );
 
-  const upcoming = db
-    .prepare(
-      `SELECT id, name, scheduled_at, status FROM campaigns
-       WHERE status IN ('scheduled', 'running', 'paused')
-       ORDER BY scheduled_at LIMIT 5`
-    )
-    .all();
+  const upcoming = await q(
+    `SELECT id, name, scheduled_at, status FROM campaigns
+     WHERE user_id = $1 AND status IN ('scheduled', 'running', 'paused')
+     ORDER BY scheduled_at LIMIT 5`,
+    [userId]
+  );
 
   // Daily activity for the dashboard chart — last 14 days (UTC days)
   const since = new Date(Date.now() - 13 * 24 * 60 * 60 * 1000);
   const sinceIso = since.toISOString().slice(0, 10);
-  const perDay = (col: "sent_at" | "opened_at" | "replied_at") =>
+  const perDay = async (col: "sent_at" | "opened_at" | "replied_at") =>
     Object.fromEntries(
       (
-        db
-          .prepare(
-            `SELECT substr(${col}, 1, 10) d, COUNT(*) n FROM emails
-             WHERE ${col} IS NOT NULL AND ${col} >= ? GROUP BY d`
-          )
-          .all(sinceIso) as { d: string; n: number }[]
-      ).map((r) => [r.d, r.n])
+        await q<{ d: string; n: string | number }>(
+          `SELECT to_char(${col} AT TIME ZONE 'UTC', 'YYYY-MM-DD') d, COUNT(*) n FROM emails
+           WHERE user_id = $1 AND ${col} IS NOT NULL AND ${col} >= $2::date GROUP BY d`,
+          [userId, sinceIso]
+        )
+      ).map((r) => [r.d, Number(r.n)])
     );
-  const sentByDay = perDay("sent_at");
-  const openedByDay = perDay("opened_at");
-  const repliedByDay = perDay("replied_at");
+  const sentByDay = await perDay("sent_at");
+  const openedByDay = await perDay("opened_at");
+  const repliedByDay = await perDay("replied_at");
   const daily = Array.from({ length: 14 }, (_, i) => {
     const date = new Date(since.getTime() + i * 24 * 60 * 60 * 1000)
       .toISOString()
@@ -78,7 +79,7 @@ export async function GET() {
     };
   });
 
-  const settings = getSettings();
+  const settings = await getSettings(userId);
   return NextResponse.json({
     stats,
     recentEmails,

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: "▦" },
@@ -14,8 +15,24 @@ const NAV = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [email, setEmail] = useState<string | null>(null);
 
-  if (pathname === "/login") return null; // login screen is full-width
+  const onAuthPage = pathname === "/login" || pathname === "/signup";
+
+  useEffect(() => {
+    if (onAuthPage) return;
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setEmail(d?.user?.email ?? null))
+      .catch(() => {});
+  }, [onAuthPage, pathname]);
+
+  if (onAuthPage) return null; // auth screens are full-width
+
+  async function signOut() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/login";
+  }
 
   return (
     <aside className="w-60 shrink-0 bg-zinc-950 text-zinc-300 flex flex-col">
@@ -47,8 +64,18 @@ export default function Sidebar() {
           );
         })}
       </nav>
-      <div className="px-6 py-4 border-t border-zinc-800 text-xs text-zinc-600">
-        Scheduler runs every minute
+      <div className="px-6 py-4 border-t border-zinc-800">
+        {email && (
+          <div className="text-xs text-zinc-400 truncate mb-1.5" title={email}>
+            {email}
+          </div>
+        )}
+        <button
+          onClick={signOut}
+          className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors"
+        >
+          Sign out
+        </button>
       </div>
     </aside>
   );

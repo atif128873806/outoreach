@@ -1,11 +1,18 @@
 import { ImapFlow } from "imapflow";
-import { getDb } from "./db";
-import { getImapConfig, getKv, setKv } from "./settings";
+import { q, q1 } from "./db";
+import {
+  getImapConfig,
+  getSettings,
+  getKv,
+  setKv,
+  type Settings,
+  type ImapConfig,
+} from "./settings";
 import { analyzeReply } from "./ai";
 
 /**
- * Reply & bounce detection. Polls the IMAP inbox for messages that arrived
- * since the last check:
+ * Reply & bounce detection, per user. Polls each user's IMAP inbox for
+ * messages that arrived since the last check:
  *  - a message from a known contact          → mark the contact replied
  *  - a bounce notice (mailer-daemon)         → mark the affected contact bounced
  *
@@ -93,13 +100,33 @@ export function extractReplyText(source: string): string {
   return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-export async function checkInbox(): Promise<InboxCheckResult> {
-  const cfg = getImapConfig();
+/** Checks every user that has IMAP configured. */
+export async function checkAllInboxes(): Promise<void> {
+  const users = await q<{ id: number }>("SELECT id FROM users ORDER BY id");
+  for (const user of users) {
+    const settings = await getSettings(user.id);
+    const cfg = getImapConfig(settings);
+    if (!cfg) continue;
+    const result = await checkInbox(user.id, settings, cfg);
+    if (result.ok && (result.replies > 0 || result.bounces > 0)) {
+      console.log(
+        `[inbox] user #${user.id}: ${result.replies} new repl${result.replies === 1 ? "y" : "ies"}, ${result.bounces} bounce(s)`
+      );
+    }
+  }
+}
+
+export async function checkInbox(
+  userId: number,
+  settings?: Settings,
+  imap?: ImapConfig
+): Promise<InboxCheckResult> {
+  const s = settings ?? (await getSettings(userId));
+  const cfg = imap ?? getImapConfig(s);
   if (!cfg) {
     return { ok: false, checked: 0, replies: 0, bounces: 0, error: "IMAP not configured" };
   }
 
-  const db = getDb();
   const client = new ImapFlow({
     host: cfg.host,
     port: cfg.port,
@@ -118,28 +145,15 @@ export async function checkInbox(): Promise<InboxCheckResult> {
     try {
       const mailbox = client.mailbox;
       const uidNext = typeof mailbox === "object" && mailbox ? mailbox.uidNext : 1;
-      const lastUid = parseInt(getKv("imap_last_uid") || "0", 10);
+      const lastUid = parseInt((await getKv(userId, "imap_last_uid")) || "0", 10);
 
       if (!lastUid) {
         // First run: don't trawl through history — start from now.
-        setKv("imap_last_uid", String((uidNext ?? 1) - 1));
-        setKv("imap_last_check", new Date().toISOString());
-        setKv("imap_last_error", "");
+        await setKv(userId, "imap_last_uid", String((uidNext ?? 1) - 1));
+        await setKv(userId, "imap_last_check", new Date().toISOString());
+        await setKv(userId, "imap_last_error", "");
         return { ok: true, checked: 0, replies: 0, bounces: 0 };
       }
-
-      const markReplied = db.prepare("UPDATE contacts SET replied = 1 WHERE id = ?");
-      const markRepliedEmail = db.prepare(
-        `UPDATE emails SET replied_at = ? WHERE id = (
-           SELECT id FROM emails WHERE contact_id = ? AND status = 'sent' AND replied_at IS NULL
-           ORDER BY sent_at DESC LIMIT 1)`
-      );
-      const findContact = db.prepare(
-        "SELECT id, replied, business_name FROM contacts WHERE email = ? COLLATE NOCASE"
-      );
-      const markBounced = db.prepare(
-        "UPDATE contacts SET bounced = 1 WHERE email = ? COLLATE NOCASE AND bounced = 0"
-      );
 
       const bounceCandidates: number[] = [];
       const replyCandidates: {
@@ -170,17 +184,24 @@ export async function checkInbox(): Promise<InboxCheckResult> {
         }
 
         if (!fromAddr) continue;
-        const contact = findContact.get(fromAddr) as
-          | { id: number; replied: number; business_name: string }
-          | undefined;
+        const contact = await q1<{ id: number; replied: number; business_name: string }>(
+          "SELECT id, replied, business_name FROM contacts WHERE user_id = $1 AND lower(email) = $2",
+          [userId, fromAddr]
+        );
         if (contact) {
-          const hadSent = db
-            .prepare("SELECT 1 FROM emails WHERE contact_id = ? AND status = 'sent' LIMIT 1")
-            .get(contact.id);
+          const hadSent = await q1(
+            "SELECT 1 FROM emails WHERE contact_id = $1 AND status = 'sent' LIMIT 1",
+            [contact.id]
+          );
           if (hadSent) {
             if (!contact.replied) replies++;
-            markReplied.run(contact.id);
-            markRepliedEmail.run(new Date().toISOString(), contact.id);
+            await q("UPDATE contacts SET replied = 1 WHERE id = $1", [contact.id]);
+            await q(
+              `UPDATE emails SET replied_at = now() WHERE id = (
+                 SELECT id FROM emails WHERE contact_id = $1 AND status = 'sent' AND replied_at IS NULL
+                 ORDER BY sent_at DESC LIMIT 1)`,
+              [contact.id]
+            );
             if (replyCandidates.length < 5) {
               replyCandidates.push({
                 uid: msg.uid,
@@ -197,40 +218,35 @@ export async function checkInbox(): Promise<InboxCheckResult> {
 
       // Reply intelligence: read each reply, classify it, and (with an AI key)
       // draft a suggested response for the Message Center.
-      if (replyCandidates.length > 0) {
-        const insertReply = db.prepare(
-          `INSERT INTO replies (contact_id, from_email, subject, snippet, classification, suggested_reply)
-           VALUES (?, ?, ?, ?, ?, ?)`
-        );
-        for (const r of replyCandidates) {
-          try {
-            const { content } = await client.download(String(r.uid), undefined, { uid: true });
-            if (!content) continue;
-            const text = extractReplyText(await streamToString(content));
-            if (!text) continue;
-            const analysis = await analyzeReply(text, {
-              business_name: r.businessName,
-              email: r.fromAddr,
-            });
-            insertReply.run(
-              r.contactId,
-              r.fromAddr,
-              r.subject,
-              text.slice(0, 600),
-              analysis.classification,
-              analysis.suggested_reply
-            );
-            console.log(`[inbox] reply from ${r.fromAddr} classified as ${analysis.classification}`);
-          } catch (err) {
-            console.error(`[inbox] could not analyze reply from ${r.fromAddr}:`, err);
-          }
+      for (const r of replyCandidates) {
+        try {
+          const { content } = await client.download(String(r.uid), undefined, { uid: true });
+          if (!content) continue;
+          const text = extractReplyText(await streamToString(content));
+          if (!text) continue;
+          const analysis = await analyzeReply(
+            text,
+            { business_name: r.businessName, email: r.fromAddr },
+            s
+          );
+          await q(
+            `INSERT INTO replies (user_id, contact_id, from_email, subject, snippet, classification, suggested_reply)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [userId, r.contactId, r.fromAddr, r.subject, text.slice(0, 600), analysis.classification, analysis.suggested_reply]
+          );
+          console.log(`[inbox] reply from ${r.fromAddr} classified as ${analysis.classification}`);
+        } catch (err) {
+          console.error(`[inbox] could not analyze reply from ${r.fromAddr}:`, err);
         }
       }
 
       // Bounce notices: download the message and look for one of our contacts inside.
       if (bounceCandidates.length > 0) {
         const contactEmails = (
-          db.prepare("SELECT email FROM contacts WHERE bounced = 0").all() as { email: string }[]
+          await q<{ email: string }>(
+            "SELECT email FROM contacts WHERE user_id = $1 AND bounced = 0",
+            [userId]
+          )
         ).map((r) => r.email.toLowerCase());
 
         for (const uid of bounceCandidates) {
@@ -240,8 +256,12 @@ export async function checkInbox(): Promise<InboxCheckResult> {
             const source = (await streamToString(content)).toLowerCase();
             for (const email of contactEmails) {
               if (source.includes(email)) {
-                const res = markBounced.run(email);
-                if (res.changes > 0) {
+                const res = await q<{ id: number }>(
+                  `UPDATE contacts SET bounced = 1
+                   WHERE user_id = $1 AND lower(email) = $2 AND bounced = 0 RETURNING id`,
+                  [userId, email]
+                );
+                if (res.length > 0) {
                   bounces++;
                   console.log(`[inbox] bounce detected for ${email}`);
                 }
@@ -253,9 +273,9 @@ export async function checkInbox(): Promise<InboxCheckResult> {
         }
       }
 
-      setKv("imap_last_uid", String(maxUid));
-      setKv("imap_last_check", new Date().toISOString());
-      setKv("imap_last_error", "");
+      await setKv(userId, "imap_last_uid", String(maxUid));
+      await setKv(userId, "imap_last_check", new Date().toISOString());
+      await setKv(userId, "imap_last_error", "");
     } finally {
       lock.release();
     }
@@ -268,9 +288,9 @@ export async function checkInbox(): Promise<InboxCheckResult> {
       /* already closed */
     }
     const message = err instanceof Error ? err.message : String(err);
-    setKv("imap_last_error", message);
-    setKv("imap_last_check", new Date().toISOString());
-    console.error("[inbox] check failed:", message);
+    await setKv(userId, "imap_last_error", message).catch(() => {});
+    await setKv(userId, "imap_last_check", new Date().toISOString()).catch(() => {});
+    console.error(`[inbox] user #${userId} check failed:`, message);
     return { ok: false, checked, replies, bounces, error: message };
   }
 }

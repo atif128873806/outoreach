@@ -99,42 +99,29 @@ function sign(payload: string): string {
   return crypto.createHmac("sha256", getAppSecret()).update(payload).digest("hex");
 }
 
-/** Cookie value: <expiryMs>.<hmac(expiryMs)> */
-export function createSessionToken(): { value: string; maxAge: number } {
+/** Cookie value: <userId>.<expiryMs>.<hmac(userId.expiryMs)> — stateless. */
+export function createSessionToken(userId: number): { value: string; maxAge: number } {
   const expiry = String(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
+  const payload = `${userId}.${expiry}`;
   return {
-    value: `${expiry}.${sign(expiry)}`,
+    value: `${payload}.${sign(payload)}`,
     maxAge: SESSION_DAYS * 24 * 60 * 60,
   };
 }
 
-export function verifySessionToken(token: string | undefined): boolean {
-  if (!token) return false;
-  const dot = token.lastIndexOf(".");
-  if (dot < 1) return false;
-  const expiry = token.slice(0, dot);
-  const mac = token.slice(dot + 1);
-  if (!/^\d+$/.test(expiry) || Number(expiry) < Date.now()) return false;
-  const expected = sign(expiry);
-  return (
-    mac.length === expected.length &&
-    crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(expected))
-  );
-}
-
-// ---------- auth-enabled flag (read by proxy.ts without touching the DB) ----------
-
-export const AUTH_FLAG_FILE = path.join(process.cwd(), "data", ".auth-required");
-
-export function setAuthFlag(enabled: boolean): void {
-  try {
-    if (enabled) {
-      fs.mkdirSync(path.dirname(AUTH_FLAG_FILE), { recursive: true });
-      fs.writeFileSync(AUTH_FLAG_FILE, "1");
-    } else {
-      fs.rmSync(AUTH_FLAG_FILE, { force: true });
-    }
-  } catch (err) {
-    console.error("[crypto] could not update auth flag file:", err);
+/** Returns the user id for a valid, unexpired session token; null otherwise. */
+export function verifySessionToken(token: string | undefined): number | null {
+  if (!token) return null;
+  const [uid, expiry, mac] = token.split(".");
+  if (!uid || !expiry || !mac) return null;
+  if (!/^\d+$/.test(uid) || !/^\d+$/.test(expiry)) return null;
+  if (Number(expiry) < Date.now()) return null;
+  const expected = sign(`${uid}.${expiry}`);
+  if (
+    mac.length !== expected.length ||
+    !crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(expected))
+  ) {
+    return null;
   }
+  return Number(uid);
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAppPasswordHash, isAuthEnabled } from "@/lib/settings";
-import { createSessionToken, verifyPassword, SESSION_COOKIE } from "@/lib/crypto";
+import { verifyLogin } from "@/lib/auth";
+import { createSessionToken, SESSION_COOKIE } from "@/lib/crypto";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
@@ -13,16 +13,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!isAuthEnabled()) {
-    return NextResponse.json({ error: "No app password is set" }, { status: 400 });
+  const { email, password } = (await req.json()) as { email?: string; password?: string };
+  if (!email?.trim() || !password) {
+    return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   }
 
-  const { password } = (await req.json()) as { password?: string };
-  if (!password || !verifyPassword(password, getAppPasswordHash())) {
-    return NextResponse.json({ error: "Wrong password" }, { status: 401 });
+  const userId = await verifyLogin(email, password);
+  if (userId == null) {
+    return NextResponse.json({ error: "Wrong email or password" }, { status: 401 });
   }
 
-  const session = createSessionToken();
+  const session = createSessionToken(userId);
   const res = NextResponse.json({ ok: true });
   res.cookies.set(SESSION_COOKIE, session.value, {
     httpOnly: true,

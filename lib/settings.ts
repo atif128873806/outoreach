@@ -1,11 +1,5 @@
-import { getDb } from "./db";
-import {
-  decryptSecret,
-  encryptSecret,
-  hashPassword,
-  isEncrypted,
-  setAuthFlag,
-} from "./crypto";
+import { q, q1, getDb } from "./db";
+import { decryptSecret, encryptSecret } from "./crypto";
 
 export const SETTING_KEYS = [
   // Sender identity — used by the AI to write messages and by the mailer
@@ -59,12 +53,11 @@ export const SECRET_MASK = "••••••••";
 
 export const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
 
-export function getSettings(): Settings {
-  const db = getDb();
-  const rows = db.prepare("SELECT key, value FROM settings").all() as {
-    key: string;
-    value: string;
-  }[];
+export async function getSettings(userId: number): Promise<Settings> {
+  const rows = await q<{ key: string; value: string }>(
+    "SELECT key, value FROM settings WHERE user_id = $1",
+    [userId]
+  );
   const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
   const out = {} as Settings;
   for (const key of SETTING_KEYS) {
@@ -74,12 +67,9 @@ export function getSettings(): Settings {
   return out;
 }
 
-export function saveSettings(values: Partial<Settings>): void {
-  const db = getDb();
-  const upsert = db.prepare(
-    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
-  );
-  const tx = db.transaction(() => {
+export async function saveSettings(userId: number, values: Partial<Settings>): Promise<void> {
+  const db = await getDb();
+  await db.transaction(async (tx) => {
     for (const key of SETTING_KEYS) {
       let v = values[key];
       if (v === undefined) continue;
@@ -87,28 +77,13 @@ export function saveSettings(values: Partial<Settings>): void {
         if (v === SECRET_MASK) continue; // untouched masked field — keep stored value
         v = encryptSecret(v);
       }
-      upsert.run(key, v);
+      await tx.query(
+        `INSERT INTO settings (user_id, key, value) VALUES ($1, $2, $3)
+         ON CONFLICT (user_id, key) DO UPDATE SET value = EXCLUDED.value`,
+        [userId, key, v]
+      );
     }
   });
-  tx();
-}
-
-/** One-time migration: encrypt any credentials stored as plaintext by earlier versions. */
-export function migrateSecretsAtRest(): void {
-  const db = getDb();
-  const read = db.prepare("SELECT value FROM settings WHERE key = ?");
-  const write = db.prepare("UPDATE settings SET value = ? WHERE key = ?");
-  let migrated = 0;
-  for (const key of SECRET_SETTING_KEYS) {
-    const row = read.get(key) as { value: string } | undefined;
-    if (row?.value && !isEncrypted(row.value)) {
-      write.run(encryptSecret(row.value), key);
-      migrated++;
-    }
-  }
-  if (migrated > 0) {
-    console.log(`[settings] encrypted ${migrated} stored credential(s) at rest`);
-  }
 }
 
 export interface AiConfig {
@@ -123,7 +98,7 @@ export interface AiConfig {
  * key is missing, we fall back to the template engine rather than another
  * provider the user didn't pick.
  */
-export function getAiConfig(s: Settings = getSettings()): AiConfig | null {
+export function getAiConfig(s: Settings): AiConfig | null {
   const anthropicKey =
     s.anthropic_api_key || process.env.ANTHROPIC_API_KEY || "";
   const groqKey = s.groq_api_key || process.env.GROQ_API_KEY || "";
@@ -149,52 +124,26 @@ export function getAiConfig(s: Settings = getSettings()): AiConfig | null {
   return null;
 }
 
-export function isSmtpConfigured(s: Settings = getSettings()): boolean {
+export function isSmtpConfigured(s: Settings): boolean {
   return Boolean(s.smtp_host && s.from_email);
 }
 
-// ---------- internal key-value state (not exposed in the settings UI) ----------
+// ---------- internal per-user key-value state (not exposed in the settings UI) ----------
 
-export function getKv(key: string): string {
-  const db = getDb();
-  const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as
-    | { value: string }
-    | undefined;
+export async function getKv(userId: number, key: string): Promise<string> {
+  const row = await q1<{ value: string }>(
+    "SELECT value FROM settings WHERE user_id = $1 AND key = $2",
+    [userId, key]
+  );
   return row?.value ?? "";
 }
 
-export function setKv(key: string, value: string): void {
-  const db = getDb();
-  db.prepare(
-    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
-  ).run(key, value);
-}
-
-// ---------- app password (login protection) ----------
-
-const APP_PASSWORD_KEY = "app_password_hash";
-
-export function isAuthEnabled(): boolean {
-  return Boolean(getKv(APP_PASSWORD_KEY));
-}
-
-export function getAppPasswordHash(): string {
-  return getKv(APP_PASSWORD_KEY);
-}
-
-export function setAppPassword(password: string): void {
-  setKv(APP_PASSWORD_KEY, hashPassword(password));
-  setAuthFlag(true);
-}
-
-export function removeAppPassword(): void {
-  setKv(APP_PASSWORD_KEY, "");
-  setAuthFlag(false);
-}
-
-/** Keeps the flag file (read by proxy.ts) in step with the DB, e.g. after a restore. */
-export function syncAuthFlag(): void {
-  setAuthFlag(isAuthEnabled());
+export async function setKv(userId: number, key: string, value: string): Promise<void> {
+  await q(
+    `INSERT INTO settings (user_id, key, value) VALUES ($1, $2, $3)
+     ON CONFLICT (user_id, key) DO UPDATE SET value = EXCLUDED.value`,
+    [userId, key, value]
+  );
 }
 
 // ---------- IMAP (reply detection) ----------
@@ -207,7 +156,7 @@ export interface ImapConfig {
 }
 
 /** IMAP config; host/user/pass fall back to the SMTP mailbox. */
-export function getImapConfig(s: Settings = getSettings()): ImapConfig | null {
+export function getImapConfig(s: Settings): ImapConfig | null {
   const host = s.imap_host || s.smtp_host;
   const user = s.imap_user || s.smtp_user;
   const pass = s.imap_pass || s.smtp_pass;
@@ -223,7 +172,7 @@ const WARMUP_RAMP = [10, 25, 40]; // week 1, 2, 3 — week 4+ uses the full cap
  * How many real (SMTP) emails may be sent today. Warm-up mode ramps the cap
  * over the first weeks of a new sender so the domain builds reputation.
  */
-export function getEffectiveDailyCap(s: Settings = getSettings()): number {
+export function getEffectiveDailyCap(s: Settings): number {
   const cap = Math.max(1, parseInt(s.daily_send_cap || "50", 10) || 50);
   if (s.warmup_enabled !== "true" || !s.warmup_started_at) return cap;
   const started = new Date(s.warmup_started_at).getTime();

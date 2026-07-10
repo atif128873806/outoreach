@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, type Campaign } from "@/lib/db";
+import { q, getDb, type Campaign } from "@/lib/db";
+import { getUserId } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -16,30 +17,35 @@ export interface CampaignWithProgress extends Campaign {
 }
 
 export async function GET() {
-  const db = getDb();
-  const campaigns = db
-    .prepare(
-      `SELECT c.*,
-        COUNT(e.id) AS total,
-        SUM(CASE WHEN e.status = 'sent' THEN 1 ELSE 0 END) AS sent,
-        SUM(CASE WHEN e.status = 'ready' THEN 1 ELSE 0 END) AS ready,
-        SUM(CASE WHEN e.status = 'failed' THEN 1 ELSE 0 END) AS failed,
-        SUM(CASE WHEN e.status = 'skipped' THEN 1 ELSE 0 END) AS skipped,
-        SUM(CASE WHEN e.status = 'pending' THEN 1 ELSE 0 END) AS pending,
-        SUM(CASE WHEN e.opened_at IS NOT NULL THEN 1 ELSE 0 END) AS opened,
-        SUM(CASE WHEN e.clicked_at IS NOT NULL THEN 1 ELSE 0 END) AS clicked,
-        SUM(CASE WHEN e.replied_at IS NOT NULL THEN 1 ELSE 0 END) AS replied
-       FROM campaigns c
-       LEFT JOIN emails e ON e.campaign_id = c.id
-       GROUP BY c.id
-       ORDER BY c.id DESC`
-    )
-    .all() as CampaignWithProgress[];
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const campaigns = await q<CampaignWithProgress>(
+    `SELECT c.*,
+      COUNT(e.id)::int AS total,
+      COUNT(*) FILTER (WHERE e.status = 'sent')::int AS sent,
+      COUNT(*) FILTER (WHERE e.status = 'ready')::int AS ready,
+      COUNT(*) FILTER (WHERE e.status = 'failed')::int AS failed,
+      COUNT(*) FILTER (WHERE e.status = 'skipped')::int AS skipped,
+      COUNT(*) FILTER (WHERE e.status = 'pending')::int AS pending,
+      COUNT(*) FILTER (WHERE e.opened_at IS NOT NULL)::int AS opened,
+      COUNT(*) FILTER (WHERE e.clicked_at IS NOT NULL)::int AS clicked,
+      COUNT(*) FILTER (WHERE e.replied_at IS NOT NULL)::int AS replied
+     FROM campaigns c
+     LEFT JOIN emails e ON e.campaign_id = c.id
+     WHERE c.user_id = $1
+     GROUP BY c.id
+     ORDER BY c.id DESC`,
+    [userId]
+  );
 
   return NextResponse.json({ campaigns });
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const body = (await req.json()) as {
     name?: string;
     description?: string;
@@ -76,7 +82,6 @@ export async function POST(req: NextRequest) {
       ? body.channel
       : "email";
 
-  const db = getDb();
   const category = body.category_filter?.trim() ?? "";
 
   // DM campaigns need a profile to link to; email campaigns just need an address.
@@ -86,17 +91,15 @@ export async function POST(req: NextRequest) {
       : channel === "linkedin"
         ? " AND linkedin != ''"
         : "";
-  const recipients = (
-    category
-      ? db
-          .prepare(
-            `SELECT id FROM contacts WHERE unsubscribed = 0 AND category = ?${igClause}`
-          )
-          .all(category)
-      : db
-          .prepare(`SELECT id FROM contacts WHERE unsubscribed = 0${igClause}`)
-          .all()
-  ) as { id: number }[];
+  const recipients = category
+    ? await q<{ id: number }>(
+        `SELECT id FROM contacts WHERE user_id = $1 AND unsubscribed = 0 AND category = $2${igClause}`,
+        [userId, category]
+      )
+    : await q<{ id: number }>(
+        `SELECT id FROM contacts WHERE user_id = $1 AND unsubscribed = 0${igClause}`,
+        [userId]
+      );
 
   if (recipients.length === 0) {
     return NextResponse.json(
@@ -121,16 +124,16 @@ export async function POST(req: NextRequest) {
   const windowEnd =
     typeof body.send_window_end === "number" ? body.send_window_end : null;
 
-  const tx = db.transaction(() => {
-    const info = db
-      .prepare(
-        `INSERT INTO campaigns
-           (name, description, tone, channel, category_filter, scheduled_at,
-            throttle_per_hour, followup_count, followup_interval_days,
-            send_window_start, send_window_end, ab_test, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(
+  const db = await getDb();
+  const campaignId = await db.transaction(async (tx) => {
+    const rows = await tx.query<{ id: number }>(
+      `INSERT INTO campaigns
+         (user_id, name, description, tone, channel, category_filter, scheduled_at,
+          throttle_per_hour, followup_count, followup_interval_days,
+          send_window_start, send_window_end, ab_test, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
+      [
+        userId,
         body.name!.trim(),
         body.description!.trim(),
         body.tone?.trim() || "professional",
@@ -144,17 +147,18 @@ export async function POST(req: NextRequest) {
         windowStart,
         windowEnd,
         channel === "email" && body.ab_test ? 1 : 0,
-        body.send_now ? "running" : "scheduled"
-      );
-    const campaignId = info.lastInsertRowid as number;
-
-    const insertEmail = db.prepare(
-      "INSERT INTO emails (campaign_id, contact_id) VALUES (?, ?)"
+        body.send_now ? "running" : "scheduled",
+      ]
     );
-    for (const r of recipients) insertEmail.run(campaignId, r.id);
-    return campaignId;
+    const id = rows[0].id;
+    for (const r of recipients) {
+      await tx.query(
+        "INSERT INTO emails (user_id, campaign_id, contact_id) VALUES ($1, $2, $3)",
+        [userId, id, r.id]
+      );
+    }
+    return id;
   });
 
-  const campaignId = tx();
   return NextResponse.json({ id: campaignId, recipients: recipients.length });
 }

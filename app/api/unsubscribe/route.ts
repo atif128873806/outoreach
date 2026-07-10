@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { q } from "@/lib/db";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
@@ -23,12 +23,12 @@ export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token");
   if (!token) return page("Invalid link", "This unsubscribe link is missing its token.");
 
-  const db = getDb();
-  const result = db
-    .prepare("UPDATE contacts SET unsubscribed = 1 WHERE unsub_token = ?")
-    .run(token);
+  const rows = await q<{ id: number }>(
+    "UPDATE contacts SET unsubscribed = 1 WHERE unsub_token = $1 RETURNING id",
+    [token]
+  );
 
-  if (result.changes === 0) {
+  if (rows.length === 0) {
     return page("Link not recognized", "We couldn't find a matching subscription. You may already be unsubscribed.");
   }
   return page("You're unsubscribed", "You won't receive any further emails from us. Sorry to see you go.");

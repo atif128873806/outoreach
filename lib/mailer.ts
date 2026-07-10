@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { getSettings, isSmtpConfigured, type Settings } from "./settings";
+import { isSmtpConfigured, type Settings } from "./settings";
 
 export interface SendResult {
   /** "smtp" when actually delivered, "simulated" when SMTP is not configured */
@@ -37,9 +37,9 @@ export async function sendMail(opts: {
   unsubToken?: string;
   /** enables open-pixel + click tracking for this email */
   trackToken?: string;
-  settings?: Settings;
+  settings: Settings;
 }): Promise<SendResult> {
-  const s = opts.settings ?? getSettings();
+  const s = opts.settings;
   const base = s.base_url ? s.base_url.replace(/\/$/, "") : "";
 
   const unsubUrl =

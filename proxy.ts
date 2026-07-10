@@ -1,20 +1,23 @@
 import { NextResponse, type NextRequest } from "next/server";
-import fs from "fs";
-import { verifySessionToken, SESSION_COOKIE, AUTH_FLAG_FILE } from "./lib/crypto";
+import { verifySessionToken, SESSION_COOKIE } from "./lib/crypto";
 
 /**
- * Login protection. Active only when an app password is set in Settings —
- * the flag file (kept in sync with the DB) tells us without a DB round-trip.
+ * Session gate. Every page and API requires a signed-in user, except:
+ *  - the auth pages/endpoints themselves
+ *  - recipient-facing endpoints (tracking pixel/click, unsubscribe) — those
+ *    must work for the people who receive the emails
+ *  - the health check
  *
- * Recipient-facing endpoints stay public: tracking pixel/click redirects and
- * the unsubscribe page must work for people who receive the emails.
+ * Session cookies are stateless HMAC tokens, so no database is touched here.
  */
 
 const PUBLIC_PREFIXES = [
   "/login",
+  "/signup",
   "/api/auth/",
   "/api/t/",
   "/api/unsubscribe",
+  "/api/health",
 ];
 
 export function proxy(request: NextRequest) {
@@ -24,9 +27,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (!fs.existsSync(AUTH_FLAG_FILE)) return NextResponse.next(); // auth not enabled
-
-  if (verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value)) {
+  if (verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value) != null) {
     return NextResponse.next();
   }
 

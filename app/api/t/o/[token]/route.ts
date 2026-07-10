@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { q } from "@/lib/db";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
@@ -22,10 +22,10 @@ export async function GET(
     /^[a-f0-9]{16,64}$/.test(token)
   ) {
     try {
-      const db = getDb();
-      db.prepare(
-        "UPDATE emails SET opened_at = ? WHERE open_token = ? AND opened_at IS NULL"
-      ).run(new Date().toISOString(), token);
+      await q(
+        "UPDATE emails SET opened_at = now() WHERE open_token = $1 AND opened_at IS NULL",
+        [token]
+      );
     } catch {
       // never fail the pixel
     }

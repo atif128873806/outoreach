@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, type Campaign, type Contact } from "@/lib/db";
+import { q1, type Campaign, type Contact } from "@/lib/db";
 import { generateMessage } from "@/lib/ai";
-import { getAiConfig } from "@/lib/settings";
+import { getAiConfig, getSettings } from "@/lib/settings";
+import { getUserId } from "@/lib/auth";
 import { checkSpam } from "@/lib/spamcheck";
 
 export const runtime = "nodejs";
@@ -11,6 +12,9 @@ export const runtime = "nodejs";
  * so the user can see what will be written.
  */
 export async function POST(req: NextRequest) {
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const body = (await req.json()) as {
     description?: string;
     tone?: string;
@@ -29,7 +33,6 @@ export async function POST(req: NextRequest) {
     body.channel === "instagram" || body.channel === "linkedin"
       ? body.channel
       : "email";
-  const db = getDb();
   const category = body.category_filter?.trim() ?? "";
   const igClause =
     channel === "instagram"
@@ -38,19 +41,15 @@ export async function POST(req: NextRequest) {
         ? " AND linkedin != ''"
         : "";
 
-  const contact = (
-    category
-      ? db
-          .prepare(
-            `SELECT * FROM contacts WHERE unsubscribed = 0 AND category = ?${igClause} ORDER BY RANDOM() LIMIT 1`
-          )
-          .get(category)
-      : db
-          .prepare(
-            `SELECT * FROM contacts WHERE unsubscribed = 0${igClause} ORDER BY RANDOM() LIMIT 1`
-          )
-          .get()
-  ) as Contact | undefined;
+  const contact = category
+    ? await q1<Contact>(
+        `SELECT * FROM contacts WHERE user_id = $1 AND unsubscribed = 0 AND category = $2${igClause} ORDER BY RANDOM() LIMIT 1`,
+        [userId, category]
+      )
+    : await q1<Contact>(
+        `SELECT * FROM contacts WHERE user_id = $1 AND unsubscribed = 0${igClause} ORDER BY RANDOM() LIMIT 1`,
+        [userId]
+      );
 
   if (!contact) {
     return NextResponse.json(
@@ -68,6 +67,7 @@ export async function POST(req: NextRequest) {
 
   const fakeCampaign = {
     id: 0,
+    user_id: userId,
     name: "preview",
     description: body.description.trim(),
     tone: body.tone?.trim() || "professional",
@@ -79,12 +79,14 @@ export async function POST(req: NextRequest) {
     followup_interval_days: 3,
     send_window_start: null,
     send_window_end: null,
+    ab_test: 0,
     status: "scheduled",
     created_at: "",
   } as Campaign;
 
   try {
-    const msg = await generateMessage(contact, fakeCampaign);
+    const settings = await getSettings(userId);
+    const msg = await generateMessage(contact, fakeCampaign, { settings });
     const spam = channel === "email" ? checkSpam(msg.subject, msg.body) : null;
     return NextResponse.json({
       contact: {
@@ -99,7 +101,7 @@ export async function POST(req: NextRequest) {
       ai: msg.ai,
       provider: msg.provider,
       spamWarnings: spam?.warnings ?? [],
-      note: getAiConfig()
+      note: getAiConfig(settings)
         ? `Written by ${msg.provider === "groq" ? "Groq" : "Claude"} AI`
         : "No AI API key configured — using the built-in template engine. Add a Groq or Anthropic key in Settings for fully AI-personalized messages.",
     });

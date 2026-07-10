@@ -18,8 +18,10 @@ export default function SettingsPage() {
   const [aiProvider, setAiProvider] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [authEnabled, setAuthEnabled] = useState(false);
-  const [appPassword, setAppPassword] = useState("");
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNext, setPwNext] = useState("");
+  const [pwMsg, setPwMsg] = useState<string | null>(null);
+  const [pwBusy, setPwBusy] = useState(false);
   const [testTo, setTestTo] = useState("");
   const [testMsg, setTestMsg] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
@@ -41,7 +43,6 @@ export default function SettingsPage() {
         setSmtpConfigured(d.smtpConfigured);
         setAiConfigured(d.aiConfigured);
         setAiProvider(d.aiProvider);
-        setAuthEnabled(Boolean(d.authEnabled));
       });
   }, []);
 
@@ -64,7 +65,6 @@ export default function SettingsPage() {
       if (payload.warmup_enabled === "true" && !payload.warmup_started_at) {
         payload.warmup_started_at = new Date().toISOString();
       }
-      if (appPassword.trim()) payload.app_password = appPassword.trim();
       const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,8 +79,6 @@ export default function SettingsPage() {
       setSmtpConfigured(data.smtpConfigured);
       setAiConfigured(data.aiConfigured);
       setAiProvider(data.aiProvider);
-      setAuthEnabled(Boolean(data.authEnabled));
-      setAppPassword("");
       setMessage("Settings saved.");
     } catch {
       setMessage("Save failed — try again.");
@@ -125,22 +123,25 @@ export default function SettingsPage() {
     }
   }
 
-  async function removeProtection() {
-    if (!confirm("Remove password protection? Anyone who can reach this URL will have full access.")) return;
-    const res = await fetch("/api/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ app_password_remove: true }),
-    });
-    if (res.ok) {
-      setAuthEnabled(false);
-      setMessage("Password protection removed.");
+  async function updatePassword() {
+    setPwBusy(true);
+    setPwMsg(null);
+    try {
+      const res = await fetch("/api/auth/me", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ current: pwCurrent, next: pwNext }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Update failed");
+      setPwCurrent("");
+      setPwNext("");
+      setPwMsg("Password updated.");
+    } catch (err) {
+      setPwMsg(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setPwBusy(false);
     }
-  }
-
-  async function signOut() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/login";
   }
 
   async function runDnsCheck() {
@@ -328,35 +329,37 @@ export default function SettingsPage() {
 
         <Card className="p-6">
           <SectionTitle
-            title="Security"
-            subtitle="Protect this dashboard with a password. Recipient-facing pages (unsubscribe, tracking) always stay public. Stored credentials — SMTP/IMAP passwords and API keys — are encrypted at rest and shown as •••••••• once saved; type a new value to replace one."
-            badge={authEnabled ? "password protected" : "open access"}
-            badgeOk={authEnabled}
+            title="Account security"
+            subtitle="Stored credentials — SMTP/IMAP passwords and API keys — are encrypted at rest and shown as •••••••• once saved; type a new value to replace one. Recipient-facing pages (unsubscribe, tracking) stay public by design."
           />
-          <div className="grid md:grid-cols-2 gap-4 mt-4">
-            <Field
-              label={authEnabled ? "Change app password" : "Set an app password"}
-              hint="At least 6 characters. Saved together with the other settings; you stay signed in on this device."
-            >
+          <div className="grid md:grid-cols-3 gap-4 mt-4 items-end">
+            <Field label="Current password">
               <input
                 type="password"
                 className={inputCls}
-                value={appPassword}
-                onChange={(e) => setAppPassword(e.target.value)}
-                placeholder={authEnabled ? "(unchanged)" : "choose a password"}
+                value={pwCurrent}
+                onChange={(e) => setPwCurrent(e.target.value)}
               />
             </Field>
-            {authEnabled && (
-              <div className="flex items-end gap-2 pb-1">
-                <button className={btnSecondary} onClick={removeProtection}>
-                  Remove password protection
-                </button>
-                <button className={btnSecondary} onClick={signOut}>
-                  Sign out on this device
-                </button>
-              </div>
-            )}
+            <Field label="New password" hint="At least 8 characters.">
+              <input
+                type="password"
+                className={inputCls}
+                value={pwNext}
+                onChange={(e) => setPwNext(e.target.value)}
+              />
+            </Field>
+            <div className="pb-5">
+              <button
+                className={btnSecondary}
+                onClick={updatePassword}
+                disabled={pwBusy || !pwCurrent || pwNext.length < 8}
+              >
+                {pwBusy ? "Updating…" : "Change password"}
+              </button>
+            </div>
           </div>
+          {pwMsg && <div className="text-sm text-zinc-500 mt-2">{pwMsg}</div>}
         </Card>
 
         <Card className="p-6">

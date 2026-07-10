@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveTxt } from "dns/promises";
 import { getSettings } from "@/lib/settings";
+import { getUserId } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -27,7 +28,10 @@ const DKIM_SELECTORS = ["default", "mail", "selector1", "selector2", "k1", "s1",
  * are what decide whether cold email lands in the inbox or in spam.
  */
 export async function POST() {
-  const s = getSettings();
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const s = await getSettings(userId);
   const domain = s.from_email.split("@")[1]?.trim();
   if (!domain) {
     return NextResponse.json(

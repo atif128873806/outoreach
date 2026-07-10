@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: outreach
+      POSTGRES_USER: outreach
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U outreach -d outreach"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://outreach:${POSTGRES_PASSWORD}@db:5432/outreach
+      APP_SECRET: ${APP_SECRET:?set APP_SECRET in .env (openssl rand -hex 32)}
+      # Optional: GROQ_API_KEY, ANTHROPIC_API_KEY, JINA_API_KEY
+    ports:
+      - "${PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Nightly logical backups into ./backups (kept 14 days)
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    entrypoint: >
+      sh -c 'while true; do
+        pg_dump -h db -U outreach -d outreach -Fc -f "/backups/outreach-$$(date +%F).dump" &&
+        find /backups -name "outreach-*.dump" -mtime +14 -delete;
+        sleep 86400;
+      done'
+
+volumes:
+  pgdata:

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, type Campaign } from "@/lib/db";
+import { q, q1, type Campaign } from "@/lib/db";
+import { getUserId } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -7,24 +8,25 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const db = getDb();
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const campaign = db
-    .prepare("SELECT * FROM campaigns WHERE id = ?")
-    .get(Number(id)) as Campaign | undefined;
+  const { id } = await params;
+  const campaign = await q1<Campaign>(
+    "SELECT * FROM campaigns WHERE id = $1 AND user_id = $2",
+    [Number(id), userId]
+  );
   if (!campaign) {
     return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
   }
 
-  const emails = db
-    .prepare(
-      `SELECT e.*, c.email AS contact_email, c.business_name, c.category, c.instagram, c.linkedin
-       FROM emails e JOIN contacts c ON c.id = e.contact_id
-       WHERE e.campaign_id = ?
-       ORDER BY e.id`
-    )
-    .all(Number(id));
+  const emails = await q(
+    `SELECT e.*, c.email AS contact_email, c.business_name, c.category, c.instagram, c.linkedin
+     FROM emails e JOIN contacts c ON c.id = e.contact_id
+     WHERE e.campaign_id = $1
+     ORDER BY e.id`,
+    [Number(id)]
+  );
 
   return NextResponse.json({ campaign, emails });
 }
@@ -40,6 +42,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { id } = await params;
   const { action } = (await req.json()) as { action?: string };
 
@@ -48,15 +53,13 @@ export async function PATCH(
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
 
-  const db = getDb();
-  const placeholders = rule.from.map(() => "?").join(", ");
-  const result = db
-    .prepare(
-      `UPDATE campaigns SET status = ? WHERE id = ? AND status IN (${placeholders})`
-    )
-    .run(rule.to, Number(id), ...rule.from);
+  const rows = await q<{ id: number }>(
+    `UPDATE campaigns SET status = $1
+     WHERE id = $2 AND user_id = $3 AND status = ANY($4) RETURNING id`,
+    [rule.to, Number(id), userId, rule.from]
+  );
 
-  if (result.changes === 0) {
+  if (rows.length === 0) {
     return NextResponse.json(
       { error: "Action not allowed in the campaign's current state" },
       { status: 409 }
@@ -69,14 +72,17 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { id } = await params;
-  const db = getDb();
-  const result = db
-    .prepare(
-      "DELETE FROM campaigns WHERE id = ? AND status IN ('completed', 'cancelled', 'scheduled', 'paused')"
-    )
-    .run(Number(id));
-  if (result.changes === 0) {
+  const rows = await q<{ id: number }>(
+    `DELETE FROM campaigns
+     WHERE id = $1 AND user_id = $2
+       AND status IN ('completed', 'cancelled', 'scheduled', 'paused') RETURNING id`,
+    [Number(id), userId]
+  );
+  if (rows.length === 0) {
     return NextResponse.json(
       { error: "Pause or cancel the campaign before deleting it" },
       { status: 409 }

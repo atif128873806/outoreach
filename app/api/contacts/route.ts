@@ -1,35 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import Papa from "papaparse";
-import { getDb, type Contact } from "@/lib/db";
+import { q, getDb, type Contact } from "@/lib/db";
+import { getUserId } from "@/lib/auth";
 import { normalizeLinkedin } from "@/lib/leads";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
-  const db = getDb();
-  const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const search = req.nextUrl.searchParams.get("q")?.trim() ?? "";
 
   let contacts: Contact[];
-  if (q) {
-    const like = `%${q}%`;
-    contacts = db
-      .prepare(
-        "SELECT * FROM contacts WHERE email LIKE ? OR business_name LIKE ? OR category LIKE ? OR instagram LIKE ? OR linkedin LIKE ? ORDER BY id DESC"
-      )
-      .all(like, like, like, like, like) as Contact[];
+  if (search) {
+    const like = `%${search}%`;
+    contacts = await q<Contact>(
+      `SELECT * FROM contacts WHERE user_id = $1 AND
+         (email ILIKE $2 OR business_name ILIKE $2 OR category ILIKE $2
+          OR instagram ILIKE $2 OR linkedin ILIKE $2)
+       ORDER BY id DESC`,
+      [userId, like]
+    );
   } else {
-    contacts = db
-      .prepare("SELECT * FROM contacts ORDER BY id DESC")
-      .all() as Contact[];
+    contacts = await q<Contact>(
+      "SELECT * FROM contacts WHERE user_id = $1 ORDER BY id DESC",
+      [userId]
+    );
   }
 
   const categories = (
-    db
-      .prepare(
-        "SELECT DISTINCT category FROM contacts WHERE category != '' ORDER BY category"
-      )
-      .all() as { category: string }[]
+    await q<{ category: string }>(
+      "SELECT DISTINCT category FROM contacts WHERE user_id = $1 AND category != '' ORDER BY category",
+      [userId]
+    )
   ).map((r) => r.category);
 
   return NextResponse.json({ contacts, categories });
@@ -65,18 +70,21 @@ function normalizeInstagram(v: string): string {
 
 const VALID_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const UPSERT_SQL = `INSERT INTO contacts (email, business_name, category, website, instagram, linkedin, phone, notes, unsub_token)
- VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
- ON CONFLICT(email) DO UPDATE SET
-   business_name = CASE WHEN excluded.business_name != '' THEN excluded.business_name ELSE contacts.business_name END,
-   category      = CASE WHEN excluded.category != '' THEN excluded.category ELSE contacts.category END,
-   website       = CASE WHEN excluded.website != '' THEN excluded.website ELSE contacts.website END,
-   instagram     = CASE WHEN excluded.instagram != '' THEN excluded.instagram ELSE contacts.instagram END,
-   linkedin      = CASE WHEN excluded.linkedin != '' THEN excluded.linkedin ELSE contacts.linkedin END,
-   phone         = CASE WHEN excluded.phone != '' THEN excluded.phone ELSE contacts.phone END,
-   notes         = CASE WHEN excluded.notes != '' THEN excluded.notes ELSE contacts.notes END`;
+const UPSERT_SQL = `INSERT INTO contacts (user_id, email, business_name, category, website, instagram, linkedin, phone, notes, unsub_token)
+ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+ ON CONFLICT (user_id, email) DO UPDATE SET
+   business_name = CASE WHEN EXCLUDED.business_name != '' THEN EXCLUDED.business_name ELSE contacts.business_name END,
+   category      = CASE WHEN EXCLUDED.category != '' THEN EXCLUDED.category ELSE contacts.category END,
+   website       = CASE WHEN EXCLUDED.website != '' THEN EXCLUDED.website ELSE contacts.website END,
+   instagram     = CASE WHEN EXCLUDED.instagram != '' THEN EXCLUDED.instagram ELSE contacts.instagram END,
+   linkedin      = CASE WHEN EXCLUDED.linkedin != '' THEN EXCLUDED.linkedin ELSE contacts.linkedin END,
+   phone         = CASE WHEN EXCLUDED.phone != '' THEN EXCLUDED.phone ELSE contacts.phone END,
+   notes         = CASE WHEN EXCLUDED.notes != '' THEN EXCLUDED.notes ELSE contacts.notes END`;
 
 export async function POST(req: NextRequest) {
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const payload = (await req.json()) as {
     csv?: string;
     contact?: {
@@ -91,9 +99,6 @@ export async function POST(req: NextRequest) {
     };
   };
 
-  const db = getDb();
-  const upsert = db.prepare(UPSERT_SQL);
-
   // Manual single-contact add
   if (payload.contact) {
     const c = payload.contact;
@@ -101,7 +106,8 @@ export async function POST(req: NextRequest) {
     if (!VALID_EMAIL.test(email)) {
       return NextResponse.json({ error: "A valid email is required" }, { status: 400 });
     }
-    upsert.run(
+    await q(UPSERT_SQL, [
+      userId,
       email,
       (c.business_name ?? "").trim(),
       (c.category ?? "").trim(),
@@ -110,8 +116,8 @@ export async function POST(req: NextRequest) {
       normalizeLinkedin(c.linkedin ?? ""),
       (c.phone ?? "").trim(),
       (c.notes ?? "").trim(),
-      crypto.randomBytes(16).toString("hex")
-    );
+      crypto.randomBytes(16).toString("hex"),
+    ]);
     return NextResponse.json({ imported: 1, skipped: 0 });
   }
 
@@ -128,14 +134,16 @@ export async function POST(req: NextRequest) {
   let imported = 0;
   let skipped = 0;
 
-  const tx = db.transaction((rows: Record<string, string>[]) => {
-    for (const row of rows) {
+  const db = await getDb();
+  await db.transaction(async (tx) => {
+    for (const row of parsed.data) {
       const email = pick(row, EMAIL_KEYS).toLowerCase();
       if (!VALID_EMAIL.test(email)) {
         skipped++;
         continue;
       }
-      upsert.run(
+      await tx.query(UPSERT_SQL, [
+        userId,
         email,
         pick(row, NAME_KEYS),
         pick(row, CATEGORY_KEYS),
@@ -144,12 +152,11 @@ export async function POST(req: NextRequest) {
         normalizeLinkedin(pick(row, LINKEDIN_KEYS)),
         pick(row, PHONE_KEYS),
         pick(row, NOTES_KEYS),
-        crypto.randomBytes(16).toString("hex")
-      );
+        crypto.randomBytes(16).toString("hex"),
+      ]);
       imported++;
     }
   });
-  tx(parsed.data);
 
   return NextResponse.json({ imported, skipped });
 }

@@ -4,13 +4,11 @@ import {
   saveSettings,
   isSmtpConfigured,
   getAiConfig,
-  isAuthEnabled,
-  setAppPassword,
-  removeAppPassword,
   SECRET_SETTING_KEYS,
   SECRET_MASK,
   type Settings,
 } from "@/lib/settings";
+import { getUserId } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -29,34 +27,20 @@ function respond(settings: Settings) {
     smtpConfigured: isSmtpConfigured(settings),
     aiConfigured: Boolean(getAiConfig(settings)),
     aiProvider: getAiConfig(settings)?.provider ?? null,
-    authEnabled: isAuthEnabled(),
   });
 }
 
 export async function GET() {
-  return respond(getSettings());
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  return respond(await getSettings(userId));
 }
 
 export async function POST(req: NextRequest) {
-  const body = (await req.json()) as Partial<Settings> & {
-    app_password?: string;
-    app_password_remove?: boolean;
-  };
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { app_password, app_password_remove, ...values } = body;
-  saveSettings(values); // masked secret values are ignored by saveSettings
-
-  if (app_password_remove) {
-    removeAppPassword();
-  } else if (app_password?.trim()) {
-    if (app_password.trim().length < 6) {
-      return NextResponse.json(
-        { error: "App password must be at least 6 characters" },
-        { status: 400 }
-      );
-    }
-    setAppPassword(app_password.trim());
-  }
-
-  return respond(getSettings());
+  const body = (await req.json()) as Partial<Settings>;
+  await saveSettings(userId, body); // masked secret values are ignored by saveSettings
+  return respond(await getSettings(userId));
 }

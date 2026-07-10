@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Campaign, Contact, ReplyClassification } from "./db";
-import { getAiConfig, getSettings, type AiConfig, type Settings } from "./settings";
+import { getAiConfig, type AiConfig, type Settings } from "./settings";
 import { templateEmail, templateDm, templateLinkedin } from "./templates";
 
 export interface GeneratedMessage {
@@ -19,7 +19,7 @@ export interface GenerateOptions {
   prior?: { subject: string; body: string };
   /** A/B subject test arm — two distinct subject-line strategies */
   subjectVariant?: "A" | "B";
-  settings?: Settings;
+  settings: Settings;
 }
 
 const SUBJECT_STYLES: Record<"A" | "B", string> = {
@@ -243,9 +243,9 @@ async function callGroq(
 export async function generateMessage(
   contact: Contact,
   campaign: Campaign,
-  opts: GenerateOptions = {}
+  opts: GenerateOptions
 ): Promise<GeneratedMessage> {
-  const s = opts.settings ?? getSettings();
+  const s = opts.settings;
   const step = opts.step ?? 1;
   const cfg = getAiConfig(s);
   // Non-email channels are body-only drafts (no subject line)
@@ -325,9 +325,9 @@ function classifyHeuristically(text: string): ReplyClassification {
 export async function analyzeReply(
   replyText: string,
   contact: { business_name: string; email: string },
-  settings?: Settings
+  settings: Settings
 ): Promise<ReplyAnalysis> {
-  const s = settings ?? getSettings();
+  const s = settings;
   const cfg = getAiConfig(s);
   const trimmed = replyText.slice(0, 4000);
 
@@ -429,9 +429,9 @@ const BRIEF_SCHEMA = {
 export async function improveBrief(
   rough: string,
   tone: string,
-  settings?: Settings
+  settings: Settings
 ): Promise<{ name: string; description: string }> {
-  const s = settings ?? getSettings();
+  const s = settings;
   const cfg = getAiConfig(s);
   if (!cfg) throw new Error("Add a Groq or Anthropic API key in Settings to use the AI assistant");
 

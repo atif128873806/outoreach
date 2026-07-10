@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { searchOsm, searchGooglePlaces, enrichLeads, type Lead } from "@/lib/leads";
 import { searchExaCompanies } from "@/lib/exa";
 import { getSettings } from "@/lib/settings";
+import { getUserId } from "@/lib/auth";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
@@ -9,6 +10,9 @@ export const runtime = "nodejs";
 export const maxDuration = 180;
 
 export async function POST(req: NextRequest) {
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   // Lead searches hit free third-party services — keep the pace neighborly.
   if (!rateLimit(`leads:${clientIp(req)}`, 10, 60_000)) {
     return NextResponse.json(
@@ -40,7 +44,7 @@ export async function POST(req: NextRequest) {
   try {
     let leads: Lead[];
     if (source === "google") {
-      const key = getSettings().google_places_api_key;
+      const key = (await getSettings(userId)).google_places_api_key;
       if (!key) {
         return NextResponse.json(
           { error: "Add a Google Places API key in Settings to use the Google source, or switch to OpenStreetMap (free)" },

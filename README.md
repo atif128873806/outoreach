@@ -32,25 +32,38 @@ AI-powered business outreach automation. Import a CSV of business contacts, desc
 - **Campaign controls** — pause, resume, start now, cancel; live progress and a full per-message log with follow-up steps
 - **Unsubscribe handling** — every email carries a one-click unsubscribe link (plus `List-Unsubscribe` header); unsubscribed contacts are skipped forever
 - **Simulation mode** — without SMTP configured, the whole pipeline runs but sends are only logged, so you can test safely
-- **Login protection** — set an app password in Settings and the whole dashboard requires sign-in (recipient-facing unsubscribe/tracking endpoints stay public); sessions are signed cookies, login attempts are rate-limited
+- **Multi-user accounts** — email + password sign-up, each account fully isolated (own contacts, campaigns, SMTP/IMAP, API keys, caps); sessions are signed cookies, login attempts are rate-limited; recipient-facing unsubscribe/tracking endpoints stay public
 - **Credentials encrypted at rest** — SMTP/IMAP passwords and API keys are stored AES-256-GCM-encrypted (key from `APP_SECRET` env or an auto-generated `data/.secret`) and are never sent back to the browser
 - **Hardened public endpoints** — tracking, unsubscribe, and lead-search endpoints are rate-limited; the click tracker only redirects for tokens it actually issued
 - **Resilient sending** — SMTP connections have hard timeouts, and transient failures (network, greylisting, rate limits) retry automatically up to 3 times with backoff
 
-## Quick start
+## Quick start (local)
 
 ```bash
 npm install
 npm run dev        # or: npm run build && npm start
 ```
 
-Open http://localhost:3000, then:
+Open http://localhost:3000 and **create your account** (multi-user: every account has its own contacts, campaigns, settings, and inbox polling). Locally, data lives in an embedded Postgres (PGlite) under `data/pg` — no database server needed. If a pre-multi-user `data/outreach.db` exists, the **first** account automatically adopts all of its data.
 
-1. **Settings** → fill in your sender identity, paste your Groq API key (console.groq.com) or Anthropic API key (console.anthropic.com) — env vars `GROQ_API_KEY` / `ANTHROPIC_API_KEY` also work — and optionally configure SMTP. Without SMTP, sends are simulated.
+Then per account:
+
+1. **Settings** → fill in your sender identity, paste your Groq API key (console.groq.com) or Anthropic API key (console.anthropic.com) — env vars `GROQ_API_KEY` / `ANTHROPIC_API_KEY` also work as global fallbacks — and optionally configure SMTP. Without SMTP, sends are simulated.
 2. **Contacts** → import your CSV (a template is downloadable on that page).
 3. **Campaigns** → create a campaign: describe your offer, pick tone/audience/time/speed, preview a sample email, and schedule it.
 
-The scheduler starts with the server and checks every minute for due campaigns.
+The scheduler starts with the server and checks every minute for due campaigns, per user.
+
+## Deploying (production)
+
+```bash
+cp .env.example .env      # set POSTGRES_PASSWORD and APP_SECRET (openssl rand -hex 32)
+docker compose up -d --build
+```
+
+That runs three containers: the app, **Postgres 17** (volume-backed), and a **nightly pg_dump backup** service (kept 14 days in `./backups`). Health check: `GET /api/health`. Put a TLS-terminating reverse proxy (Caddy, nginx, Traefik) in front and set each account's **Public base URL** in Settings to the HTTPS domain so tracking and unsubscribe links work.
+
+Running elsewhere (Railway, Fly, a VPS without Docker): set `DATABASE_URL` to any Postgres and `APP_SECRET` to a stable random value, then `npm run build && npm start`. Run a single app instance — the scheduler takes a Postgres advisory lock so an accidental second instance won't double-send, but one instance is the supported shape.
 
 ## CSV format
 
@@ -63,7 +76,7 @@ Only `email` is required. Common header aliases (company, industry, url, …) ar
 
 ## Stack
 
-Next.js (App Router) · SQLite (better-sqlite3, stored in `data/outreach.db`) · Groq API (`llama-3.3-70b-versatile`, JSON mode) or Anthropic API (`claude-opus-4-8`, structured outputs) · Nodemailer · node-cron
+Next.js (App Router) · Postgres (`pg` in production via `DATABASE_URL`, embedded PGlite for local dev) · multi-user auth (scrypt + HMAC session cookies) · Groq API (`llama-3.3-70b-versatile`, JSON mode) or Anthropic API (`claude-opus-4-8`, structured outputs) · Nodemailer · node-cron
 
 ## Responsible use
 

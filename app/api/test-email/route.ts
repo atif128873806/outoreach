@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendMail } from "@/lib/mailer";
 import { getSettings, isSmtpConfigured } from "@/lib/settings";
+import { getUserId } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const userId = await getUserId();
+  if (userId == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   // Optional subject/body let the campaign form send a generated preview to
   // the user's own inbox; without them this is a plain SMTP test.
   const { to, subject, body } = (await req.json()) as {
@@ -13,7 +17,7 @@ export async function POST(req: NextRequest) {
     body?: string;
   };
 
-  const settings = getSettings();
+  const settings = await getSettings(userId);
   const recipient = to?.trim() || settings.from_email;
   if (!recipient) {
     return NextResponse.json({ error: "Recipient email is required" }, { status: 400 });
