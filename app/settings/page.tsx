@@ -206,26 +206,19 @@ export default function SettingsPage() {
         <Card className="p-6">
           <SectionTitle
             title="AI message writer"
-            subtitle="AI writing is included free — every account can generate personalized messages out of the box. Adding your own Groq or Anthropic key below is optional: use it only if you'd rather run on your own AI account and rate limits."
-            badge={aiConfigured ? `active: ${aiProvider === "groq" ? "Groq" : "Claude"}` : "template mode"}
+            subtitle="AI writing is included free on every account — nothing to set up. Prefer Anthropic's Claude? Add your own key below to switch; otherwise the free AI is used automatically."
+            badge={aiConfigured ? (aiProvider === "groq" ? "free AI active" : "Claude active") : "template mode"}
             badgeOk={aiConfigured}
           />
           <div className="grid md:grid-cols-2 gap-4 mt-4">
-            <Field label="Provider" hint="Auto uses Claude (Anthropic) when a key exists, otherwise Groq (the free default).">
-              <select className={inputCls} value={settings.ai_provider || "auto"} onChange={set("ai_provider")}>
-                <option value="auto">Auto (free Groq by default)</option>
-                <option value="groq">Groq</option>
-                <option value="anthropic">Anthropic (Claude)</option>
+            <Field label="Model" hint="The free included AI needs no key. Selecting Claude requires your own Anthropic key below.">
+              <select className={inputCls} value={settings.ai_provider === "anthropic" ? "anthropic" : "auto"} onChange={set("ai_provider")}>
+                <option value="auto">Free AI (included) — recommended</option>
+                <option value="anthropic">Anthropic Claude (use my key)</option>
               </select>
             </Field>
             <div />
-            <Field label="Groq API key (optional)" hint="Included free by default — only add your own key from console.groq.com to use your own Groq account.">
-              <input type="password" className={inputCls} value={settings.groq_api_key ?? ""} onChange={set("groq_api_key")} placeholder="using the free included key" />
-            </Field>
-            <Field label="Groq model" hint="Leave empty for the default (llama-3.3-70b-versatile).">
-              <input className={inputCls} value={settings.groq_model ?? ""} onChange={set("groq_model")} placeholder="llama-3.3-70b-versatile" />
-            </Field>
-            <Field label="Anthropic API key (optional)" hint="Add a key from console.anthropic.com to use Claude instead of the free Groq default.">
+            <Field label="Anthropic API key (optional)" hint="Only needed if you chose Claude above. Get one at console.anthropic.com.">
               <input type="password" className={inputCls} value={settings.anthropic_api_key ?? ""} onChange={set("anthropic_api_key")} placeholder="sk-ant-…" />
             </Field>
           </div>
