@@ -126,19 +126,22 @@ export default function LandingPage() {
             Outreach<span className="text-zinc-400">Studio</span>
           </Link>
           <nav className="hidden items-center gap-7 text-sm text-zinc-500 md:flex">
-            <a href="#features" className="hover:text-zinc-900">Features</a>
+            <Link href="/features" className="hover:text-zinc-900">Features</Link>
             <a href="#how" className="hover:text-zinc-900">How it works</a>
             <a href="#channels" className="hover:text-zinc-900">Channels</a>
             <a href="#pricing" className="hover:text-zinc-900">Pricing</a>
             <a href="#faq" className="hover:text-zinc-900">FAQ</a>
           </nav>
           <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm font-medium text-zinc-600 hover:text-zinc-900">
+            <Link
+              href="/login"
+              className="hidden text-sm font-medium text-zinc-600 hover:text-zinc-900 sm:inline"
+            >
               Sign in
             </Link>
             <Link
               href="/signup"
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:-translate-y-px hover:bg-zinc-700 hover:shadow-md"
+              className="whitespace-nowrap rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white shadow-sm transition-all hover:-translate-y-px hover:bg-zinc-700 hover:shadow-md sm:px-4"
             >
               Get started free
             </Link>
@@ -362,6 +365,15 @@ export default function LandingPage() {
             </div>
           ))}
         </div>
+        <div className="mt-10 text-center">
+          <Link
+            href="/features"
+            className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-6 py-3 text-sm font-semibold text-zinc-700 transition-all hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md"
+          >
+            Take the full product tour
+            <span aria-hidden>→</span>
+          </Link>
+        </div>
       </section>
 
       {/* Channels */}
@@ -581,7 +593,7 @@ export default function LandingPage() {
               outreach automation
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-              <a href="#features" className="hover:text-zinc-600">Features</a>
+              <Link href="/features" className="hover:text-zinc-600">Features</Link>
               <Link href="/pricing" className="hover:text-zinc-600">Pricing</Link>
               <Link href="/contact" className="hover:text-zinc-600">Contact</Link>
               <Link href="/login" className="hover:text-zinc-600">Sign in</Link>
