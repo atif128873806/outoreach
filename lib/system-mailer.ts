@@ -17,6 +17,8 @@ interface SystemSmtp {
   pass: string;
   fromEmail: string;
   fromName: string;
+  /** Skip TLS cert-hostname validation — needed when connecting to a cPanel mail server by IP. */
+  insecureTls: boolean;
 }
 
 export function getSystemSmtp(): SystemSmtp | null {
@@ -33,6 +35,20 @@ export function getSystemSmtp(): SystemSmtp | null {
     pass,
     fromEmail: process.env.SYSTEM_FROM_EMAIL?.trim() || user,
     fromName: process.env.SYSTEM_FROM_NAME?.trim() || "Outreach Studio",
+    insecureTls: process.env.SYSTEM_SMTP_INSECURE_TLS === "true",
+  };
+}
+
+function transportOptions(cfg: SystemSmtp) {
+  return {
+    host: cfg.host,
+    port: cfg.port,
+    secure: cfg.secure,
+    auth: { user: cfg.user, pass: cfg.pass },
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 30_000,
+    ...(cfg.insecureTls ? { tls: { rejectUnauthorized: false } } : {}),
   };
 }
 
@@ -55,15 +71,7 @@ async function sendSystemMail(opts: {
     console.log(`[system-mailer] not configured — skipped "${opts.subject}" to ${opts.to}`);
     return;
   }
-  const transporter = nodemailer.createTransport({
-    host: cfg.host,
-    port: cfg.port,
-    secure: cfg.secure,
-    auth: { user: cfg.user, pass: cfg.pass },
-    connectionTimeout: 15_000,
-    greetingTimeout: 15_000,
-    socketTimeout: 30_000,
-  });
+  const transporter = nodemailer.createTransport(transportOptions(cfg));
   await transporter.sendMail({
     from: `"${cfg.fromName}" <${cfg.fromEmail}>`,
     to: opts.to,
@@ -78,13 +86,7 @@ export async function verifySystemMailer(): Promise<{ ok: boolean; error?: strin
   const cfg = getSystemSmtp();
   if (!cfg) return { ok: false, error: "System mailer is not configured" };
   try {
-    const transporter = nodemailer.createTransport({
-      host: cfg.host,
-      port: cfg.port,
-      secure: cfg.secure,
-      auth: { user: cfg.user, pass: cfg.pass },
-      connectionTimeout: 15_000,
-    });
+    const transporter = nodemailer.createTransport(transportOptions(cfg));
     await transporter.verify();
     return { ok: true };
   } catch (err) {
