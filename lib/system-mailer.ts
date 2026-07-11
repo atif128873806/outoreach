@@ -56,7 +56,8 @@ export function isSystemMailerConfigured(): boolean {
   return getSystemSmtp() !== null;
 }
 
-function appUrl(): string {
+/** Public base URL of this instance (APP_URL env), no trailing slash. */
+export function appUrl(): string {
   return (process.env.APP_URL || "").replace(/\/$/, "");
 }
 
@@ -94,8 +95,82 @@ export async function verifySystemMailer(): Promise<{ ok: boolean; error?: strin
   }
 }
 
+const FOOT_HTML = (why: string) =>
+  `<p style="color:#a1a1aa;font-size:12px;line-height:1.6;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">${why}</p>`;
+
+const BUTTON_HTML = (href: string, label: string) =>
+  `<div style="margin:24px 0;"><a href="${href}" style="background:#18181b;color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 22px;border-radius:8px;display:inline-block;">${label}</a></div>`;
+
+/** Email-verification email (signup + resend). Fire-and-forget safe. */
+export async function sendVerificationEmail(
+  to: string,
+  name: string,
+  verifyUrl: string
+): Promise<void> {
+  const first = (name || "").trim().split(/\s+/)[0] || "there";
+  const text = `Hi ${first},
+
+Confirm your email address to unlock sending with Outreach Studio.
+
+Open this link:
+${verifyUrl}
+
+The link is valid for 48 hours. If you didn't create an account, you can ignore this email.
+
+The Outreach Studio team`;
+
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#18181b;">
+  <div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin-bottom:4px;">Confirm your email</div>
+  <p style="color:#52525b;font-size:14px;line-height:1.6;margin:0 0 8px;">Hi ${first}, click the button below to verify this address and unlock sending.</p>
+  ${BUTTON_HTML(verifyUrl, "Verify my email")}
+  <p style="color:#71717a;font-size:12px;line-height:1.6;margin:0;">Or paste this link into your browser:<br/><span style="word-break:break-all;color:#2563eb;">${verifyUrl}</span></p>
+  ${FOOT_HTML("The link is valid for 48 hours. If you didn't create an account at Outreach Studio, you can safely ignore this email.")}
+</div>`;
+
+  try {
+    await sendSystemMail({ to, subject: "Confirm your email — Outreach Studio", text, html });
+    console.log(`[system-mailer] verification email sent to ${to}`);
+  } catch (err) {
+    console.error(`[system-mailer] verification email to ${to} failed:`, err);
+  }
+}
+
+/** Password-reset email. Fire-and-forget safe. */
+export async function sendPasswordResetEmail(
+  to: string,
+  name: string,
+  resetUrl: string
+): Promise<void> {
+  const first = (name || "").trim().split(/\s+/)[0] || "there";
+  const text = `Hi ${first},
+
+Someone requested a password reset for your Outreach Studio account.
+
+Reset your password here (valid for 60 minutes):
+${resetUrl}
+
+If this wasn't you, ignore this email — your password stays unchanged.
+
+The Outreach Studio team`;
+
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#18181b;">
+  <div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin-bottom:4px;">Reset your password</div>
+  <p style="color:#52525b;font-size:14px;line-height:1.6;margin:0 0 8px;">Hi ${first}, click the button below to choose a new password. The link is valid for 60 minutes.</p>
+  ${BUTTON_HTML(resetUrl, "Choose a new password")}
+  <p style="color:#71717a;font-size:12px;line-height:1.6;margin:0;">Or paste this link into your browser:<br/><span style="word-break:break-all;color:#2563eb;">${resetUrl}</span></p>
+  ${FOOT_HTML("If you didn't request this, you can safely ignore this email — your password stays unchanged.")}
+</div>`;
+
+  try {
+    await sendSystemMail({ to, subject: "Reset your password — Outreach Studio", text, html });
+    console.log(`[system-mailer] password-reset email sent to ${to}`);
+  } catch (err) {
+    console.error(`[system-mailer] password-reset email to ${to} failed:`, err);
+  }
+}
+
 /** Welcome email on signup. Fire-and-forget — never blocks the request. */
-export async function sendWelcomeEmail(to: string, name: string): Promise<void> {
+export async function sendWelcomeEmail(to: string, name: string, verifyUrl?: string): Promise<void> {
   const url = appUrl();
   const first = (name || "").trim().split(/\s+/)[0] || "there";
   const dash = url ? `${url}/dashboard` : "your dashboard";
@@ -111,7 +186,14 @@ Here's how to get your first campaign out the door:
 3. Write & schedule — describe your offer once; the AI writes a personal message for every contact, then tracks opens, clicks, and replies.
 
 AI writing is included free — no API key required to get started.
-
+${
+  verifyUrl
+    ? `
+First, confirm your email address (valid for 48 hours):
+${verifyUrl}
+`
+    : ""
+}
 ${url ? `Open your dashboard: ${dash}` : ""}
 
 Happy sending,
@@ -127,9 +209,11 @@ The Outreach Studio team`;
   </table>
   <p style="color:#16a34a;font-size:13px;margin:16px 0 0;">✓ AI writing is included free — no API key required to get started.</p>
   ${
-    url
-      ? `<div style="margin:24px 0;"><a href="${dash}" style="background:#18181b;color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 22px;border-radius:8px;display:inline-block;">Open your dashboard</a></div>`
-      : ""
+    verifyUrl
+      ? `${BUTTON_HTML(verifyUrl, "Verify my email")}<p style="color:#71717a;font-size:12px;line-height:1.6;margin:-12px 0 16px;">Confirming your address unlocks real sending and free AI writing. Or paste this link:<br/><span style="word-break:break-all;color:#2563eb;">${verifyUrl}</span></p>`
+      : url
+        ? `<div style="margin:24px 0;"><a href="${dash}" style="background:#18181b;color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 22px;border-radius:8px;display:inline-block;">Open your dashboard</a></div>`
+        : ""
   }
   <p style="color:#a1a1aa;font-size:12px;line-height:1.6;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">You're receiving this because an account was created with this email at Outreach Studio.</p>
 </div>`;

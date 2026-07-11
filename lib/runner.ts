@@ -2,6 +2,10 @@ import crypto from "crypto";
 import { q, q1, type Campaign, type Contact, type EmailRow } from "./db";
 import { generateMessage } from "./ai";
 import { sendMail } from "./mailer";
+import { isEmailVerified } from "./auth";
+import { getUserPlan } from "./usage";
+import { capWithPlan } from "./plans";
+import { hourInTimeZone, isHourInWindow } from "./timewindow";
 import {
   getSettings,
   getEffectiveDailyCap,
@@ -12,6 +16,7 @@ import {
 
 let ticking = false;
 const capNoticeDay = new Map<number, string>();
+const verifyNoticeDay = new Map<number, string>();
 
 // Errors worth retrying: connection/timeout problems, SMTP 4xx "try again
 // later" replies, and provider rate limits. Anything else fails permanently.
@@ -75,14 +80,13 @@ export async function tick(): Promise<void> {
   }
 }
 
-function insideSendWindow(campaign: Campaign): boolean {
+function insideSendWindow(campaign: Campaign, settings: Settings): boolean {
   if (campaign.send_window_start == null || campaign.send_window_end == null) {
     return true;
   }
-  const hour = new Date().getHours(); // server-local time
-  const { send_window_start: start, send_window_end: end } = campaign;
-  // Window may wrap midnight, e.g. 20 → 6
-  return start <= end ? hour >= start && hour < end : hour >= start || hour < end;
+  // Evaluated in the user's configured time zone (server-local when unset).
+  const hour = hourInTimeZone(settings.timezone);
+  return isHourInWindow(hour, campaign.send_window_start, campaign.send_window_end);
 }
 
 async function processCampaignBatch(campaign: Campaign, settings: Settings): Promise<void> {
@@ -103,7 +107,24 @@ async function processCampaignBatch(campaign: Campaign, settings: Settings): Pro
     return;
   }
 
-  if (!insideSendWindow(campaign)) return; // outside allowed hours; try next tick
+  if (!insideSendWindow(campaign, settings)) return; // outside allowed hours; try next tick
+
+  // Real SMTP sending requires a verified email address (when the instance
+  // enforces verification). Simulated sends stay open for testing.
+  if (
+    campaign.channel === "email" &&
+    isSmtpConfigured(settings) &&
+    !(await isEmailVerified(campaign.user_id))
+  ) {
+    const today = new Date().toDateString();
+    if (verifyNoticeDay.get(campaign.user_id) !== today) {
+      verifyNoticeDay.set(campaign.user_id, today);
+      console.log(
+        `[runner] user #${campaign.user_id} has not verified their email — real sends are on hold`
+      );
+    }
+    return;
+  }
 
   // throttle_per_hour spread across one-minute ticks
   const batchSize = Math.max(1, Math.round(campaign.throttle_per_hour / 60));
@@ -147,9 +168,11 @@ async function processCampaignBatch(campaign: Campaign, settings: Settings): Pro
       continue;
     }
 
-    // Deliverability: enforce the user's daily cap (with warm-up ramp) on real sends.
+    // Deliverability + plan: the user's daily cap (with warm-up ramp),
+    // bounded by their plan's emails/day, enforced on real sends.
     if (campaign.channel === "email" && isSmtpConfigured(settings)) {
-      const cap = getEffectiveDailyCap(settings);
+      const plan = await getUserPlan(campaign.user_id);
+      const cap = capWithPlan(getEffectiveDailyCap(settings), plan);
       if ((await sentTodayCount(campaign.user_id)) >= cap) {
         const today = new Date().toDateString();
         if (capNoticeDay.get(campaign.user_id) !== today) {

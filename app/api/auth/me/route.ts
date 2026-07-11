@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getUserId, getUser, changePassword } from "@/lib/auth";
+import { getUserId, getUser, changePassword, isVerificationEnforced } from "@/lib/auth";
 import { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
@@ -10,7 +10,14 @@ export async function GET() {
   const user = await getUser(uid);
   return NextResponse.json({
     user: user
-      ? { id: user.id, email: user.email, name: user.name, isAdmin: Boolean(user.is_admin) }
+      ? {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          isAdmin: Boolean(user.is_admin),
+          emailVerified: Boolean(user.email_verified) || !isVerificationEnforced(),
+          plan: user.plan,
+        }
       : null,
   });
 }

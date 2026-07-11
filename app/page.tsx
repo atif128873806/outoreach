@@ -72,7 +72,7 @@ const FAQS = [
   },
   {
     q: "Which AI does the writing?",
-    a: "Your choice: Groq (free tier available) or Anthropic Claude — you bring your own API key, so there's no per-message markup. Without a key, a built-in template engine with rotating variants takes over.",
+    a: "AI writing is included free — no API key needed (up to 150 generations a day on the free plan). Prefer your own model? Add a Groq or Anthropic Claude key in Settings for unlimited use with no per-message markup.",
   },
   {
     q: "Is the Instagram and LinkedIn outreach safe for my accounts?",
@@ -426,55 +426,96 @@ export default function LandingPage() {
           Simple pricing
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-center text-zinc-500">
-          Free while in beta. Bring your own AI key and mailbox — no per-message markup, ever.
+          Start free with AI writing included. No per-message markup, ever.{" "}
+          <Link href="/pricing" className="text-blue-600 underline hover:text-blue-700">
+            Full pricing details →
+          </Link>
         </p>
-        <div className="mx-auto mt-12 grid max-w-3xl gap-6 md:grid-cols-2">
-          <div className="relative rounded-2xl border-2 border-zinc-900 bg-white p-8 shadow-xl shadow-zinc-900/10">
-            <span className="absolute -top-3 left-6 rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-white">
-              Free while in beta
-            </span>
-            <div className="flex items-baseline justify-between">
-              <h3 className="font-semibold">Beta</h3>
-              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-                available now
-              </span>
-            </div>
-            <div className="mt-4 text-4xl font-semibold">
-              $0<span className="text-base font-normal text-zinc-400"> / month</span>
-            </div>
-            <ul className="mt-6 space-y-2.5 text-sm text-zinc-600">
-              {[
+        <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-3">
+          {[
+            {
+              name: "Free",
+              price: "$0",
+              period: "forever",
+              badge: null,
+              points: [
+                "50 Lead Finder results / month",
+                "50 emails / day, your own SMTP",
+                "150 AI generations / day included",
                 "Unlimited contacts & campaigns",
-                "All three channels",
-                "Lead Finder + decision-maker search",
-                "Reply triage with AI-suggested answers",
-                "A/B testing & analytics",
-              ].map((x) => (
-                <li key={x} className="flex gap-2">
-                  <span className="text-emerald-600">✓</span> {x}
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/signup"
-              className="mt-8 block rounded-xl bg-zinc-900 px-4 py-3 text-center text-sm font-semibold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-zinc-700 hover:shadow-lg"
+              ],
+              cta: "Create your account",
+              href: "/signup",
+              primary: false,
+            },
+            {
+              name: "Starter",
+              price: "$9",
+              period: "/ month",
+              badge: null,
+              points: [
+                "400 Lead Finder results / month",
+                "150 emails / day",
+                "500 AI generations / day included",
+                "Email support",
+              ],
+              cta: "Get Starter",
+              href: "/pricing",
+              primary: false,
+            },
+            {
+              name: "Pro",
+              price: "$29",
+              period: "/ month",
+              badge: "Best value",
+              points: [
+                "2,500 Lead Finder results / month",
+                "500 emails / day",
+                "Unlimited AI writing included",
+                "Priority support & early access",
+              ],
+              cta: "Get Pro",
+              href: "/pricing",
+              primary: true,
+            },
+          ].map((p) => (
+            <div
+              key={p.name}
+              className={`relative rounded-2xl bg-white p-8 ${
+                p.primary
+                  ? "border-2 border-zinc-900 shadow-xl shadow-zinc-900/10"
+                  : "border border-zinc-200"
+              }`}
             >
-              Create your account
-            </Link>
-          </div>
-          <div className="rounded-2xl border border-zinc-200 bg-zinc-50/50 p-8">
-            <div className="flex items-baseline justify-between">
-              <h3 className="font-semibold">Pro</h3>
-              <span className="rounded-full bg-zinc-200/70 px-2.5 py-0.5 text-xs font-medium text-zinc-500">
-                coming soon
-              </span>
+              {p.badge && (
+                <span className="absolute -top-3 left-6 rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-white">
+                  {p.badge}
+                </span>
+              )}
+              <h3 className="font-semibold">{p.name}</h3>
+              <div className="mt-4 text-4xl font-semibold">
+                {p.price}
+                <span className="text-base font-normal text-zinc-400"> {p.period}</span>
+              </div>
+              <ul className="mt-6 space-y-2.5 text-sm text-zinc-600">
+                {p.points.map((x) => (
+                  <li key={x} className="flex gap-2">
+                    <span className="text-emerald-600">✓</span> {x}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href={p.href}
+                className={`mt-8 block rounded-xl px-4 py-3 text-center text-sm font-semibold transition-all ${
+                  p.primary
+                    ? "bg-zinc-900 text-white shadow-md hover:-translate-y-0.5 hover:bg-zinc-700 hover:shadow-lg"
+                    : "border border-zinc-300 text-zinc-700 hover:bg-zinc-50"
+                }`}
+              >
+                {p.cta}
+              </Link>
             </div>
-            <div className="mt-4 text-4xl font-semibold text-zinc-300">$—</div>
-            <p className="mt-6 text-sm leading-relaxed text-zinc-500">
-              Teams, higher sending volumes, priority support, and managed AI (no key
-              needed). Beta users get grandfathered pricing when Pro launches.
-            </p>
-          </div>
+          ))}
         </div>
       </section>
 
@@ -533,19 +574,30 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-zinc-100">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-10 text-sm text-zinc-400 md:flex-row">
-          <div>
-            <span className="font-semibold text-zinc-600">Outreach Studio</span> · AI
-            outreach automation
+        <div className="mx-auto max-w-6xl px-6 py-10 text-sm text-zinc-400">
+          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+            <div>
+              <span className="font-semibold text-zinc-600">Outreach Studio</span> · AI
+              outreach automation
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+              <a href="#features" className="hover:text-zinc-600">Features</a>
+              <Link href="/pricing" className="hover:text-zinc-600">Pricing</Link>
+              <Link href="/contact" className="hover:text-zinc-600">Contact</Link>
+              <Link href="/login" className="hover:text-zinc-600">Sign in</Link>
+            </div>
+            <div className="max-w-xs text-center text-xs md:text-right">
+              Built for legitimate business outreach. Honor opt-outs and the anti-spam
+              laws that apply to you.
+            </div>
           </div>
-          <div className="flex items-center gap-6">
-            <a href="#features" className="hover:text-zinc-600">Features</a>
-            <a href="#pricing" className="hover:text-zinc-600">Pricing</a>
-            <Link href="/login" className="hover:text-zinc-600">Sign in</Link>
-          </div>
-          <div className="max-w-xs text-center text-xs md:text-right">
-            Built for legitimate business outreach. Honor opt-outs and the anti-spam
-            laws that apply to you.
+          <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-zinc-100 pt-6 text-xs md:flex-row">
+            <div>© {new Date().getFullYear()} Outreach Studio</div>
+            <div className="flex items-center gap-5">
+              <Link href="/terms" className="hover:text-zinc-600">Terms of Service</Link>
+              <Link href="/privacy" className="hover:text-zinc-600">Privacy Policy</Link>
+              <Link href="/refund-policy" className="hover:text-zinc-600">Refund Policy</Link>
+            </div>
           </div>
         </div>
       </footer>

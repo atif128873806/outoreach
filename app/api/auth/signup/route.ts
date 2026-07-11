@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createUser, userCount } from "@/lib/auth";
+import { createUser, userCount, startEmailVerification, isVerificationEnforced } from "@/lib/auth";
 import { importLegacySqlite } from "@/lib/legacy-import";
-import { sendWelcomeEmail } from "@/lib/system-mailer";
+import { appUrl, sendWelcomeEmail } from "@/lib/system-mailer";
 import { createSessionToken, SESSION_COOKIE, SESSION_COOKIE_OPTIONS } from "@/lib/crypto";
-import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { rateLimitDb, clientIp } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  if (!rateLimit(`signup:${clientIp(req)}`, 5, 60 * 60 * 1000)) {
+  if (!(await rateLimitDb(`signup:${clientIp(req)}`, 5, 60 * 60 * 1000))) {
     return NextResponse.json(
       { error: "Too many signups from this address — try again later" },
       { status: 429 }
@@ -44,8 +44,13 @@ export async function POST(req: NextRequest) {
     imported = await importLegacySqlite(result.id);
   }
 
-  // Welcome email — fire and forget, never blocks signup.
-  void sendWelcomeEmail(email.trim().toLowerCase(), name ?? "");
+  // Welcome email (with verification link when enforced) — fire and forget.
+  let verifyUrl: string | undefined;
+  if (isVerificationEnforced() && appUrl()) {
+    const token = await startEmailVerification(result.id);
+    verifyUrl = `${appUrl()}/api/auth/verify-email?token=${token}`;
+  }
+  void sendWelcomeEmail(email.trim().toLowerCase(), name ?? "", verifyUrl);
 
   const session = createSessionToken(result.id);
   const res = NextResponse.json({ ok: true, imported });

@@ -9,6 +9,7 @@ interface Row {
   email: string;
   name: string;
   is_admin: number;
+  plan: string;
   created_at: string;
   contacts: number;
   campaigns: number;
@@ -26,6 +27,24 @@ export default function AdminPage() {
   const [users, setUsers] = useState<Row[]>([]);
   const [instance, setInstance] = useState<Instance | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "forbidden">("loading");
+  const [planMsg, setPlanMsg] = useState<string | null>(null);
+
+  async function changePlan(userId: number, plan: string) {
+    const prev = users;
+    setUsers((u) => u.map((row) => (row.id === userId ? { ...row, plan } : row)));
+    setPlanMsg(null);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, plan }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Update failed");
+    } catch (err) {
+      setUsers(prev); // roll back the optimistic change
+      setPlanMsg(err instanceof Error ? err.message : "Update failed");
+    }
+  }
 
   useEffect(() => {
     fetch("/api/admin/users")
@@ -84,12 +103,14 @@ export default function AdminPage() {
         />
       </div>
 
+      {planMsg && <div className="text-sm text-red-500 mb-3">{planMsg}</div>}
       <Card className="p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-zinc-400 uppercase tracking-wide">
                 <th className="px-4 py-2.5 font-medium">Account</th>
+                <th className="px-4 py-2.5 font-medium">Plan</th>
                 <th className="px-4 py-2.5 font-medium">Joined</th>
                 <th className="px-4 py-2.5 font-medium">Contacts</th>
                 <th className="px-4 py-2.5 font-medium">Campaigns</th>
@@ -109,6 +130,17 @@ export default function AdminPage() {
                       )}
                     </div>
                     {u.name && <div className="text-xs text-zinc-400">{u.name}</div>}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <select
+                      value={u.plan || "free"}
+                      onChange={(e) => changePlan(u.id, e.target.value)}
+                      className="rounded-lg border border-zinc-200 px-2 py-1 text-xs outline-none focus:border-zinc-400"
+                    >
+                      <option value="free">Free</option>
+                      <option value="starter">Starter</option>
+                      <option value="pro">Pro</option>
+                    </select>
                   </td>
                   <td className="px-4 py-2.5 text-zinc-500">{fmtDate(u.created_at)}</td>
                   <td className="px-4 py-2.5 tabular-nums">{u.contacts}</td>

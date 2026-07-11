@@ -29,6 +29,12 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       JINA_API_KEY: ${JINA_API_KEY:-}
+      # Instance-wide hard ceiling on included-AI generations/day per user
+      # (cost brake; overrides plan limits, including Pro's "unlimited")
+      GLOBAL_AI_DAILY_LIMIT: ${GLOBAL_AI_DAILY_LIMIT:-}
+      # Public-facing identity shown on legal/pricing pages
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+      LEGAL_OPERATOR: ${LEGAL_OPERATOR:-}
       # System (transactional) mailer — welcome emails from the company mailbox
       SYSTEM_SMTP_HOST: ${SYSTEM_SMTP_HOST:-}
       SYSTEM_SMTP_PORT: ${SYSTEM_SMTP_PORT:-465}

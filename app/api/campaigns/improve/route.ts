@@ -21,7 +21,8 @@ export async function POST(req: NextRequest) {
     const result = await improveBrief(
       body.description.trim(),
       body.tone?.trim() || "professional",
-      await getSettings(userId)
+      await getSettings(userId),
+      userId
     );
     return NextResponse.json(result);
   } catch (err) {

@@ -4,6 +4,7 @@ import { searchExaCompanies } from "@/lib/exa";
 import { getSettings } from "@/lib/settings";
 import { getUserId } from "@/lib/auth";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { getLeadQuota, leadQuotaMessage, recordUsage } from "@/lib/usage";
 
 export const runtime = "nodejs";
 // Search + enrichment can take a while for larger lead counts
@@ -28,9 +29,16 @@ export async function POST(req: NextRequest) {
     count?: number;
   };
 
+  // Plan quota: each returned lead counts against the monthly allowance.
+  const quota = await getLeadQuota(userId);
+  if (quota.remaining !== null && quota.remaining <= 0) {
+    return NextResponse.json({ error: leadQuotaMessage(quota) }, { status: 403 });
+  }
+
   const niche = body.niche?.trim();
   const location = body.location?.trim();
-  const count = Math.min(50, Math.max(1, body.count ?? 10));
+  let count = Math.min(50, Math.max(1, body.count ?? 10));
+  if (quota.remaining !== null) count = Math.min(count, quota.remaining);
   const source =
     body.source === "google" ? "google" : body.source === "osm" ? "osm" : "web";
 
@@ -78,12 +86,17 @@ export async function POST(req: NextRequest) {
     );
     const result = enriched.slice(0, count);
 
+    await recordUsage(userId, "leads", result.length);
+    const remaining =
+      quota.remaining === null ? null : Math.max(0, quota.remaining - result.length);
+
     return NextResponse.json({
       leads: result,
       meta: {
         found: result.length,
         withEmail: result.filter((l) => l.email).length,
         withInstagram: result.filter((l) => l.instagram).length,
+        quota: { plan: quota.plan.id, limit: quota.limit, remaining },
       },
     });
   } catch (err) {

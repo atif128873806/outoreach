@@ -25,6 +25,9 @@ export const SETTING_KEYS = [
   "daily_send_cap",
   "warmup_enabled",
   "warmup_started_at",
+  // IANA zone (e.g. "America/New_York") that send windows are evaluated in;
+  // empty = server-local time
+  "timezone",
   // AI providers
   "ai_provider", // "auto" (default) | "anthropic" | "groq"
   "anthropic_api_key",
@@ -90,6 +93,8 @@ export interface AiConfig {
   provider: "anthropic" | "groq";
   apiKey: string;
   model: string;
+  /** true when the key is the instance's global env key, not the user's own — subject to the daily quota */
+  global: boolean;
 }
 
 /**
@@ -102,24 +107,26 @@ export function getAiConfig(s: Settings): AiConfig | null {
   const anthropicKey =
     s.anthropic_api_key || process.env.ANTHROPIC_API_KEY || "";
   const groqKey = s.groq_api_key || process.env.GROQ_API_KEY || "";
+  const anthropicGlobal = !s.anthropic_api_key && Boolean(anthropicKey);
+  const groqGlobal = !s.groq_api_key && Boolean(groqKey);
   const pref = s.ai_provider || "auto";
 
   if (pref === "anthropic") {
     return anthropicKey
-      ? { provider: "anthropic", apiKey: anthropicKey, model: "claude-opus-4-8" }
+      ? { provider: "anthropic", apiKey: anthropicKey, model: "claude-opus-4-8", global: anthropicGlobal }
       : null;
   }
   if (pref === "groq") {
     return groqKey
-      ? { provider: "groq", apiKey: groqKey, model: s.groq_model || DEFAULT_GROQ_MODEL }
+      ? { provider: "groq", apiKey: groqKey, model: s.groq_model || DEFAULT_GROQ_MODEL, global: groqGlobal }
       : null;
   }
   // auto
   if (anthropicKey) {
-    return { provider: "anthropic", apiKey: anthropicKey, model: "claude-opus-4-8" };
+    return { provider: "anthropic", apiKey: anthropicKey, model: "claude-opus-4-8", global: anthropicGlobal };
   }
   if (groqKey) {
-    return { provider: "groq", apiKey: groqKey, model: s.groq_model || DEFAULT_GROQ_MODEL };
+    return { provider: "groq", apiKey: groqKey, model: s.groq_model || DEFAULT_GROQ_MODEL, global: groqGlobal };
   }
   return null;
 }

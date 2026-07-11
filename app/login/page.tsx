@@ -48,7 +48,12 @@ function LoginForm() {
         <input type="email" autoFocus className={input} value={email} onChange={(e) => setEmail(e.target.value)} />
       </label>
       <label className="block">
-        <div className="text-sm font-medium text-zinc-600 mb-1.5">Password</div>
+        <div className="flex items-baseline justify-between mb-1.5">
+          <div className="text-sm font-medium text-zinc-600">Password</div>
+          <Link href="/forgot-password" className="text-xs text-zinc-400 underline hover:text-zinc-600">
+            Forgot password?
+          </Link>
+        </div>
         <input type="password" className={input} value={password} onChange={(e) => setPassword(e.target.value)} />
       </label>
       {error && <div className="text-sm text-red-500 mt-3">{error}</div>}

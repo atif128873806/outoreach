@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Campaign, Contact, ReplyClassification } from "./db";
 import { getAiConfig, type AiConfig, type Settings } from "./settings";
+import { consumeGlobalAi } from "./ai-usage";
 import { templateEmail, templateDm, templateLinkedin } from "./templates";
 
 export interface GeneratedMessage {
@@ -247,9 +248,19 @@ export async function generateMessage(
 ): Promise<GeneratedMessage> {
   const s = opts.settings;
   const step = opts.step ?? 1;
-  const cfg = getAiConfig(s);
+  let cfg = getAiConfig(s);
   // Non-email channels are body-only drafts (no subject line)
   const isDm = campaign.channel !== "email";
+
+  // The instance's global key is quota'd per user; over quota (or unverified)
+  // the template engine takes over so campaigns keep moving.
+  if (cfg?.global) {
+    const gate = await consumeGlobalAi(campaign.user_id);
+    if (!gate.ok) {
+      console.log(`[ai] global AI unavailable for user #${campaign.user_id}: ${gate.reason}`);
+      cfg = null;
+    }
+  }
 
   if (!cfg) {
     const t =
@@ -429,11 +440,16 @@ const BRIEF_SCHEMA = {
 export async function improveBrief(
   rough: string,
   tone: string,
-  settings: Settings
+  settings: Settings,
+  userId: number
 ): Promise<{ name: string; description: string }> {
   const s = settings;
   const cfg = getAiConfig(s);
   if (!cfg) throw new Error("Add a Groq or Anthropic API key in Settings to use the AI assistant");
+  if (cfg.global) {
+    const gate = await consumeGlobalAi(userId);
+    if (!gate.ok) throw new Error(gate.reason);
+  }
 
   const sender = senderContext(s);
   const system = `You sharpen rough campaign ideas into crisp outreach briefs. The brief is what an AI copywriter uses to write every message in the campaign, so it must state: what is being offered, the concrete benefit, and the single goal (what the recipient should do). Use ONLY facts, numbers, and prices that appear in the user's idea or sender details — NEVER invent statistics, prices, timelines, or results; a brief without numbers is better than one with made-up numbers. Write in a ${tone} tone. No placeholder brackets.

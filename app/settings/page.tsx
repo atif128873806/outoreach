@@ -374,6 +374,26 @@ export default function SettingsPage() {
                 Warm-up mode (ramp: 10/day week 1, 25 week 2, 40 week 3, then full cap)
               </label>
             </div>
+            <Field
+              label="Time zone for send windows"
+              hint="Campaign business-hours windows are evaluated in this zone. Empty = server time."
+            >
+              <input
+                className={inputCls}
+                list="tz-options"
+                value={settings.timezone ?? ""}
+                onChange={set("timezone")}
+                placeholder={Intl.DateTimeFormat().resolvedOptions().timeZone}
+              />
+              <datalist id="tz-options">
+                {(
+                  (Intl as unknown as { supportedValuesOf?: (k: string) => string[] })
+                    .supportedValuesOf?.("timeZone") ?? []
+                ).map((tz) => (
+                  <option key={tz} value={tz} />
+                ))}
+              </datalist>
+            </Field>
           </div>
 
           <div className="mt-6 pt-4 border-t border-zinc-100">

@@ -14,6 +14,13 @@ import { verifySessionToken, SESSION_COOKIE } from "./lib/crypto";
 const PUBLIC_PREFIXES = [
   "/login",
   "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/pricing",
+  "/terms",
+  "/privacy",
+  "/refund-policy",
+  "/contact",
   "/api/auth/",
   "/api/t/",
   "/api/unsubscribe",

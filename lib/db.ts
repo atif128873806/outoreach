@@ -94,12 +94,18 @@ async function createAdapter(): Promise<Adapter> {
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
-  id            SERIAL PRIMARY KEY,
-  email         TEXT NOT NULL UNIQUE,
-  name          TEXT NOT NULL DEFAULT '',
-  password_hash TEXT NOT NULL,
-  is_admin      INTEGER NOT NULL DEFAULT 0,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+  id             SERIAL PRIMARY KEY,
+  email          TEXT NOT NULL UNIQUE,
+  name           TEXT NOT NULL DEFAULT '',
+  password_hash  TEXT NOT NULL,
+  is_admin       INTEGER NOT NULL DEFAULT 0,
+  email_verified INTEGER NOT NULL DEFAULT 0,
+  verify_token   TEXT,
+  verify_expires TIMESTAMPTZ,
+  reset_token    TEXT,
+  reset_expires  TIMESTAMPTZ,
+  plan           TEXT NOT NULL DEFAULT 'free',
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS settings (
@@ -174,6 +180,30 @@ CREATE INDEX IF NOT EXISTS idx_emails_user_sent ON emails(user_id, status, sent_
 CREATE INDEX IF NOT EXISTS idx_emails_open_token ON emails(open_token);
 CREATE INDEX IF NOT EXISTS idx_contacts_user ON contacts(user_id);
 
+-- Generic per-user daily usage counters (kind: 'leads', …)
+CREATE TABLE IF NOT EXISTS usage_daily (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day     TEXT NOT NULL,
+  kind    TEXT NOT NULL,
+  count   INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, day, kind)
+);
+
+-- Per-user daily count of AI generations made with the instance's global key
+CREATE TABLE IF NOT EXISTS ai_usage (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day     TEXT NOT NULL,
+  count   INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, day)
+);
+
+-- Fixed-window rate limits that survive restarts (auth endpoints)
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key      TEXT PRIMARY KEY,
+  count    INTEGER NOT NULL DEFAULT 0,
+  reset_at TIMESTAMPTZ NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS replies (
   id              SERIAL PRIMARY KEY,
   user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -190,9 +220,39 @@ CREATE TABLE IF NOT EXISTS replies (
 
 async function init(): Promise<Adapter> {
   const db = await createAdapter();
+
+  // Detect pre-verification databases BEFORE the schema runs, so we can
+  // grandfather their existing accounts as verified.
+  const hadUsersTable =
+    (
+      await db.query(
+        "SELECT 1 FROM information_schema.tables WHERE table_name = 'users'"
+      )
+    ).length > 0;
+  const hadVerifiedColumn =
+    hadUsersTable &&
+    (
+      await db.query(
+        "SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'email_verified'"
+      )
+    ).length > 0;
+
   await db.exec(SCHEMA);
+
   // Migrations for databases created by earlier versions
   await db.exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin INTEGER NOT NULL DEFAULT 0");
+  await db.exec(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified INTEGER NOT NULL DEFAULT 0;
+     ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_token TEXT;
+     ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_expires TIMESTAMPTZ;
+     ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT;
+     ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_expires TIMESTAMPTZ;
+     ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free'`
+  );
+  if (hadUsersTable && !hadVerifiedColumn) {
+    // Accounts created before email verification existed keep working.
+    await db.exec("UPDATE users SET email_verified = 1");
+  }
   return db;
 }
 
@@ -225,6 +285,15 @@ export interface User {
   name: string;
   password_hash: string;
   is_admin: number;
+  email_verified: number;
+  /** sha256 hex of the emailed verification token */
+  verify_token: string | null;
+  verify_expires: string | null;
+  /** sha256 hex of the emailed password-reset token */
+  reset_token: string | null;
+  reset_expires: string | null;
+  /** "free" | "starter" | "pro" — see lib/plans.ts */
+  plan: string;
   created_at: string;
 }
 

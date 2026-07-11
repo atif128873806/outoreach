@@ -74,6 +74,18 @@ export function decryptSecret(stored: string): string {
   }
 }
 
+// ---------- one-time email tokens (verification / password reset) ----------
+
+/** Random URL-safe token. The raw value is emailed; only its hash is stored. */
+export function createEmailToken(): { raw: string; hash: string } {
+  const raw = crypto.randomBytes(32).toString("hex");
+  return { raw, hash: hashEmailToken(raw) };
+}
+
+export function hashEmailToken(raw: string): string {
+  return crypto.createHash("sha256").update(raw).digest("hex");
+}
+
 // ---------- password hashing (scrypt) ----------
 
 export function hashPassword(password: string): string {

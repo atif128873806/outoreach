@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { searchExaPeople } from "@/lib/exa";
 import { getUserId } from "@/lib/auth";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { getLeadQuota, leadQuotaMessage, recordUsage } from "@/lib/usage";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -24,8 +25,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Business name is required" }, { status: 400 });
   }
 
+  // Owner lookups draw from the same monthly Lead Finder allowance (1 each).
+  const quota = await getLeadQuota(userId);
+  if (quota.remaining !== null && quota.remaining <= 0) {
+    return NextResponse.json({ error: leadQuotaMessage(quota) }, { status: 403 });
+  }
+
   try {
     const candidates = await searchExaPeople(businessName, body.location?.trim() ?? "");
+    await recordUsage(userId, "leads", 1);
     return NextResponse.json({ candidates });
   } catch (err) {
     return NextResponse.json(
