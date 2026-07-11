@@ -1,0 +1,19 @@
+# Never bake secrets or local state into the image.
+# Runtime config comes from the container environment (docker-compose .env),
+# not from a file copied into the image. A baked .env is also mis-parsed by
+# Next's dotenv-expand (e.g. a $ in a password), so it must never ship.
+.env
+.env.*
+!.env.example
+
+# Build artifacts and deps are produced inside the image
+node_modules
+.next
+out
+build
+
+# Local data / backups / vcs
+data
+backups
+.git
+*.tgz
