@@ -46,6 +46,8 @@ services:
       SYSTEM_SMTP_PASS: ${SYSTEM_SMTP_PASS:-}
       SYSTEM_FROM_EMAIL: ${SYSTEM_FROM_EMAIL:-}
       SYSTEM_FROM_NAME: ${SYSTEM_FROM_NAME:-Outreach Studio}
+      # Skip TLS cert-hostname check (only needed when connecting to mail by IP)
+      SYSTEM_SMTP_INSECURE_TLS: ${SYSTEM_SMTP_INSECURE_TLS:-}
       # Close registration once your accounts exist
       SIGNUPS_DISABLED: ${SIGNUPS_DISABLED:-}
     ports:
