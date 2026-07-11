@@ -21,6 +21,9 @@ services:
       db:
         condition: service_healthy
     environment:
+      # Bind Next standalone to all interfaces so the in-container healthcheck
+      # (127.0.0.1) works; Docker otherwise sets HOSTNAME to the container id.
+      HOSTNAME: "0.0.0.0"
       DATABASE_URL: postgres://outreach:${POSTGRES_PASSWORD}@db:5432/outreach
       APP_SECRET: ${APP_SECRET:?set APP_SECRET in .env (openssl rand -hex 32)}
       # Public URL — used in welcome-email links
