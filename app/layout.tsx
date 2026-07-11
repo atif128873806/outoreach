@@ -20,6 +20,19 @@ export const metadata: Metadata = {
   },
   description:
     "Find business leads with emails included, let AI write personalized email, Instagram, and LinkedIn outreach, and track opens, clicks, and replies — all in one tool.",
+  openGraph: {
+    title: "Outreach Studio — AI outreach that finds, writes, and follows up",
+    description:
+      "Find business leads with emails included, let AI write personalized outreach across email, Instagram, and LinkedIn, and track every open, click, and reply.",
+    siteName: "Outreach Studio",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Outreach Studio — AI outreach that finds, writes, and follows up",
+    description:
+      "Lead discovery with emails included, AI-written messages, automatic follow-ups, and reply triage — one pipeline.",
+  },
 };
 
 export default function RootLayout({

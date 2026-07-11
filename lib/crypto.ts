@@ -95,6 +95,14 @@ export function verifyPassword(password: string, stored: string): boolean {
 export const SESSION_COOKIE = "os_session";
 const SESSION_DAYS = 30;
 
+/** Shared options for setting the session cookie (secure over HTTPS in production). */
+export const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: "lax",
+  path: "/",
+  secure: process.env.NODE_ENV === "production" && process.env.INSECURE_COOKIES !== "true",
+} as const;
+
 function sign(payload: string): string {
   return crypto.createHmac("sha256", getAppSecret()).update(payload).digest("hex");
 }

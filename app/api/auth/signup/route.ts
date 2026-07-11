@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUser, userCount } from "@/lib/auth";
 import { importLegacySqlite } from "@/lib/legacy-import";
-import { createSessionToken, SESSION_COOKIE } from "@/lib/crypto";
+import { createSessionToken, SESSION_COOKIE, SESSION_COOKIE_OPTIONS } from "@/lib/crypto";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
@@ -11,6 +11,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: "Too many signups from this address — try again later" },
       { status: 429 }
+    );
+  }
+
+  // Self-hosters can close registration once their accounts exist.
+  if (process.env.SIGNUPS_DISABLED === "true") {
+    return NextResponse.json(
+      { error: "Sign-ups are currently disabled on this instance" },
+      { status: 403 }
     );
   }
 
@@ -38,9 +46,7 @@ export async function POST(req: NextRequest) {
   const session = createSessionToken(result.id);
   const res = NextResponse.json({ ok: true, imported });
   res.cookies.set(SESSION_COOKIE, session.value, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
+    ...SESSION_COOKIE_OPTIONS,
     maxAge: session.maxAge,
   });
   return res;

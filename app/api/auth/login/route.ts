@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyLogin } from "@/lib/auth";
-import { createSessionToken, SESSION_COOKIE } from "@/lib/crypto";
+import { createSessionToken, SESSION_COOKIE, SESSION_COOKIE_OPTIONS } from "@/lib/crypto";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
@@ -26,9 +26,7 @@ export async function POST(req: NextRequest) {
   const session = createSessionToken(userId);
   const res = NextResponse.json({ ok: true });
   res.cookies.set(SESSION_COOKIE, session.value, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
+    ...SESSION_COOKIE_OPTIONS,
     maxAge: session.maxAge,
   });
   return res;
