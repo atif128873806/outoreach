@@ -8,7 +8,9 @@ import { rateLimitDb, clientIp } from "@/lib/ratelimit";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  if (!(await rateLimitDb(`signup:${clientIp(req)}`, 5, 60 * 60 * 1000))) {
+  // Per-IP cap. Kept generous because many legitimate users share one public IP
+  // (mobile/CGNAT networks); email verification is the real abuse control.
+  if (!(await rateLimitDb(`signup:${clientIp(req)}`, 20, 60 * 60 * 1000))) {
     return NextResponse.json(
       { error: "Too many signups from this address — try again later" },
       { status: 429 }
