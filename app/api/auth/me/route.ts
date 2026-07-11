@@ -7,7 +7,12 @@ export const runtime = "nodejs";
 export async function GET() {
   const uid = await getUserId();
   if (uid == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  return NextResponse.json({ user: await getUser(uid) });
+  const user = await getUser(uid);
+  return NextResponse.json({
+    user: user
+      ? { id: user.id, email: user.email, name: user.name, isAdmin: Boolean(user.is_admin) }
+      : null,
+  });
 }
 
 /** Change password: { current, next } */

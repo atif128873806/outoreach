@@ -206,26 +206,26 @@ export default function SettingsPage() {
         <Card className="p-6">
           <SectionTitle
             title="AI message writer"
-            subtitle="Choose which AI writes your emails and DMs. Without any key, the built-in template engine is used."
+            subtitle="AI writing is included free — every account can generate personalized messages out of the box. Adding your own Groq or Anthropic key below is optional: use it only if you'd rather run on your own AI account and rate limits."
             badge={aiConfigured ? `active: ${aiProvider === "groq" ? "Groq" : "Claude"}` : "template mode"}
             badgeOk={aiConfigured}
           />
           <div className="grid md:grid-cols-2 gap-4 mt-4">
-            <Field label="Provider" hint="Auto uses Claude (Anthropic) when its key exists, otherwise Groq.">
+            <Field label="Provider" hint="Auto uses Claude (Anthropic) when a key exists, otherwise Groq (the free default).">
               <select className={inputCls} value={settings.ai_provider || "auto"} onChange={set("ai_provider")}>
-                <option value="auto">Auto (prefer Anthropic, else Groq)</option>
+                <option value="auto">Auto (free Groq by default)</option>
                 <option value="groq">Groq</option>
                 <option value="anthropic">Anthropic (Claude)</option>
               </select>
             </Field>
             <div />
-            <Field label="Groq API key" hint="Get one at console.groq.com. Also read from the GROQ_API_KEY environment variable.">
-              <input type="password" className={inputCls} value={settings.groq_api_key ?? ""} onChange={set("groq_api_key")} placeholder="gsk_…" />
+            <Field label="Groq API key (optional)" hint="Included free by default — only add your own key from console.groq.com to use your own Groq account.">
+              <input type="password" className={inputCls} value={settings.groq_api_key ?? ""} onChange={set("groq_api_key")} placeholder="using the free included key" />
             </Field>
             <Field label="Groq model" hint="Leave empty for the default (llama-3.3-70b-versatile).">
               <input className={inputCls} value={settings.groq_model ?? ""} onChange={set("groq_model")} placeholder="llama-3.3-70b-versatile" />
             </Field>
-            <Field label="Anthropic API key" hint="Get one at console.anthropic.com. Also read from the ANTHROPIC_API_KEY environment variable.">
+            <Field label="Anthropic API key (optional)" hint="Add a key from console.anthropic.com to use Claude instead of the free Groq default.">
               <input type="password" className={inputCls} value={settings.anthropic_api_key ?? ""} onChange={set("anthropic_api_key")} placeholder="sk-ant-…" />
             </Field>
           </div>

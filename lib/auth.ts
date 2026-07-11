@@ -36,7 +36,7 @@ export async function createUser(
   email: string,
   name: string,
   password: string
-): Promise<{ id: number } | { error: string }> {
+): Promise<{ id: number; isAdmin: boolean } | { error: string }> {
   const cleanEmail = email.trim().toLowerCase();
   if (!VALID_EMAIL.test(cleanEmail)) return { error: "Enter a valid email address" };
   if (password.length < 8) return { error: "Password must be at least 8 characters" };
@@ -44,11 +44,18 @@ export async function createUser(
   const existing = await q1("SELECT 1 FROM users WHERE email = $1", [cleanEmail]);
   if (existing) return { error: "An account with this email already exists" };
 
+  // The very first account on an instance is the owner/admin.
+  const isFirst = (await userCount()) === 0;
   const rows = await q<{ id: number }>(
-    "INSERT INTO users (email, name, password_hash) VALUES ($1, $2, $3) RETURNING id",
-    [cleanEmail, name.trim(), hashPassword(password)]
+    "INSERT INTO users (email, name, password_hash, is_admin) VALUES ($1, $2, $3, $4) RETURNING id",
+    [cleanEmail, name.trim(), hashPassword(password), isFirst ? 1 : 0]
   );
-  return { id: rows[0].id };
+  return { id: rows[0].id, isAdmin: isFirst };
+}
+
+export async function isAdmin(userId: number): Promise<boolean> {
+  const row = await q1<{ is_admin: number }>("SELECT is_admin FROM users WHERE id = $1", [userId]);
+  return Boolean(row?.is_admin);
 }
 
 export async function verifyLogin(email: string, password: string): Promise<number | null> {
@@ -73,7 +80,12 @@ export async function changePassword(
   return null;
 }
 
-export async function getUser(userId: number): Promise<{ id: number; email: string; name: string } | null> {
-  const user = await q1<User>("SELECT id, email, name FROM users WHERE id = $1", [userId]);
+export async function getUser(
+  userId: number
+): Promise<{ id: number; email: string; name: string; is_admin: number } | null> {
+  const user = await q1<User>(
+    "SELECT id, email, name, is_admin FROM users WHERE id = $1",
+    [userId]
+  );
   return user ?? null;
 }

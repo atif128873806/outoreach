@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS users (
   email         TEXT NOT NULL UNIQUE,
   name          TEXT NOT NULL DEFAULT '',
   password_hash TEXT NOT NULL,
+  is_admin      INTEGER NOT NULL DEFAULT 0,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -190,6 +191,8 @@ CREATE TABLE IF NOT EXISTS replies (
 async function init(): Promise<Adapter> {
   const db = await createAdapter();
   await db.exec(SCHEMA);
+  // Migrations for databases created by earlier versions
+  await db.exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin INTEGER NOT NULL DEFAULT 0");
   return db;
 }
 
@@ -221,6 +224,7 @@ export interface User {
   email: string;
   name: string;
   password_hash: string;
+  is_admin: number;
   created_at: string;
 }
 

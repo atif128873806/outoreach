@@ -16,6 +16,7 @@ const NAV = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [email, setEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const onAuthPage = pathname === "/login" || pathname === "/signup";
 
@@ -23,7 +24,10 @@ export default function Sidebar() {
     if (onAuthPage) return;
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setEmail(d?.user?.email ?? null))
+      .then((d) => {
+        setEmail(d?.user?.email ?? null);
+        setIsAdmin(Boolean(d?.user?.isAdmin));
+      })
       .catch(() => {});
   }, [onAuthPage, pathname]);
 
@@ -60,11 +64,31 @@ export default function Sidebar() {
             </Link>
           );
         })}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+              pathname.startsWith("/admin")
+                ? "bg-zinc-800 text-white font-medium"
+                : "hover:bg-zinc-900 hover:text-white"
+            }`}
+          >
+            <span className="w-5 text-center">★</span>
+            Admin
+          </Link>
+        )}
       </nav>
       <div className="px-6 py-4 border-t border-zinc-800">
         {email && (
-          <div className="text-xs text-zinc-400 truncate mb-1.5" title={email}>
-            {email}
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <span className="truncate text-xs text-zinc-400" title={email}>
+              {email}
+            </span>
+            {isAdmin && (
+              <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium text-zinc-300">
+                owner
+              </span>
+            )}
           </div>
         )}
         <button

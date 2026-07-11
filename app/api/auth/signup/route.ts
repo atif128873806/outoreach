@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUser, userCount } from "@/lib/auth";
 import { importLegacySqlite } from "@/lib/legacy-import";
+import { sendWelcomeEmail } from "@/lib/system-mailer";
 import { createSessionToken, SESSION_COOKIE, SESSION_COOKIE_OPTIONS } from "@/lib/crypto";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
@@ -42,6 +43,9 @@ export async function POST(req: NextRequest) {
   if (wasEmpty) {
     imported = await importLegacySqlite(result.id);
   }
+
+  // Welcome email — fire and forget, never blocks signup.
+  void sendWelcomeEmail(email.trim().toLowerCase(), name ?? "");
 
   const session = createSessionToken(result.id);
   const res = NextResponse.json({ ok: true, imported });

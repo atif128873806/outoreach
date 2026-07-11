@@ -23,7 +23,22 @@ services:
     environment:
       DATABASE_URL: postgres://outreach:${POSTGRES_PASSWORD}@db:5432/outreach
       APP_SECRET: ${APP_SECRET:?set APP_SECRET in .env (openssl rand -hex 32)}
-      # Optional: GROQ_API_KEY, ANTHROPIC_API_KEY, JINA_API_KEY
+      # Public URL — used in welcome-email links
+      APP_URL: ${APP_URL:-}
+      # Free AI for all accounts (global fallback key)
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      JINA_API_KEY: ${JINA_API_KEY:-}
+      # System (transactional) mailer — welcome emails from the company mailbox
+      SYSTEM_SMTP_HOST: ${SYSTEM_SMTP_HOST:-}
+      SYSTEM_SMTP_PORT: ${SYSTEM_SMTP_PORT:-465}
+      SYSTEM_SMTP_SECURE: ${SYSTEM_SMTP_SECURE:-true}
+      SYSTEM_SMTP_USER: ${SYSTEM_SMTP_USER:-}
+      SYSTEM_SMTP_PASS: ${SYSTEM_SMTP_PASS:-}
+      SYSTEM_FROM_EMAIL: ${SYSTEM_FROM_EMAIL:-}
+      SYSTEM_FROM_NAME: ${SYSTEM_FROM_NAME:-Outreach Studio}
+      # Close registration once your accounts exist
+      SIGNUPS_DISABLED: ${SIGNUPS_DISABLED:-}
     ports:
       - "${PORT:-3000}:3000"
     healthcheck:
