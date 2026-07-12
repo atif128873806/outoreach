@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SITE } from "@/lib/site";
 import { LogoTile } from "./Logo";
+import ToolsDropdown from "./ToolsDropdown";
 
 /**
  * Shared chrome for public pages (pricing, legal, contact): the same light
@@ -31,6 +32,7 @@ export default function PublicShell({
           </Link>
           <nav className="flex items-center gap-6 text-sm text-zinc-500">
             <Link href="/features" className="hidden hover:text-zinc-900 sm:inline">Features</Link>
+            <span className="hidden sm:block"><ToolsDropdown /></span>
             <Link href="/pricing" className="hover:text-zinc-900">Pricing</Link>
             <Link href="/contact" className="hover:text-zinc-900">Contact</Link>
             <Link href="/login" className="hover:text-zinc-900">Sign in</Link>

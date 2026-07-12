@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LogoTile } from "../components/Logo";
+import ToolsDropdown from "../components/ToolsDropdown";
 
 export const metadata: Metadata = {
   title: "Features — Outreach Studio",
@@ -125,6 +126,7 @@ export default function FeaturesPage() {
           <nav className="hidden items-center gap-7 text-sm text-zinc-500 md:flex">
             <span className="font-medium text-zinc-900">Features</span>
             <a href="#tour" className="hover:text-zinc-900">How it works</a>
+            <ToolsDropdown />
             <Link href="/pricing" className="hover:text-zinc-900">Pricing</Link>
             <Link href="/#faq" className="hover:text-zinc-900">FAQ</Link>
             <Link href="/contact" className="hover:text-zinc-900">Contact</Link>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LogoTile } from "./components/Logo";
+import ToolsDropdown from "./components/ToolsDropdown";
 
 /**
  * Public marketing landing page. Signed-in visitors never see this —
@@ -127,7 +128,7 @@ export default function LandingPage() {
           <nav className="hidden items-center gap-7 text-sm text-zinc-500 md:flex">
             <Link href="/features" className="hover:text-zinc-900">Features</Link>
             <a href="#how" className="hover:text-zinc-900">How it works</a>
-            <a href="#channels" className="hover:text-zinc-900">Channels</a>
+            <ToolsDropdown />
             <a href="#pricing" className="hover:text-zinc-900">Pricing</a>
             <a href="#faq" className="hover:text-zinc-900">FAQ</a>
           </nav>
