@@ -42,13 +42,17 @@ Work through phases in order. Inside a phase, items are sorted by value.
 - **Now:** manual billing. Invoice via Payoneer/Wise/bank (JazzCash/Easypaisa
   locally), activate plans via the /admin dropdown. /billing already routes
   upgrade requests to the support email.
-- **This week:** pre-check with **Dodo Payments** (MoR that supports
-  Pakistan-based founders; Payoneer/Wise/local-bank payouts; borderline
-  categories reviewed case-by-case) — email compliance@dodopayments.com with an
-  honest description before applying. Also consider 2Checkout/Verifone.
-- **When revenue justifies it (the industry-standard path):** US LLC
-  (Wyoming, via Firstbase/doola, ~$300–500 setup) + Mercury + **Stripe** —
-  how the major cold-email SaaS products process payments.
+- **Dodo Payments: DEAD END (tried 2026-07-12)** — account creation does not
+  support Pakistan-region merchants, despite their marketing about Pakistan
+  payouts. Don't retry unless they announce Pakistan onboarding.
+- **Candidates still open:** 2Checkout/Verifone (historically onboards
+  Pakistani merchants — check their AUP for outreach tools and apply
+  honestly); regional options (Payoneer checkout, local PSPs) for
+  Pakistan-market customers.
+- **The real answer, when revenue justifies it:** US LLC (Wyoming, via
+  Firstbase/doola, ~$300–500 setup + ~$200/yr) + Mercury bank + **Stripe** —
+  the route the major cold-email SaaS products use. Never misrepresent the
+  product to any processor; category-fit honestly or don't apply.
 
 ### 1.1 Checkout + webhook → automatic plan activation  ⭐ the #1 gap
 The integration shape below was written for Paddle but applies to ANY provider
