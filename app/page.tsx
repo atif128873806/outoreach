@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LogoTile } from "./components/Logo";
 
 /**
  * Public marketing landing page. Signed-in visitors never see this —
@@ -120,9 +121,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-40 border-b border-zinc-100 bg-white/80 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 text-xs font-bold text-white">
-              O
-            </span>
+            <LogoTile className="h-7 w-7" />
             Outreach<span className="text-zinc-400">Studio</span>
           </Link>
           <nav className="hidden items-center gap-7 text-sm text-zinc-500 md:flex">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { LogoMark } from "./Logo";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "▦" },
@@ -42,10 +43,15 @@ export default function Sidebar() {
   return (
     <aside className="w-60 shrink-0 bg-zinc-950 text-zinc-300 flex flex-col">
       <div className="px-6 py-6 border-b border-zinc-800">
-        <div className="text-white font-semibold text-lg tracking-tight">
-          Outreach Studio
+        <div className="flex items-center gap-2.5">
+          <LogoMark className="h-7 w-7 shrink-0" />
+          <div>
+            <div className="text-white font-semibold text-lg tracking-tight leading-tight">
+              Outreach Studio
+            </div>
+            <div className="text-xs text-zinc-500">AI outreach automation</div>
+          </div>
         </div>
-        <div className="text-xs text-zinc-500 mt-1">AI outreach automation</div>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
         {NAV.map((item) => {
