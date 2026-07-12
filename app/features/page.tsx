@@ -125,6 +125,7 @@ export default function FeaturesPage() {
           </Link>
           <nav className="hidden items-center gap-7 text-sm text-zinc-500 md:flex">
             <span className="font-medium text-zinc-900">Features</span>
+            <a href="#tour" className="hover:text-zinc-900">How it works</a>
             <Link href="/pricing" className="hover:text-zinc-900">Pricing</Link>
             <Link href="/#faq" className="hover:text-zinc-900">FAQ</Link>
             <Link href="/contact" className="hover:text-zinc-900">Contact</Link>
@@ -234,7 +235,7 @@ export default function FeaturesPage() {
       </section>
 
       {/* ============================== STAGE 1 — FIND ============================== */}
-      <section className="mx-auto max-w-6xl px-6 py-20">
+      <section id="tour" className="mx-auto max-w-6xl px-6 py-20 scroll-mt-20">
         <div className="grid items-center gap-14 lg:grid-cols-2">
           <StageCopy
             n="1"
