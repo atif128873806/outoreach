@@ -17,6 +17,8 @@ const PUBLIC_PREFIXES = [
   "/forgot-password",
   "/reset-password",
   "/features",
+  "/tools",
+  "/api/tools/",
   "/pricing",
   "/terms",
   "/privacy",

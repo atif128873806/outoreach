@@ -604,7 +604,9 @@ export default function LandingPage() {
           </div>
           <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-zinc-100 pt-6 text-xs md:flex-row">
             <div>© {new Date().getFullYear()} Outreach Studio</div>
-            <div className="flex items-center gap-5">
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+              <Link href="/tools/spam-checker" className="hover:text-zinc-600">Free spam checker</Link>
+              <Link href="/tools/dns-checker" className="hover:text-zinc-600">Free SPF/DKIM checker</Link>
               <Link href="/terms" className="hover:text-zinc-600">Terms of Service</Link>
               <Link href="/privacy" className="hover:text-zinc-600">Privacy Policy</Link>
               <Link href="/refund-policy" className="hover:text-zinc-600">Refund Policy</Link>
