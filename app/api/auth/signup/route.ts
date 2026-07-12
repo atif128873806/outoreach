@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUser, userCount, startEmailVerification, isVerificationEnforced } from "@/lib/auth";
 import { importLegacySqlite } from "@/lib/legacy-import";
-import { appUrl, sendWelcomeEmail } from "@/lib/system-mailer";
+import { appUrl, sendWelcomeEmail, sendVerificationEmail } from "@/lib/system-mailer";
 import { createSessionToken, SESSION_COOKIE, SESSION_COOKIE_OPTIONS } from "@/lib/crypto";
 import { rateLimitDb, clientIp } from "@/lib/ratelimit";
 
@@ -46,13 +46,21 @@ export async function POST(req: NextRequest) {
     imported = await importLegacySqlite(result.id);
   }
 
-  // Welcome email (with verification link when enforced) — fire and forget.
-  let verifyUrl: string | undefined;
+  // When verification is enforced, signup sends ONLY the short verification
+  // email (a first-contact marketing email is more likely to hit spam and can
+  // bury the link the user actually needs). The welcome email goes out after
+  // they verify. Unverified instances just get the welcome email directly.
+  const cleanEmail = email.trim().toLowerCase();
   if (isVerificationEnforced() && appUrl()) {
     const token = await startEmailVerification(result.id);
-    verifyUrl = `${appUrl()}/api/auth/verify-email?token=${token}`;
+    void sendVerificationEmail(
+      cleanEmail,
+      name ?? "",
+      `${appUrl()}/api/auth/verify-email?token=${token}`
+    );
+  } else {
+    void sendWelcomeEmail(cleanEmail, name ?? "");
   }
-  void sendWelcomeEmail(email.trim().toLowerCase(), name ?? "", verifyUrl);
 
   const session = createSessionToken(result.id);
   const res = NextResponse.json({ ok: true, imported });
