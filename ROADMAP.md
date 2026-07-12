@@ -29,29 +29,44 @@ Work through phases in order. Inside a phase, items are sorted by value.
 
 ---
 
-## Phase 1 — Money loop (do this the moment Paddle approves)
+## Phase 1 — Money loop
 
-### 1.1 Paddle checkout + webhook → automatic plan activation  ⭐ the #1 gap
-**Why:** today a purchase requires the admin to flip a dropdown in /admin.
-Self-serve payment is what makes the business run without you.
-**How:**
-- Create products in Paddle matching `lib/plans.ts` exactly
+> **2026-07-12 UPDATE — Paddle REJECTED the domain** under their AUP
+> ("facilitation of unsolicited outbound marketing" + "enriching marketing
+> lists"). This is a *category* rejection — cold-outreach tools and lead
+> enrichment are outside Paddle's acceptable use, so rewording the site won't
+> fix it. Lemon Squeezy has equivalent restrictions. **Never misrepresent the
+> product to a processor** — approval-then-termination freezes funds.
+
+### 1.0 Payments strategy (revised)
+- **Now:** manual billing. Invoice via Payoneer/Wise/bank (JazzCash/Easypaisa
+  locally), activate plans via the /admin dropdown. /billing already routes
+  upgrade requests to the support email.
+- **This week:** pre-check with **Dodo Payments** (MoR that supports
+  Pakistan-based founders; Payoneer/Wise/local-bank payouts; borderline
+  categories reviewed case-by-case) — email compliance@dodopayments.com with an
+  honest description before applying. Also consider 2Checkout/Verifone.
+- **When revenue justifies it (the industry-standard path):** US LLC
+  (Wyoming, via Firstbase/doola, ~$300–500 setup) + Mercury + **Stripe** —
+  how the major cold-email SaaS products process payments.
+
+### 1.1 Checkout + webhook → automatic plan activation  ⭐ the #1 gap
+The integration shape below was written for Paddle but applies to ANY provider
+(Dodo Payments has equivalent webhooks; Stripe likewise):
+- Create products matching `lib/plans.ts` exactly
   (Starter $9/mo · $90/yr, Pro $29/mo · $290/yr).
-- New route `app/api/billing/webhook/route.ts`: verify Paddle signature
-  (`PADDLE_WEBHOOK_SECRET` env), handle `subscription.activated/updated/canceled`
-  → `UPDATE users SET plan=... WHERE email=...` (map via customer email;
-  store `paddle_customer_id`/`paddle_subscription_id` columns on `users` for
-  robustness — add via migration in `lib/db.ts` `init()`).
-- Add webhook path to `PUBLIC_PREFIXES` in `proxy.ts`.
-- Upgrade buttons: Paddle.js overlay checkout on `/billing` (page exists) and
+- New route `app/api/billing/webhook/route.ts`: verify the provider's webhook
+  signature (secret in env), handle subscription activated/updated/canceled
+  → `UPDATE users SET plan=... ` (map via customer email; store
+  `billing_customer_id`/`billing_subscription_id` columns on `users` —
+  add via migration in `lib/db.ts` `init()`).
+- Add the webhook path to `PUBLIC_PREFIXES` in `proxy.ts`.
+- Upgrade buttons: provider's overlay/hosted checkout on `/billing` and
   `/pricing`, passing the signed-in user's email.
 - Downgrade/cancel: webhook sets plan back to `free` at period end.
 - Keep the admin dropdown (`/admin`, PATCH `/api/admin/users`) as the manual
   fallback — it already works.
-**Env to add** (compose + .env.example): `PADDLE_WEBHOOK_SECRET`,
-`NEXT_PUBLIC_PADDLE_CLIENT_TOKEN`, `NEXT_PUBLIC_PADDLE_ENV`.
-**Effort:** 1–2 days including sandbox testing. Test with Paddle sandbox before
-pointing DNS-side anything at live.
+**Effort:** 1–2 days including sandbox testing.
 
 ### 1.2 Dunning + plan-state emails
 **Why:** failed renewals silently downgrade paying users → churn + support pain.
