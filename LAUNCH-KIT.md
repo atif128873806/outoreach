@@ -78,7 +78,7 @@ Rule of thumb: never edit facts (prices, limits, features) without checking
 > LinkedIn messages are drafted for manual sending (automated DMs get accounts
 > banned — Outreach Studio never fakes them).
 >
-> **Pricing** — Free forever plan (50 leads/mo, 50 emails/day, 150 AI
+> **Pricing** — Free forever plan (150 leads/mo, 50 emails/day, 150 AI
 > writes/day). Starter $9/mo. Pro $29/mo with unlimited AI writing. Your data
 > stays in your own Postgres; SMTP passwords and API keys are encrypted at rest.
 

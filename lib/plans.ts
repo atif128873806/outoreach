@@ -29,7 +29,7 @@ export const PLANS: Record<PlanId, Plan> = {
     name: "Free",
     priceMonthlyUsd: 0,
     priceYearlyUsd: 0,
-    leadsPerMonth: 50,
+    leadsPerMonth: 150,
     emailsPerDay: 50,
     aiPerDay: 150,
     tagline: "Everything you need to land your first clients.",
