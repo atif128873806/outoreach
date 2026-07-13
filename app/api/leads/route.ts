@@ -5,6 +5,7 @@ import { getSettings } from "@/lib/settings";
 import { getUserId } from "@/lib/auth";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { getLeadQuota, leadQuotaMessage, recordUsage } from "@/lib/usage";
+import { q } from "@/lib/db";
 
 export const runtime = "nodejs";
 // Search + enrichment can take a while for larger lead counts
@@ -78,24 +79,57 @@ export async function POST(req: NextRequest) {
     const toEnrich = leads.slice(0, Math.min(leads.length, count + 10));
     const enriched = await enrichLeads(toEnrich);
 
+    // Hide leads that are already in this user's Contacts (matched by email or
+    // website host) — re-running the same search shouldn't show old finds or
+    // charge quota for them.
+    const existing = await q<{ email: string; website: string }>(
+      "SELECT email, website FROM contacts WHERE user_id = $1",
+      [userId]
+    );
+    const knownEmails = new Set(existing.map((c) => c.email.toLowerCase()));
+    const host = (u: string) =>
+      u.toLowerCase().replace(/^[a-z]+:\/\//, "").replace(/^www\./, "").split("/")[0];
+    const knownHosts = new Set(existing.filter((c) => c.website).map((c) => host(c.website)));
+    const fresh = enriched.filter(
+      (l) =>
+        !(l.email && knownEmails.has(l.email.toLowerCase())) &&
+        !(l.website && knownHosts.has(host(l.website)))
+    );
+    const skippedExisting = enriched.length - fresh.length;
+
     // Contactable leads first, then trim to the requested amount.
-    enriched.sort(
+    fresh.sort(
       (a, b) =>
         Number(Boolean(b.email)) * 2 + Number(Boolean(b.instagram)) -
         (Number(Boolean(a.email)) * 2 + Number(Boolean(a.instagram)))
     );
-    const result = enriched.slice(0, count);
+    const result = fresh.slice(0, count);
 
     await recordUsage(userId, "leads", result.length);
     const remaining =
       quota.remaining === null ? null : Math.max(0, quota.remaining - result.length);
 
+    // Be honest when we deliver fewer than asked — and say why.
+    const notes: string[] = [];
+    if (skippedExisting > 0) {
+      notes.push(
+        `${skippedExisting} result${skippedExisting > 1 ? "s" : ""} already in your Contacts ${skippedExisting > 1 ? "were" : "was"} hidden (not counted against your quota).`
+      );
+    }
+    if (result.length < count) {
+      notes.push(
+        `Found ${result.length} new ${result.length === 1 ? "match" : "matches"} for this search — sources have limits per area. Try another source (OpenStreetMap or Google), a broader niche, or a nearby city for more.`
+      );
+    }
+
     return NextResponse.json({
       leads: result,
+      note: notes.length ? notes.join(" ") : undefined,
       meta: {
         found: result.length,
         withEmail: result.filter((l) => l.email).length,
         withInstagram: result.filter((l) => l.instagram).length,
+        skippedExisting,
         quota: { plan: quota.plan.id, limit: quota.limit, remaining },
       },
     });

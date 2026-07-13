@@ -128,7 +128,7 @@ export default function LeadsPage() {
       if (!res.ok) throw new Error(data.error || "Search failed");
       setLeads(data.leads);
       setMeta(data.meta);
-      if (data.note) setNote(data.note);
+      setNote(data.note ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
     } finally {
@@ -217,7 +217,7 @@ export default function LeadsPage() {
               className={inputCls}
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g. Lahore, Pakistan"
+              placeholder="e.g. New York, USA"
             />
           </label>
           <label className="block md:col-span-1">
