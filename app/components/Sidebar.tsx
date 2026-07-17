@@ -13,6 +13,7 @@ const NAV = [
   { href: "/messages", label: "Message Center", icon: "◎" },
   { href: "/billing", label: "Plan & Usage", icon: "◇" },
   { href: "/settings", label: "Settings", icon: "⚙" },
+  { href: "/docs", label: "Help & Docs", icon: "?" },
 ];
 
 export default function Sidebar() {

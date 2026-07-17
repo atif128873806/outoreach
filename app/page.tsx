@@ -594,6 +594,7 @@ export default function LandingPage() {
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
               <Link href="/features" className="hover:text-zinc-600">Features</Link>
+              <Link href="/docs" className="hover:text-zinc-600">Docs</Link>
               <Link href="/pricing" className="hover:text-zinc-600">Pricing</Link>
               <Link href="/contact" className="hover:text-zinc-600">Contact</Link>
               <Link href="/login" className="hover:text-zinc-600">Sign in</Link>

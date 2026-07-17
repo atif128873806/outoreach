@@ -33,6 +33,7 @@ export default function PublicShell({
           <nav className="flex items-center gap-6 text-sm text-zinc-500">
             <Link href="/features" className="hidden hover:text-zinc-900 sm:inline">Features</Link>
             <span className="hidden sm:block"><ToolsDropdown /></span>
+            <Link href="/docs" className="hidden hover:text-zinc-900 sm:inline">Docs</Link>
             <Link href="/pricing" className="hover:text-zinc-900">Pricing</Link>
             <Link href="/contact" className="hover:text-zinc-900">Contact</Link>
             <Link href="/login" className="hover:text-zinc-900">Sign in</Link>
