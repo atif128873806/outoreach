@@ -158,51 +158,59 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Common niche words → the OSM tag values actually used for them
-const NICHE_ALIASES: Record<string, string> = {
-  gym: "fitness_centre|fitness|gym",
-  fitness: "fitness_centre|fitness|gym",
-  dentist: "dentist|dental",
-  dental: "dentist|dental",
-  "dental clinic": "dentist|dental",
-  doctor: "doctors|clinic",
-  clinic: "clinic|doctors",
-  "hair salon": "hairdresser|beauty",
-  barber: "hairdresser|barber",
-  salon: "hairdresser|beauty",
-  "beauty salon": "beauty|hairdresser|cosmetics",
-  lawyer: "lawyer|notary",
-  "real estate": "estate_agent",
-  realtor: "estate_agent",
-  mechanic: "car_repair",
-  "car repair": "car_repair",
-  "auto repair": "car_repair",
-  coffee: "cafe|coffee",
-  "coffee shop": "cafe|coffee",
-  hotel: "hotel|guest_house|hostel",
-  florist: "florist",
-  vet: "veterinary",
-  veterinarian: "veterinary",
-  pharmacy: "pharmacy|chemist",
+// Common niche words → the OSM tag values used for them. When `keys` is set,
+// the query targets only those tag keys — dramatically faster on Overpass
+// than scanning every key with a case-insensitive regex.
+const NICHE_ALIASES: Record<string, { re: string; keys?: string[] }> = {
+  gym: { re: "fitness_centre|fitness|gym", keys: ["leisure", "amenity"] },
+  fitness: { re: "fitness_centre|fitness|gym", keys: ["leisure", "amenity"] },
+  dentist: { re: "dentist|dental", keys: ["amenity", "healthcare"] },
+  dental: { re: "dentist|dental", keys: ["amenity", "healthcare"] },
+  "dental clinic": { re: "dentist|dental", keys: ["amenity", "healthcare"] },
+  doctor: { re: "doctors|clinic", keys: ["amenity", "healthcare"] },
+  clinic: { re: "clinic|doctors", keys: ["amenity", "healthcare"] },
+  "hair salon": { re: "hairdresser|beauty", keys: ["shop"] },
+  barber: { re: "hairdresser|barber", keys: ["shop"] },
+  salon: { re: "hairdresser|beauty", keys: ["shop"] },
+  "beauty salon": { re: "beauty|hairdresser|cosmetics", keys: ["shop"] },
+  lawyer: { re: "lawyer|notary", keys: ["office"] },
+  "real estate": { re: "estate_agent", keys: ["office", "shop"] },
+  "real estate agency": { re: "estate_agent", keys: ["office", "shop"] },
+  "estate agent": { re: "estate_agent", keys: ["office", "shop"] },
+  realtor: { re: "estate_agent", keys: ["office", "shop"] },
+  mechanic: { re: "car_repair", keys: ["shop"] },
+  "car repair": { re: "car_repair", keys: ["shop"] },
+  "auto repair": { re: "car_repair", keys: ["shop"] },
+  coffee: { re: "cafe|coffee", keys: ["amenity", "shop", "cuisine"] },
+  "coffee shop": { re: "cafe|coffee", keys: ["amenity", "shop", "cuisine"] },
+  restaurant: { re: "restaurant|fast_food", keys: ["amenity"] },
+  cafe: { re: "cafe", keys: ["amenity"] },
+  hotel: { re: "hotel|guest_house|hostel", keys: ["tourism"] },
+  florist: { re: "florist", keys: ["shop"] },
+  vet: { re: "veterinary", keys: ["amenity"] },
+  veterinarian: { re: "veterinary", keys: ["amenity"] },
+  pharmacy: { re: "pharmacy|chemist", keys: ["amenity", "shop", "healthcare"] },
 };
 
 const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ];
 
 async function runOverpass(query: string): Promise<{ elements?: OsmElement[] }> {
   let lastErr: Error | null = null;
+  // Fail fast per mirror (30s) so a busy server costs seconds, not a minute.
   for (const endpoint of OVERPASS_ENDPOINTS) {
     try {
-      const res = await fetchWithTimeout(endpoint, 45_000, {
+      const res = await fetchWithTimeout(endpoint, 30_000, {
         method: "POST",
         body: "data=" + encodeURIComponent(query),
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       });
       if (!res.ok) {
         lastErr = new Error(`OpenStreetMap search failed (${res.status})`);
-        continue; // busy server — try the mirror
+        continue; // busy server — try the next mirror
       }
       return (await res.json()) as { elements?: OsmElement[] };
     } catch (err) {
@@ -224,16 +232,22 @@ export async function searchOsm(
 
   // "Dental Clinics" → matches tag values like "dentist"/"dental_clinic"
   const lower = niche.trim().toLowerCase();
+  const alias = NICHE_ALIASES[lower] ?? NICHE_ALIASES[lower.replace(/s$/, "")];
   const base = escapeRegex(lower.replace(/s$/, ""));
-  const tagRegex = NICHE_ALIASES[lower] ?? NICHE_ALIASES[lower.replace(/s$/, "")] ?? base.replace(/\s+/g, "[_ ]?");
+  const tagRegex = alias?.re ?? base.replace(/\s+/g, "[_ ]?");
   const bb = `(${bbox.south},${bbox.west},${bbox.north},${bbox.east})`;
 
-  const keys = ["amenity", "shop", "cuisine", "craft", "office", "leisure", "healthcare", "tourism"];
+  // Known niches hit only their real tag keys with exact-case values (OSM tag
+  // values are lowercase) — far cheaper than 8 case-insensitive regex scans.
+  const keys = alias?.keys ?? [
+    "amenity", "shop", "cuisine", "craft", "office", "leisure", "healthcare", "tourism",
+  ];
+  const flags = alias ? "" : ",i";
   const clauses = keys
-    .map((k) => `nwr["${k}"~"${tagRegex}",i]["name"]${bb};`)
+    .map((k) => `nwr["${k}"~"${tagRegex}"${flags}]["name"]${bb};`)
     .join("\n  ");
 
-  const query = `[out:json][timeout:40];
+  const query = `[out:json][timeout:25];
 (
   ${clauses}
 );
