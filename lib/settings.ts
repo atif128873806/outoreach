@@ -98,36 +98,47 @@ export interface AiConfig {
 }
 
 /**
- * Resolves which AI provider to use. "auto" prefers Anthropic when its key
- * exists, otherwise Groq. An explicit choice is honored strictly — if its
- * key is missing, we fall back to the template engine rather than another
- * provider the user didn't pick.
+ * Resolves which AI provider to use.
+ *
+ * "auto" (shown in the UI as "Free AI (included)") means the INSTANCE's
+ * global key — a personal key stored in Settings must never override it,
+ * otherwise a bad personal key silently breaks the free path the user chose.
+ * Explicit choices ("anthropic"/"groq") use the user's own key, with the env
+ * key as fallback; if neither exists we fall back to the template engine
+ * rather than a provider the user didn't pick.
  */
 export function getAiConfig(s: Settings): AiConfig | null {
-  const anthropicKey =
-    s.anthropic_api_key || process.env.ANTHROPIC_API_KEY || "";
-  const groqKey = s.groq_api_key || process.env.GROQ_API_KEY || "";
-  const anthropicGlobal = !s.anthropic_api_key && Boolean(anthropicKey);
-  const groqGlobal = !s.groq_api_key && Boolean(groqKey);
+  const envAnthropic = process.env.ANTHROPIC_API_KEY || "";
+  const envGroq = process.env.GROQ_API_KEY || "";
   const pref = s.ai_provider || "auto";
 
+  const groq = (apiKey: string, global: boolean): AiConfig => ({
+    provider: "groq",
+    apiKey,
+    model: s.groq_model || DEFAULT_GROQ_MODEL,
+    global,
+  });
+  const anthropic = (apiKey: string, global: boolean): AiConfig => ({
+    provider: "anthropic",
+    apiKey,
+    model: "claude-opus-4-8",
+    global,
+  });
+
   if (pref === "anthropic") {
-    return anthropicKey
-      ? { provider: "anthropic", apiKey: anthropicKey, model: "claude-opus-4-8", global: anthropicGlobal }
-      : null;
+    const key = s.anthropic_api_key || envAnthropic;
+    return key ? anthropic(key, !s.anthropic_api_key) : null;
   }
   if (pref === "groq") {
-    return groqKey
-      ? { provider: "groq", apiKey: groqKey, model: s.groq_model || DEFAULT_GROQ_MODEL, global: groqGlobal }
-      : null;
+    const key = s.groq_api_key || envGroq;
+    return key ? groq(key, !s.groq_api_key) : null;
   }
-  // auto
-  if (anthropicKey) {
-    return { provider: "anthropic", apiKey: anthropicKey, model: "claude-opus-4-8", global: anthropicGlobal };
-  }
-  if (groqKey) {
-    return { provider: "groq", apiKey: groqKey, model: s.groq_model || DEFAULT_GROQ_MODEL, global: groqGlobal };
-  }
+  // "auto" = the included free AI: instance keys first, always.
+  if (envGroq) return groq(envGroq, true);
+  if (envAnthropic) return anthropic(envAnthropic, true);
+  // Self-hosted instance without global keys — use whatever the user stored.
+  if (s.groq_api_key) return groq(s.groq_api_key, false);
+  if (s.anthropic_api_key) return anthropic(s.anthropic_api_key, false);
   return null;
 }
 
