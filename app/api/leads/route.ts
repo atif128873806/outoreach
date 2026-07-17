@@ -6,6 +6,7 @@ import { getUserId } from "@/lib/auth";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { getLeadQuota, leadQuotaMessage, recordUsage } from "@/lib/usage";
 import { q } from "@/lib/db";
+import { friendlyProviderError } from "@/lib/friendly-error";
 
 export const runtime = "nodejs";
 // Search + enrichment can take a while for larger lead counts
@@ -134,9 +135,6 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Lead search failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: friendlyProviderError(err, "search") }, { status: 500 });
   }
 }

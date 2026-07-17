@@ -4,6 +4,7 @@ import { generateMessage } from "@/lib/ai";
 import { getAiConfig, getSettings } from "@/lib/settings";
 import { getUserId } from "@/lib/auth";
 import { checkSpam } from "@/lib/spamcheck";
+import { friendlyProviderError } from "@/lib/friendly-error";
 
 export const runtime = "nodejs";
 
@@ -106,9 +107,6 @@ export async function POST(req: NextRequest) {
         : "No AI API key configured — using the built-in template engine. Add a Groq or Anthropic key in Settings for fully AI-personalized messages.",
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Preview failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: friendlyProviderError(err, "ai") }, { status: 500 });
   }
 }

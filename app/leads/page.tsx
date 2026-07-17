@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Card,
@@ -236,17 +236,14 @@ export default function LeadsPage() {
             {searching ? "Searching…" : "Find leads"}
           </button>
         </div>
-        {searching && (
-          <p className="text-xs text-zinc-400 mt-3">
-            Searching {source === "web" ? "the web" : source === "osm" ? "OpenStreetMap" : "Google Places"}, then visiting each
-            business&apos;s website to find emails and Instagram handles — this can take up to a minute…
-          </p>
-        )}
+        {searching && <SearchProgress source={source} />}
         {error && <div className="text-sm text-red-500 mt-3">{error}</div>}
         {note && <div className="text-sm text-amber-600 mt-3">{note}</div>}
       </Card>
 
-      {leads && leads.length > 0 && (
+      {searching && <SkeletonResults rows={Math.min(count, 6)} />}
+
+      {!searching && leads && leads.length > 0 && (
         <Card className="p-0 overflow-hidden">
           <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between flex-wrap gap-3">
             <div className="text-sm">
@@ -433,5 +430,66 @@ function SourceOption({
       <div className="text-sm font-medium">{title}</div>
       <div className="text-xs text-zinc-400 mt-0.5">{desc}</div>
     </button>
+  );
+}
+
+/** Staged progress line — tells the user what the pipeline is doing right now. */
+const SEARCH_STAGES: { at: number; label: (src: string) => string }[] = [
+  { at: 0, label: (src) => `Searching ${src} for businesses…` },
+  { at: 6, label: () => "Found candidates — visiting their websites…" },
+  { at: 16, label: () => "Extracting emails, Instagram, and LinkedIn…" },
+  { at: 32, label: () => "Rendering JS-heavy sites to find hidden contact info…" },
+  { at: 50, label: () => "Sorting the most contactable leads first — almost done…" },
+];
+
+function SearchProgress({ source }: { source: string }) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const srcName =
+    source === "web" ? "the web" : source === "osm" ? "OpenStreetMap" : "Google Places";
+  let idx = 0;
+  for (let i = 0; i < SEARCH_STAGES.length; i++) if (elapsed >= SEARCH_STAGES[i].at) idx = i;
+  return (
+    <div className="mt-4">
+      <div className="flex items-center gap-2.5 text-sm text-zinc-600">
+        <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-zinc-200 border-t-blue-600" />
+        {SEARCH_STAGES[idx].label(srcName)}
+        <span className="text-xs tabular-nums text-zinc-400">{elapsed}s</span>
+      </div>
+      <div className="mt-2.5 flex gap-1.5">
+        {SEARCH_STAGES.map((s, i) => (
+          <span
+            key={s.at}
+            className={`h-1 flex-1 rounded-full transition-colors duration-500 ${
+              i <= idx ? "bg-blue-600" : "bg-zinc-100"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Shimmer placeholder rows where the results will appear. */
+function SkeletonResults({ rows }: { rows: number }) {
+  return (
+    <Card className="p-0 overflow-hidden">
+      <div className="divide-y divide-zinc-100">
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i} className="flex animate-pulse items-center gap-3 px-5 py-4">
+            <span className="h-9 w-9 shrink-0 rounded-lg bg-zinc-100" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="h-3.5 w-44 max-w-full rounded bg-zinc-100" />
+              <div className="h-3 w-64 max-w-full rounded bg-zinc-100/80" />
+            </div>
+            <span className="hidden h-5 w-24 rounded-full bg-zinc-100 sm:block" />
+            <span className="hidden h-5 w-20 rounded-full bg-zinc-100 md:block" />
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }

@@ -3,6 +3,7 @@ import { searchExaPeople } from "@/lib/exa";
 import { getUserId } from "@/lib/auth";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { getLeadQuota, leadQuotaMessage, recordUsage } from "@/lib/usage";
+import { friendlyProviderError } from "@/lib/friendly-error";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -36,9 +37,6 @@ export async function POST(req: NextRequest) {
     await recordUsage(userId, "leads", 1);
     return NextResponse.json({ candidates });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "People search failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: friendlyProviderError(err, "search") }, { status: 500 });
   }
 }

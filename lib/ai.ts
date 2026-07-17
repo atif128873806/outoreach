@@ -73,15 +73,27 @@ function senderContext(s: Settings): string {
 
 function emailSystemPrompt(s: Settings): string {
   const sender = senderContext(s);
-  return `You are an expert B2B outreach copywriter. You write short, genuinely personalized cold emails that respect the reader's time.
+  return `You are an elite B2B outreach copywriter. Your emails read like a sharp, busy professional wrote them personally after 10 minutes of research — never like a template or a mass mailer.
 
-Rules:
-- Keep the body under 150 words (follow-ups under 80 words).
-- Personalize using the recipient's business name and category — reference something concrete about their kind of business, never generic flattery.
-- One clear, low-friction call to action (e.g. a short reply or a quick call).
-- Plain text only. No markdown, no HTML, no emojis, no placeholder brackets like [Name].
-- Honest and professional: no fake urgency, no misleading claims, no pretending a prior relationship exists.
-- For follow-ups: be brief and gracious, reference the earlier email lightly, and make it easy to say no.
+STRUCTURE (in this order):
+1. Open with something SPECIFIC to this recipient: their business by name, what they visibly do, or a detail from their notes/intel. The first sentence must be about THEM, not the sender.
+2. Bridge to ONE concrete problem or opportunity relevant to their kind of business, and how the sender's offer addresses it. Concrete beats clever.
+3. Close with one soft, low-friction question (a reply, not a demand for a meeting).
+4. Professional sign-off using the sender's name/role/company when provided.
+
+HARD BANS — never write any of these:
+- "I hope this email finds you well" or any variant of hoping/trusting they are well
+- "My name is …" openings, "I wanted to reach out", "I came across your website", "I'll keep this short"
+- Generic flattery ("impressive work", "love what you're doing") without a specific detail behind it
+- Buzzwords: synergy, leverage, solutions, cutting-edge, revolutionize, streamline
+- Fake urgency, fake familiarity, invented statistics, or any claim not in the campaign brief
+
+STYLE:
+- Body under 130 words (follow-ups under 70). Short sentences. Confident, warm, direct.
+- Plain text only: no markdown, no HTML, no emojis, no placeholder brackets like [Name].
+- Subject line: 3–7 words, natural and specific to them — like a colleague's email, not a headline. No clickbait, no ALL CAPS.
+- If notes or company intel are provided for the recipient, weave ONE specific detail from them into the email — that is what makes it feel personal.
+- For follow-ups: brief and gracious, reference the earlier email lightly, make it easy to say no.
 - Write in the requested tone.
 
 ${sender ? `Details about the sender to use in the email:\n${sender}` : "The sender has not provided identity details; sign off simply."}`;
@@ -130,7 +142,7 @@ function buildUserPrompt(
 ${contact.website ? `- Website: ${contact.website}` : ""}
 ${contact.instagram ? `- Instagram: @${contact.instagram}` : ""}
 ${contact.linkedin ? `- LinkedIn: linkedin.com/${contact.linkedin}` : ""}
-${contact.notes ? `- Notes about this contact: ${contact.notes}` : ""}`;
+${contact.notes ? `- Company intel / notes (USE one specific detail from this): ${contact.notes}` : ""}`;
 
   const firstTouch =
     campaign.channel === "instagram"

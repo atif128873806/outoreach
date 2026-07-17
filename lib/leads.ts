@@ -70,16 +70,36 @@ export function extractLinkedin(html: string): string {
 
 const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
 
-export function extractEmails(html: string): string[] {
-  const found = html.match(EMAIL_RE) ?? [];
+/** Undo the common ways sites hide emails from scrapers: entities and [at]/[dot]. */
+function deobfuscate(text: string): string {
+  return text
+    .replace(/&#0?64;|&commat;/gi, "@")
+    .replace(/&#0?46;|&period;/gi, ".")
+    .replace(/\s*[[(]\s*(?:at|@)\s*[\])]\s*/gi, "@")
+    .replace(/\s*[[(]\s*(?:dot|\.)\s*[\])]\s*/gi, ".");
+}
+
+const JUNK_EMAIL =
+  /example\.|sentry|wixpress|your-email|email@|no-?reply|donotreply|godaddy|\.(png|jpe?g|gif|webp|svg|css|js|woff2?)$/;
+
+/**
+ * All plausible emails in a page, best first. When `siteHost` is given,
+ * addresses on the business's own domain outrank gmail/hotmail catch-alls.
+ */
+export function extractEmails(html: string, siteHost?: string): string[] {
+  const found = deobfuscate(html).match(EMAIL_RE) ?? [];
   const clean = new Set<string>();
   for (const raw of found) {
     const e = raw.toLowerCase();
-    if (/\.(png|jpe?g|gif|webp|svg|css|js|woff2?)$/.test(e)) continue;
-    if (e.includes("example.") || e.includes("sentry") || e.includes("wixpress") || e.includes("your-email") || e.includes("email@")) continue;
+    if (JUNK_EMAIL.test(e)) continue;
     clean.add(e);
   }
-  return [...clean];
+  const list = [...clean];
+  if (siteHost) {
+    const root = siteHost.replace(/^www\./, "");
+    list.sort((a, b) => Number(b.endsWith(root)) - Number(a.endsWith(root)));
+  }
+  return list;
 }
 
 export function extractInstagram(html: string): string {
@@ -338,30 +358,40 @@ async function fetchPageViaJina(url: string): Promise<string> {
   return (await res.text()).slice(0, 500_000);
 }
 
-/** Visits a lead's website (and its contact page) to find email + Instagram. */
+/** Visits a lead's website (and its contact/about pages) to find email + socials. */
 async function enrichLead(lead: Lead): Promise<Lead> {
   if (!lead.website || (lead.email && lead.instagram)) return lead;
   const url = lead.website.startsWith("http") ? lead.website : `https://${lead.website}`;
+  const siteHost = (() => {
+    try {
+      return new URL(url).hostname.toLowerCase();
+    } catch {
+      return undefined;
+    }
+  })();
+
+  const scan = (text: string) => {
+    if (!lead.email) lead.email = extractEmails(text, siteHost)[0] ?? "";
+    if (!lead.instagram) lead.instagram = extractInstagram(text);
+    if (!lead.linkedin) lead.linkedin = extractLinkedin(text);
+  };
 
   try {
     const html = await fetchPageText(url);
-
     if (html) {
-      if (!lead.email) lead.email = extractEmails(html)[0] ?? "";
-      if (!lead.instagram) lead.instagram = extractInstagram(html);
-      if (!lead.linkedin) lead.linkedin = extractLinkedin(html);
+      scan(html);
 
-      // No email on the homepage? Try the contact page.
+      // No email on the homepage? Follow its contact link, or probe the
+      // usual paths when the homepage doesn't link one.
       if (!lead.email) {
-        const linkMatch = html.match(/href=["']([^"']*contact[^"']*)["']/i);
-        if (linkMatch) {
-          const contactUrl = new URL(linkMatch[1], url).toString();
-          const contactHtml = await fetchPageText(contactUrl);
-          if (contactHtml) {
-            lead.email = extractEmails(contactHtml)[0] ?? "";
-            if (!lead.instagram) lead.instagram = extractInstagram(contactHtml);
-            if (!lead.linkedin) lead.linkedin = extractLinkedin(contactHtml);
-          }
+        const linkMatch = html.match(/href=["']([^"']*(?:contact|about)[^"']*)["']/i);
+        const candidates = linkMatch
+          ? [new URL(linkMatch[1], url).toString()]
+          : [new URL("/contact", url).toString(), new URL("/contact-us", url).toString()];
+        for (const candidate of candidates) {
+          const pageHtml = await fetchPageText(candidate);
+          if (pageHtml) scan(pageHtml);
+          if (lead.email) break;
         }
       }
     }
@@ -370,11 +400,7 @@ async function enrichLead(lead: Lead): Promise<Lead> {
     // fetches. Let Jina Reader render it and scan the text instead.
     if (!lead.email) {
       const text = await fetchPageViaJina(url);
-      if (text) {
-        lead.email = extractEmails(text)[0] ?? "";
-        if (!lead.instagram) lead.instagram = extractInstagram(text);
-        if (!lead.linkedin) lead.linkedin = extractLinkedin(text);
-      }
+      if (text) scan(text);
     }
   } catch {
     // site unreachable/slow — keep whatever we already have
