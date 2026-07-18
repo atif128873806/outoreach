@@ -88,3 +88,23 @@ body {
     animation: none;
   }
 }
+
+/* Wide tables: horizontal scroll with an always-visible, styled scrollbar */
+.x-scroll {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d8 transparent;
+}
+.x-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.x-scroll::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 4px;
+}
+.x-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+.x-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}

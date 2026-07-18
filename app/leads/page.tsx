@@ -367,8 +367,8 @@ export default function LeadsPage() {
               )}
             </div>
           )}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="x-scroll">
+            <table className="w-full min-w-[1150px] text-sm">
               <thead>
                 <tr className="text-left text-xs text-zinc-400 uppercase tracking-wide">
                   <th className="px-4 py-2.5 font-medium">Business</th>
