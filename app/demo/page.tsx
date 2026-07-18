@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PublicShell from "../components/PublicShell";
+import DemoEmbed from "./DemoEmbed";
 
 export const metadata: Metadata = {
   title: "Interactive demo — Outreach Studio",
@@ -17,15 +18,9 @@ export default function DemoPage() {
       subtitle="A real click-through of the product — you drive. No signup, takes about two minutes."
       wide
     >
-      <div className="overflow-hidden rounded-2xl border border-zinc-200 shadow-xl shadow-zinc-900/10">
-        <iframe
-          src={DEMO_SRC}
-          title="Outreach Studio interactive demo"
-          className="block h-[70vh] min-h-[520px] w-full border-0"
-          allow="fullscreen"
-          loading="lazy"
-        />
-      </div>
+      {/* Start the connection to the demo host as early as possible */}
+      <link rel="preconnect" href="https://usemirage.io" />
+      <DemoEmbed src={DEMO_SRC} />
       <p className="mt-3 text-center text-xs text-zinc-400">
         Demo not loading?{" "}
         <a

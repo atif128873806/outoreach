@@ -6,6 +6,8 @@ Rule of thumb: never edit facts (prices, limits, features) without checking
 
 **Live URLs**
 - Product: https://outreach.sakodev.com
+- Interactive demo (no signup): https://outreach.sakodev.com/demo
+- Documentation: https://outreach.sakodev.com/docs
 - Product tour: https://outreach.sakodev.com/features
 - Pricing: https://outreach.sakodev.com/pricing
 - Free tool #1: https://outreach.sakodev.com/tools/spam-checker
