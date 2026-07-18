@@ -371,7 +371,7 @@ export default function LeadsPage() {
             <table className="w-full min-w-[1150px] text-sm">
               <thead>
                 <tr className="text-left text-xs text-zinc-400 uppercase tracking-wide">
-                  <th className="px-4 py-2.5 font-medium">Business</th>
+                  <th className="sticky left-0 z-10 bg-white px-4 py-2.5 font-medium border-r border-zinc-100">Business</th>
                   <th className="px-4 py-2.5 font-medium">Email</th>
                   <th className="px-4 py-2.5 font-medium">Social</th>
                   <th className="px-4 py-2.5 font-medium">Decision maker</th>
@@ -381,17 +381,17 @@ export default function LeadsPage() {
               </thead>
               <tbody className="divide-y divide-zinc-100">
                 {visible.map(({ l, i }) => (
-                  <tr key={i} className="hover:bg-zinc-50">
-                    <td className="px-4 py-2.5">
-                      <div className="font-medium">{l.business_name}</div>
-                      {l.address && <div className="text-xs text-zinc-400">{l.address}</div>}
+                  <tr key={i} className="group hover:bg-zinc-50">
+                    <td className="sticky left-0 z-10 bg-white group-hover:bg-zinc-50 px-4 py-2.5 border-r border-zinc-100">
+                      <div className="max-w-[230px] font-medium">{l.business_name}</div>
+                      {l.address && <div className="max-w-[230px] truncate text-xs text-zinc-400">{l.address}</div>}
                       {l.notes && (
-                        <div className="text-xs text-zinc-400 mt-0.5 max-w-72 truncate" title={l.notes}>
+                        <div className="text-xs text-zinc-400 mt-0.5 max-w-[230px] truncate" title={l.notes}>
                           {l.notes}
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="max-w-[220px] break-all px-4 py-2.5">
                       {l.email || <span className="text-zinc-300">not found</span>}
                     </td>
                     <td className="px-4 py-2.5">
@@ -430,7 +430,13 @@ export default function LeadsPage() {
                     <td className="px-4 py-2.5 text-xs max-w-48 truncate">
                       {l.website ? (
                         <div>
-                          <a href={l.website} target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:underline">
+                          <a
+                            href={l.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={l.website}
+                            className="inline-block max-w-[200px] truncate align-bottom text-zinc-500 hover:underline"
+                          >
                             {l.website.replace(/^https?:\/\/(www\.)?/, "")}
                           </a>
                           {(l.site_flags?.length ?? 0) > 0 && (
