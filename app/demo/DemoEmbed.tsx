@@ -11,7 +11,7 @@ import { LogoMark } from "../components/Logo";
 export default function DemoEmbed({ src }: { src: string }) {
   const [loaded, setLoaded] = useState(false);
   return (
-    <div className="relative aspect-video max-h-[78vh] w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10">
+    <div className="relative aspect-video max-h-[78vh] w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10 sm:aspect-[2/1]">
       {!loaded && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-zinc-950">
           <LogoMark className="h-12 w-12" />
