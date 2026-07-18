@@ -170,6 +170,14 @@ export default function DocsPage() {
             Instagram handle or phone is enough — no email needed) and reach them
             with an Instagram DM campaign or a call.
           </p>
+          <p>
+            <b>Redesign-prospect mode</b> — the <Code>Outdated website</Code> filter
+            audits every site found and keeps only the ones with concrete problems:
+            no HTTPS, not mobile-friendly, free-builder hosting, ancient copyright
+            dates, 2000s-era code. The specific issues are saved into each
+            lead&apos;s notes, so the AI opens your email with them — &quot;I noticed
+            your site isn&apos;t mobile-friendly…&quot; — automatically.
+          </p>
         </Section>
       </div>
 

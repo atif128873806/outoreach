@@ -35,6 +35,7 @@ interface Lead {
   address: string;
   notes: string;
   source: string;
+  site_flags?: string[];
 }
 
 function toCsv(leads: Lead[]): string {
@@ -63,7 +64,7 @@ export default function LeadsPage() {
   const [niche, setNiche] = useState("");
   const [location, setLocation] = useState("");
   const [count, setCount] = useState(10);
-  const [websiteFilter, setWebsiteFilter] = useState<"any" | "with" | "without">("any");
+  const [websiteFilter, setWebsiteFilter] = useState<"any" | "with" | "without" | "outdated">("any");
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -239,11 +240,14 @@ export default function LeadsPage() {
             <select
               className={inputCls}
               value={websiteFilter}
-              onChange={(e) => setWebsiteFilter(e.target.value as "any" | "with" | "without")}
+              onChange={(e) =>
+                setWebsiteFilter(e.target.value as "any" | "with" | "without" | "outdated")
+              }
             >
               <option value="any">Any</option>
               <option value="with">Has a website</option>
               <option value="without">No website (sell them one!)</option>
+              <option value="outdated">Outdated website (redesign prospects)</option>
             </select>
           </label>
           <button
@@ -254,6 +258,15 @@ export default function LeadsPage() {
             {searching ? "Searching…" : "Find leads"}
           </button>
         </div>
+        {websiteFilter === "outdated" && !searching && (
+          <p className="text-xs text-amber-600 mt-3">
+            Redesign-prospect mode: every website found is audited for concrete problems —
+            no HTTPS, not mobile-friendly, free-builder hosting, ancient copyright dates,
+            2000s-era code. Only flawed sites are kept, and each lead&apos;s notes list
+            exactly what&apos;s wrong: ready-made talking points for your pitch.{" "}
+            {source !== "web" && "Tip: the Web search (AI) source works best here — every result has a site to audit."}
+          </p>
+        )}
         {websiteFilter === "without" && !searching && (
           <p className="text-xs text-amber-600 mt-3">
             Offline-business mode: automatically searches map data (OpenStreetMap, plus
@@ -362,9 +375,19 @@ export default function LeadsPage() {
                     <td className="px-4 py-2.5 text-xs">{l.phone || "—"}</td>
                     <td className="px-4 py-2.5 text-xs max-w-48 truncate">
                       {l.website ? (
-                        <a href={l.website} target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:underline">
-                          {l.website.replace(/^https?:\/\/(www\.)?/, "")}
-                        </a>
+                        <div>
+                          <a href={l.website} target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:underline">
+                            {l.website.replace(/^https?:\/\/(www\.)?/, "")}
+                          </a>
+                          {(l.site_flags?.length ?? 0) > 0 && (
+                            <div
+                              className="mt-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700"
+                              title={l.site_flags!.join(" · ")}
+                            >
+                              ⚠ needs redesign · {l.site_flags!.length} issue{l.site_flags!.length > 1 ? "s" : ""}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         "—"
                       )}

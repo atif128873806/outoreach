@@ -34,7 +34,9 @@ export async function POST(req: NextRequest) {
     websiteFilter?: string;
   };
   const websiteFilter =
-    body.websiteFilter === "with" || body.websiteFilter === "without"
+    body.websiteFilter === "with" ||
+    body.websiteFilter === "without" ||
+    body.websiteFilter === "outdated"
       ? body.websiteFilter
       : "any";
 
@@ -91,7 +93,7 @@ export async function POST(req: NextRequest) {
       } else {
         leads = await searchExaCompanies(niche, location, count);
       }
-      if (websiteFilter === "with") {
+      if (websiteFilter === "with" || websiteFilter === "outdated") {
         leads = leads.filter((l) => l.website);
       }
     }
@@ -103,7 +105,9 @@ export async function POST(req: NextRequest) {
         note:
           websiteFilter === "without"
             ? "No businesses without a website found here. OpenStreetMap and Google Places are the best sources for offline businesses — or try a bigger area."
-            : "No businesses found. Try a broader niche (e.g. 'restaurant' instead of 'vegan bistro') or a bigger location.",
+            : websiteFilter === "outdated"
+              ? "No businesses with websites found for this search — try a broader niche or bigger area, then the audit can look for outdated sites."
+              : "No businesses found. Try a broader niche (e.g. 'restaurant' instead of 'vegan bistro') or a bigger location.",
       });
     }
 
@@ -128,8 +132,25 @@ export async function POST(req: NextRequest) {
       }
       enriched = pool;
     } else {
-      // Enrich a few more than requested so missing emails don't shrink the result.
-      enriched = await enrichLeads(leads.slice(0, Math.min(leads.length, count + 10)));
+      // Enrich a few more than requested so missing emails don't shrink the
+      // result; outdated mode gets extra headroom since modern sites drop out.
+      const headroom = websiteFilter === "outdated" ? count + 15 : count + 10;
+      enriched = await enrichLeads(
+        leads.slice(0, Math.min(leads.length, headroom)),
+        5,
+        websiteFilter === "outdated"
+      );
+      if (websiteFilter === "outdated") {
+        // Keep only sites with concrete problems, and put those problems in
+        // the notes — they become the AI's personalization material AND the
+        // user's talking points ("I noticed your site isn't mobile-friendly…").
+        enriched = enriched.filter((l) => (l.site_flags?.length ?? 0) > 0);
+        for (const l of enriched) {
+          l.notes = [l.notes, `Website issues: ${l.site_flags!.join("; ")}`]
+            .filter(Boolean)
+            .join(" | ");
+        }
+      }
     }
 
     // Hide leads that are already in this user's Contacts (matched by email,
@@ -160,7 +181,9 @@ export async function POST(req: NextRequest) {
       const score = (l: (typeof fresh)[number]) =>
         websiteFilter === "without"
           ? Number(Boolean(l.instagram)) * 4 + Number(Boolean(l.email)) * 2 + Number(Boolean(l.phone))
-          : Number(Boolean(l.email)) * 2 + Number(Boolean(l.instagram));
+          : websiteFilter === "outdated"
+            ? (l.site_flags?.length ?? 0) * 2 + Number(Boolean(l.email))
+            : Number(Boolean(l.email)) * 2 + Number(Boolean(l.instagram));
       return score(b) - score(a);
     });
     const result = fresh.slice(0, count);
@@ -178,7 +201,14 @@ export async function POST(req: NextRequest) {
     }
     if (result.length < count) {
       notes.push(
-        `Found ${result.length} new ${result.length === 1 ? "match" : "matches"} for this search — sources have limits per area. Try another source (OpenStreetMap or Google), a broader niche, or a nearby city for more.`
+        websiteFilter === "outdated"
+          ? `${result.length} of the sites audited showed real problems — the rest look modern. Ask for more leads or try another niche/city to widen the net.`
+          : `Found ${result.length} new ${result.length === 1 ? "match" : "matches"} for this search — sources have limits per area. Try another source (OpenStreetMap or Google), a broader niche, or a nearby city for more.`
+      );
+    }
+    if (websiteFilter === "outdated" && result.length > 0) {
+      notes.push(
+        "Each lead's notes list exactly what's wrong with their site — the AI uses them to personalize your pitch."
       );
     }
     if (websiteFilter === "without" && result.length > 0) {

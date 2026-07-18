@@ -23,6 +23,8 @@ export interface Lead {
   /** Short company intel (what they do, size, founding) — feeds AI personalization. */
   notes: string;
   source: string;
+  /** Website-quality problems found by the outdated-site audit (redesign prospects). */
+  site_flags?: string[];
 }
 
 const UA = "OutreachStudio/1.0 (local lead finder)";
@@ -363,6 +365,53 @@ export async function searchGooglePlaces(
   }));
 }
 
+// ---------- website quality audit (redesign prospects) ----------
+
+/** Hosts that mean "no real website" — free builders and social pages used as a site. */
+const BUILDER_HOSTS =
+  /(\.|^)(wixsite\.com|weebly\.com|blogspot\.\w+|wordpress\.com|sites\.google\.com|business\.site|webnode\.\w+|jimdofree\.com|000webhostapp\.com|neocities\.org|facebook\.com|instagram\.com|linktr\.ee)$/i;
+
+/**
+ * Scores a homepage for "this business needs a new website" signals.
+ * Pure and heuristic by design: every flag is a concrete, checkable fact the
+ * user can mention in their outreach email.
+ */
+export function auditWebsiteHtml(html: string, url: string): string[] {
+  const flags: string[] = [];
+  const lower = html.toLowerCase();
+
+  if (/^http:\/\//i.test(url.trim())) flags.push("no HTTPS (browser shows 'Not secure')");
+
+  try {
+    const host = new URL(url.startsWith("http") ? url : `https://${url}`).hostname;
+    if (BUILDER_HOSTS.test(host)) flags.push(`hosted on a free builder / social page (${host.replace(/^www\./, "")})`);
+  } catch {
+    /* unparseable url — no host flag */
+  }
+
+  if (html && !/name=["']?viewport/i.test(html)) {
+    flags.push("not mobile-friendly (no responsive viewport)");
+  }
+
+  if (/<frameset|<marquee|<blink|\.swf\b/i.test(html)) {
+    flags.push("built with 2000s-era web technology");
+  }
+
+  const years = [...html.matchAll(/(?:©|&copy;|&#169;|copyright)[^\d]{0,20}(\d{4})/gi)]
+    .map((m) => parseInt(m[1], 10))
+    .filter((y) => y >= 1995 && y <= new Date().getFullYear());
+  if (years.length) {
+    const latest = Math.max(...years);
+    if (latest <= new Date().getFullYear() - 3) {
+      flags.push(`site last touched around ${latest} (copyright notice)`);
+    }
+  }
+
+  if (html && html.length < 1800) flags.push("barely any content on the homepage");
+
+  return flags;
+}
+
 // ---------- website enrichment ----------
 
 async function fetchPageText(url: string): Promise<string> {
@@ -395,8 +444,8 @@ async function fetchPageViaJina(url: string): Promise<string> {
 }
 
 /** Visits a lead's website (and its contact/about pages) to find email + socials. */
-async function enrichLead(lead: Lead): Promise<Lead> {
-  if (!lead.website || (lead.email && lead.instagram)) return lead;
+async function enrichLead(lead: Lead, audit = false): Promise<Lead> {
+  if (!lead.website || (!audit && lead.email && lead.instagram)) return lead;
   const url = lead.website.startsWith("http") ? lead.website : `https://${lead.website}`;
   const siteHost = (() => {
     try {
@@ -414,6 +463,7 @@ async function enrichLead(lead: Lead): Promise<Lead> {
 
   try {
     const html = await fetchPageText(url);
+    if (audit) lead.site_flags = auditWebsiteHtml(html, lead.website);
     if (html) {
       scan(html);
 
@@ -444,11 +494,15 @@ async function enrichLead(lead: Lead): Promise<Lead> {
   return lead;
 }
 
-export async function enrichLeads(leads: Lead[], concurrency = 5): Promise<Lead[]> {
+export async function enrichLeads(
+  leads: Lead[],
+  concurrency = 5,
+  audit = false
+): Promise<Lead[]> {
   const out: Lead[] = [...leads];
   for (let i = 0; i < out.length; i += concurrency) {
     const batch = out.slice(i, i + concurrency);
-    const enriched = await Promise.all(batch.map(enrichLead));
+    const enriched = await Promise.all(batch.map((l) => enrichLead(l, audit)));
     for (let j = 0; j < enriched.length; j++) out[i + j] = enriched[j];
   }
   return out;
