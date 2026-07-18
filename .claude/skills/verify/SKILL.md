@@ -45,3 +45,12 @@ python `email` lib (`decode_header` for subjects: spaces become underscores).
 - `npm test` = `node --test` on `tests/*.test.ts`, no deps needed (Node ≥23).
 - 4 pre-existing `react-hooks/set-state-in-effect` lint errors in
   campaigns/contacts/messages pages — not regressions.
+
+- **Turbopack dev staleness:** `next dev` has twice served stale lib/ code
+  after edits (changes to lib/leads.ts invisible in API responses). When an
+  edit "has no effect", don't debug the code — verify with a production
+  build: `rm -rf .next && npm run build && npx next start -p 3124`
+  (that's also exactly what the VPS runs).
+- **pkill self-match:** `pkill -f "next dev"` matches the wrapper shell's own
+  cmdline and kills the whole command (exit 144). Use `pkill -f "[n]ext dev"`
+  in its own Bash call, or TaskStop for background tasks.

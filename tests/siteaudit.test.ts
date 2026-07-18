@@ -51,3 +51,20 @@ test("extractPhone prefers international formats and rejects long IDs", () => {
   assert.equal(extractPhone("no numbers here"), "");
   assert.equal(extractPhone("year 2016 2020 2024"), "");
 });
+
+test("detectTech identifies platforms and marketing tags", async () => {
+  const { detectTech } = await import("../lib/leads.ts");
+  const wp = detectTech('<link href="/wp-content/themes/x/style.css"><script src="https://connect.facebook.net/en_US/fbevents.js"></script>');
+  assert.equal(wp.stack, "WordPress");
+  assert.deepEqual(wp.pixels, ["Facebook Pixel"]);
+
+  const shop = detectTech('<img src="https://cdn.shopify.com/s/x.png"><script src="https://www.googletagmanager.com/gtag/js"></script>');
+  assert.equal(shop.stack, "Shopify");
+  assert.deepEqual(shop.pixels, ["Google Analytics"]);
+
+  const custom = detectTech("<html><body>hand-rolled site</body></html>");
+  assert.equal(custom.stack, undefined);
+  assert.deepEqual(custom.pixels, []);
+
+  assert.deepEqual(detectTech(""), { pixels: [] });
+});

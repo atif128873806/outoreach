@@ -36,6 +36,8 @@ interface Lead {
   notes: string;
   source: string;
   site_flags?: string[];
+  tech?: string;
+  pixels?: string[];
 }
 
 function toCsv(leads: Lead[]): string {
@@ -73,6 +75,13 @@ export default function LeadsPage() {
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [people, setPeople] = useState<Record<number, PeopleState>>({});
+  /** Result-view chip: null = all, "pixels" = runs marketing tags, else a stack name. */
+  const [chip, setChip] = useState<string | null>(null);
+
+  const chipMatch = (l: Lead) =>
+    chip === null ? true : chip === "pixels" ? (l.pixels?.length ?? 0) > 0 : l.tech === chip;
+  /** Rows shown in the table (original indexes kept for the people-lookup state). */
+  const visible = (leads ?? []).map((l, i) => ({ l, i })).filter(({ l }) => chipMatch(l));
 
   async function findPeople(i: number) {
     const lead = leads?.[i];
@@ -131,6 +140,7 @@ export default function LeadsPage() {
       setLeads(data.leads);
       setMeta(data.meta);
       setNote(data.note ?? null);
+      setChip(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
     } finally {
@@ -139,8 +149,9 @@ export default function LeadsPage() {
   }
 
   function downloadCsv() {
-    if (!leads?.length) return;
-    const blob = new Blob([toCsv(leads)], { type: "text/csv;charset=utf-8" });
+    const rows = visible.map((v) => v.l);
+    if (!rows.length) return;
+    const blob = new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `leads-${niche.replace(/\s+/g, "-")}-${location.replace(/[\s,]+/g, "-")}.csv`;
@@ -153,7 +164,7 @@ export default function LeadsPage() {
   const importable = (l: Lead) => Boolean(l.email || (l.business_name && (l.instagram || l.phone)));
 
   async function importToContacts() {
-    const withEmail = (leads ?? []).filter(importable);
+    const withEmail = visible.map((v) => v.l).filter(importable);
     if (withEmail.length === 0) return;
     setImporting(true);
     setImportMsg(null);
@@ -174,7 +185,18 @@ export default function LeadsPage() {
   }
 
   const emailCount = (leads ?? []).filter((l) => l.email).length;
-  const importableCount = (leads ?? []).filter(importable).length;
+  const importableCount = visible.filter(({ l }) => importable(l)).length;
+
+  // Chip options derived from the current results (stack names by frequency).
+  const stackCounts = new Map<string, number>();
+  for (const l of leads ?? []) if (l.tech) stackCounts.set(l.tech, (stackCounts.get(l.tech) ?? 0) + 1);
+  const pixelCount = (leads ?? []).filter((l) => (l.pixels?.length ?? 0) > 0).length;
+  const chipDefs: { key: string; label: string }[] = [
+    ...[...stackCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, n]) => ({ key: name, label: `${name} (${n})` })),
+    ...(pixelCount > 0 ? [{ key: "pixels", label: `Runs marketing tags (${pixelCount})` }] : []),
+  ];
 
   return (
     <div>
@@ -313,6 +335,38 @@ export default function LeadsPage() {
               </Link>
             </div>
           )}
+          {chipDefs.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 px-5 py-3 border-b border-zinc-100">
+              <button
+                onClick={() => setChip(null)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  chip === null
+                    ? "bg-zinc-900 text-white"
+                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                }`}
+              >
+                All ({leads.length})
+              </button>
+              {chipDefs.map((c) => (
+                <button
+                  key={c.key}
+                  onClick={() => setChip(chip === c.key ? null : c.key)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    chip === c.key
+                      ? "bg-zinc-900 text-white"
+                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+              {chip !== null && (
+                <span className="text-xs text-zinc-400">
+                  showing {visible.length} of {leads.length} — import &amp; CSV follow this filter
+                </span>
+              )}
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -326,7 +380,7 @@ export default function LeadsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
-                {leads.map((l, i) => (
+                {visible.map(({ l, i }) => (
                   <tr key={i} className="hover:bg-zinc-50">
                     <td className="px-4 py-2.5">
                       <div className="font-medium">{l.business_name}</div>
@@ -387,6 +441,22 @@ export default function LeadsPage() {
                               ⚠ needs redesign · {l.site_flags!.length} issue{l.site_flags!.length > 1 ? "s" : ""}
                             </div>
                           )}
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {l.tech && (
+                              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                                {l.tech}
+                              </span>
+                            )}
+                            {(l.pixels ?? []).map((p) => (
+                              <span
+                                key={p}
+                                className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700"
+                                title="This business invests in marketing"
+                              >
+                                {p}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       ) : (
                         "—"

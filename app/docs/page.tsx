@@ -178,6 +178,15 @@ export default function DocsPage() {
             lead&apos;s notes, so the AI opens your email with them — &quot;I noticed
             your site isn&apos;t mobile-friendly…&quot; — automatically.
           </p>
+          <p>
+            <b>Tech profile on every lead</b> — every website found is also read for
+            its platform (WordPress, Shopify, Wix…) and marketing tags (Facebook
+            Pixel, Google Analytics…). Badges appear on each lead, one-click chips
+            above the results filter by them (import &amp; CSV follow the filter),
+            and the facts flow into the lead&apos;s notes so the AI can pitch with
+            them — a business running ads to an outdated site is your hottest
+            prospect.
+          </p>
         </Section>
       </div>
 

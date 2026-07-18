@@ -25,6 +25,10 @@ export interface Lead {
   source: string;
   /** Website-quality problems found by the outdated-site audit (redesign prospects). */
   site_flags?: string[];
+  /** Detected site platform (WordPress, Shopify, …) — pitch-targeting data. */
+  tech?: string;
+  /** Marketing tags found on the site (Facebook Pixel, Google Analytics, …). */
+  pixels?: string[];
 }
 
 const UA = "OutreachStudio/1.0 (local lead finder)";
@@ -412,11 +416,54 @@ export function auditWebsiteHtml(html: string, url: string): string[] {
   return flags;
 }
 
+// ---------- tech-stack & marketing-tag detection ----------
+
+/** Platform fingerprints, checked in order — first match wins. */
+const STACK_SIGNATURES: [string, RegExp][] = [
+  ["WordPress", /wp-content\/|wp-includes\/|content=["']WordPress/i],
+  ["Shopify", /cdn\.shopify\.com|\.myshopify\.com|Shopify\.theme/i],
+  ["Wix", /wixstatic\.com|parastorage\.com|X-Wix-/i],
+  ["Squarespace", /squarespace\.com|squarespace-cdn\.com/i],
+  ["Webflow", /website-files\.com|data-wf-page/i],
+  ["GoDaddy Builder", /wsimg\.com|websitebuilder\.godaddy/i],
+  ["Weebly", /weebly\.com\/uploads|_weebly/i],
+  ["Joomla", /content=["']Joomla/i],
+  ["Drupal", /Drupal\.settings|content=["']Drupal/i],
+  ["Blogger", /content=["']blogger["']/i],
+];
+
+const PIXEL_SIGNATURES: [string, RegExp][] = [
+  ["Facebook Pixel", /connect\.facebook\.net|fbq\s*\(/i],
+  ["Google Analytics", /googletagmanager\.com|google-analytics\.com|gtag\s*\(/i],
+  ["Google Ads tag", /googleadservices\.com|googleads\.g\.doubleclick/i],
+  ["TikTok Pixel", /analytics\.tiktok\.com/i],
+];
+
+export interface TechProfile {
+  /** Detected platform, or undefined when unrecognized/custom. */
+  stack?: string;
+  /** Marketing/tracking tags present — a "this business invests in marketing" signal. */
+  pixels: string[];
+}
+
+/** Reads what a site is built with and which marketing tags it runs — pure. */
+export function detectTech(html: string): TechProfile {
+  if (!html) return { pixels: [] };
+  const stack = STACK_SIGNATURES.find(([, re]) => re.test(html))?.[0];
+  const pixels = PIXEL_SIGNATURES.filter(([, re]) => re.test(html)).map(([name]) => name);
+  return { stack, pixels };
+}
+
 // ---------- website enrichment ----------
 
 async function fetchPageText(url: string): Promise<string> {
-  const res = await fetchWithTimeout(url, 8_000, {
-    headers: { Accept: "text/html" },
+  const res = await fetchWithTimeout(url, 12_000, {
+    headers: {
+      Accept: "text/html",
+      // Some sites (WAFs, WordPress security plugins) refuse UA-less requests
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+    },
     redirect: "follow",
   });
   if (!res.ok) return "";
@@ -443,9 +490,13 @@ async function fetchPageViaJina(url: string): Promise<string> {
   return (await res.text()).slice(0, 500_000);
 }
 
-/** Visits a lead's website (and its contact/about pages) to find email + socials. */
+/**
+ * Visits a lead's website to find email + socials, read its tech stack and
+ * marketing tags, and (optionally) audit its quality. The homepage is always
+ * fetched when a website exists — the tech profile applies to every lead.
+ */
 async function enrichLead(lead: Lead, audit = false): Promise<Lead> {
-  if (!lead.website || (!audit && lead.email && lead.instagram)) return lead;
+  if (!lead.website) return lead;
   const url = lead.website.startsWith("http") ? lead.website : `https://${lead.website}`;
   const siteHost = (() => {
     try {
@@ -463,8 +514,15 @@ async function enrichLead(lead: Lead, audit = false): Promise<Lead> {
 
   try {
     const html = await fetchPageText(url);
-    if (audit) lead.site_flags = auditWebsiteHtml(html, lead.website);
+    if (audit) {
+      lead.site_flags = auditWebsiteHtml(html, lead.website);
+      // A listed website that doesn't load is the hottest redesign signal there is.
+      if (!html) lead.site_flags.push("website doesn't load at all");
+    }
     if (html) {
+      const t = detectTech(html);
+      lead.tech = t.stack;
+      lead.pixels = t.pixels;
       scan(html);
 
       // No email on the homepage? Follow its contact link, or probe the
@@ -490,6 +548,9 @@ async function enrichLead(lead: Lead, audit = false): Promise<Lead> {
     }
   } catch {
     // site unreachable/slow — keep whatever we already have
+    if (audit) {
+      lead.site_flags = [...(lead.site_flags ?? []), "website doesn't load at all"];
+    }
   }
   return lead;
 }

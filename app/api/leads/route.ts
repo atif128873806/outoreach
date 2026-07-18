@@ -151,6 +151,17 @@ export async function POST(req: NextRequest) {
             .join(" | ");
         }
       }
+      // Tech profile → notes for every lead, so the AI can pitch with it
+      // ("your WordPress site…", "you're running Facebook ads to…").
+      for (const l of enriched) {
+        const bits = [
+          l.tech ? `built on ${l.tech}` : "",
+          l.pixels?.length ? `runs ${l.pixels.join(" + ")}` : "",
+        ].filter(Boolean);
+        if (bits.length) {
+          l.notes = [l.notes, `Site tech: ${bits.join("; ")}`].filter(Boolean).join(" | ");
+        }
+      }
     }
 
     // Hide leads that are already in this user's Contacts (matched by email,
