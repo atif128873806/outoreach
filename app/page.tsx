@@ -204,12 +204,12 @@ export default function LandingPage() {
             >
               Start free — no card needed
             </Link>
-            <a
-              href="#how"
+            <Link
+              href="/demo"
               className="rounded-xl border border-zinc-200 bg-white px-7 py-3.5 text-sm font-semibold text-zinc-700 transition-all hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md"
             >
-              See how it works
-            </a>
+              ▶ See it in action
+            </Link>
           </div>
           <p className="rise rise-3 mt-5 text-xs text-zinc-400">
             No credit card · Bring your own AI key · Self-hostable with one command
@@ -594,6 +594,7 @@ export default function LandingPage() {
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
               <Link href="/features" className="hover:text-zinc-600">Features</Link>
+              <Link href="/demo" className="hover:text-zinc-600">Demo</Link>
               <Link href="/docs" className="hover:text-zinc-600">Docs</Link>
               <Link href="/pricing" className="hover:text-zinc-600">Pricing</Link>
               <Link href="/contact" className="hover:text-zinc-600">Contact</Link>
