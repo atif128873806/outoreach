@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchOsm, searchGooglePlaces, enrichLeads, type Lead } from "@/lib/leads";
-import { searchExaCompanies } from "@/lib/exa";
+import { searchExaCompanies, findOfflineContact } from "@/lib/exa";
 import { getSettings } from "@/lib/settings";
 import { getUserId } from "@/lib/auth";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
@@ -60,27 +60,40 @@ export async function POST(req: NextRequest) {
 
   try {
     let leads: Lead[];
-    if (source === "google") {
-      const key = (await getSettings(userId)).google_places_api_key;
-      if (!key) {
-        return NextResponse.json(
-          { error: "Add a Google Places API key in Settings to use the Google source, or switch to OpenStreetMap (free)" },
-          { status: 400 }
-        );
-      }
-      leads = await searchGooglePlaces(niche, location, count, key);
-    } else if (source === "osm") {
-      leads = await searchOsm(niche, location, count);
-    } else {
-      leads = await searchExaCompanies(niche, location, count);
-    }
-
-    // Website filter: "without" surfaces offline businesses (no site to
-    // enrich — their value is the phone/Instagram for DM or call outreach).
     if (websiteFilter === "without") {
+      // Offline-business pipeline: web search can't find businesses that
+      // aren't on the web, so this mode always uses map data — OSM, merged
+      // with Google Places when the user has a key (best phone coverage).
+      leads = await searchOsm(niche, location, Math.max(count, 20));
+      const key = (await getSettings(userId)).google_places_api_key;
+      if (key) {
+        try {
+          const gp = await searchGooglePlaces(niche, location, count, key);
+          const names = new Set(leads.map((l) => l.business_name.toLowerCase()));
+          for (const g of gp) if (!names.has(g.business_name.toLowerCase())) leads.push(g);
+        } catch {
+          // Google being down must not break the OSM results
+        }
+      }
       leads = leads.filter((l) => !l.website);
-    } else if (websiteFilter === "with") {
-      leads = leads.filter((l) => l.website);
+    } else {
+      if (source === "google") {
+        const key = (await getSettings(userId)).google_places_api_key;
+        if (!key) {
+          return NextResponse.json(
+            { error: "Add a Google Places API key in Settings to use the Google source, or switch to OpenStreetMap (free)" },
+            { status: 400 }
+          );
+        }
+        leads = await searchGooglePlaces(niche, location, count, key);
+      } else if (source === "osm") {
+        leads = await searchOsm(niche, location, count);
+      } else {
+        leads = await searchExaCompanies(niche, location, count);
+      }
+      if (websiteFilter === "with") {
+        leads = leads.filter((l) => l.website);
+      }
     }
 
     if (leads.length === 0) {
@@ -94,35 +107,50 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Enrich a few more than requested so missing emails don't shrink the
-    // result. Offline businesses have no site to visit — skip enrichment and
-    // rank by how reachable they are (Instagram DM beats phone-only).
-    const enriched =
-      websiteFilter === "without"
-        ? leads
-            .slice(0, count + 10)
-            .sort(
-              (a, b) =>
-                Number(Boolean(b.instagram)) * 4 + Number(Boolean(b.email)) * 2 + Number(Boolean(b.phone)) -
-                (Number(Boolean(a.instagram)) * 4 + Number(Boolean(a.email)) * 2 + Number(Boolean(a.phone)))
-            )
-        : await enrichLeads(leads.slice(0, Math.min(leads.length, count + 10)));
+    let enriched: Lead[];
+    if (websiteFilter === "without") {
+      // No site to visit — instead, hunt each business's public footprint on
+      // the web. Offline businesses usually DO have an Instagram page or a
+      // directory listing with a phone; one targeted search per business
+      // turns "name and address only" into an actually reachable lead.
+      const pool = leads.slice(0, Math.min(leads.length, count + 8));
+      const CONCURRENCY = 4;
+      for (let i = 0; i < pool.length; i += CONCURRENCY) {
+        await Promise.all(
+          pool.slice(i, i + CONCURRENCY).map(async (l) => {
+            if (l.instagram && l.phone) return; // already reachable
+            const found = await findOfflineContact(l.business_name, location);
+            if (!l.instagram) l.instagram = found.instagram;
+            if (!l.phone) l.phone = found.phone;
+            if (!l.email) l.email = found.email;
+          })
+        );
+      }
+      enriched = pool;
+    } else {
+      // Enrich a few more than requested so missing emails don't shrink the result.
+      enriched = await enrichLeads(leads.slice(0, Math.min(leads.length, count + 10)));
+    }
 
-    // Hide leads that are already in this user's Contacts (matched by email or
-    // website host) — re-running the same search shouldn't show old finds or
-    // charge quota for them.
-    const existing = await q<{ email: string; website: string }>(
-      "SELECT email, website FROM contacts WHERE user_id = $1",
+    // Hide leads that are already in this user's Contacts (matched by email,
+    // website host, or — for no-email offline contacts — business name) so a
+    // re-run doesn't show old finds or charge quota for them.
+    const existing = await q<{ email: string; website: string; business_name: string }>(
+      "SELECT email, website, business_name FROM contacts WHERE user_id = $1",
       [userId]
     );
     const knownEmails = new Set(existing.map((c) => c.email.toLowerCase()));
     const host = (u: string) =>
       u.toLowerCase().replace(/^[a-z]+:\/\//, "").replace(/^www\./, "").split("/")[0];
     const knownHosts = new Set(existing.filter((c) => c.website).map((c) => host(c.website)));
+    const knownNames = new Set(
+      existing.filter((c) => !c.email && c.business_name).map((c) => c.business_name.toLowerCase())
+    );
     const fresh = enriched.filter(
       (l) =>
         !(l.email && knownEmails.has(l.email.toLowerCase())) &&
-        !(l.website && knownHosts.has(host(l.website)))
+        !(l.website && knownHosts.has(host(l.website))) &&
+        !(l.business_name && knownNames.has(l.business_name.toLowerCase()))
     );
     const skippedExisting = enriched.length - fresh.length;
 

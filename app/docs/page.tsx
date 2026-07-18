@@ -162,11 +162,13 @@ export default function DocsPage() {
           <p>
             <b>Offline-business mode</b> — set the Website filter to{" "}
             <Code>No website</Code> to find businesses with no site at all: perfect
-            prospects if you sell websites or digital services. These usually have no
-            email either — import them anyway (a business name plus an Instagram
-            handle or phone is enough) and reach them with an Instagram DM campaign
-            or a call. OpenStreetMap and Google Places are the best sources for this
-            mode.
+            prospects if you sell websites or digital services. This mode picks its
+            own sources (map data — OpenStreetMap, plus Google Places if you added a
+            key) and then automatically hunts each business&apos;s Instagram, phone,
+            and email across the web, since offline businesses usually have an
+            Instagram page even without a site. Import them (a business name plus an
+            Instagram handle or phone is enough — no email needed) and reach them
+            with an Instagram DM campaign or a call.
           </p>
         </Section>
       </div>

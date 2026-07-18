@@ -102,6 +102,28 @@ export function extractEmails(html: string, siteHost?: string): string[] {
   return list;
 }
 
+const PHONE_RE = /\+?\d[\d\s().\-]{7,}\d/g;
+
+/**
+ * Best plausible phone number in a blob of text. Prefers international
+ * (+…) formats; 9–13 digits keeps real numbers and drops the long numeric
+ * IDs (Facebook, tracking) that lurk in search results.
+ */
+export function extractPhone(text: string): string {
+  const candidates = (text.match(PHONE_RE) ?? [])
+    .map((raw) => ({ raw: raw.trim().replace(/\s+/g, " "), digits: raw.replace(/\D/g, "") }))
+    .filter(
+      ({ raw, digits }) =>
+        digits.length >= 9 && digits.length <= 13 && !/^(19|20)\d{2}/.test(raw)
+    );
+  candidates.sort(
+    (a, b) =>
+      Number(b.raw.startsWith("+")) - Number(a.raw.startsWith("+")) ||
+      Number(/[ ().-]/.test(b.raw)) - Number(/[ ().-]/.test(a.raw))
+  );
+  return candidates[0]?.raw ?? "";
+}
+
 export function extractInstagram(html: string): string {
   const matches = html.matchAll(/instagram\.com\/([a-zA-Z0-9._]{2,30})/g);
   for (const m of matches) {

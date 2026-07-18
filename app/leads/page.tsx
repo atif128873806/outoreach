@@ -256,11 +256,11 @@ export default function LeadsPage() {
         </div>
         {websiteFilter === "without" && !searching && (
           <p className="text-xs text-amber-600 mt-3">
-            Offline-business mode: finds businesses with no website — ideal for selling web
-            &amp; digital services.{" "}
-            {source === "web"
-              ? "Tip: OpenStreetMap or Google Places find these much better than web search."
-              : "Results are ranked Instagram-first so you can run DM campaigns; many also include phone numbers."}
+            Offline-business mode: automatically searches map data (OpenStreetMap, plus
+            Google Places if you added a key — your source selection above is ignored),
+            then hunts each business&apos;s Instagram, phone, and email across the web.
+            Ideal prospects for selling websites &amp; digital services; reach them with
+            an Instagram DM campaign or a call.
           </p>
         )}
         {searching && <SearchProgress source={source} />}

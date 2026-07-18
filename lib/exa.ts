@@ -8,7 +8,7 @@
  * (https://github.com/Panniantong/agent-reach).
  */
 
-import { extractEmails, extractInstagram, normalizeLinkedin, type Lead } from "./leads";
+import { extractEmails, extractInstagram, extractPhone, normalizeLinkedin, type Lead } from "./leads";
 
 const EXA_MCP_URL = "https://mcp.exa.ai/mcp";
 
@@ -258,4 +258,31 @@ export async function searchExaPeople(
 function normalizeLinkedinPerson(url: string): string {
   const m = url.match(/linkedin\.com\/(in\/[a-zA-Z0-9\-_.%]{2,60})/i);
   return m ? m[1] : "";
+}
+
+// ---------- offline-business contact hunt ----------
+
+/**
+ * A business with no website usually still has a public footprint — an
+ * Instagram page, a directory listing with a phone, sometimes an email.
+ * One web search per business digs those up so offline leads become
+ * actually reachable (IG DM campaigns / calls).
+ */
+export async function findOfflineContact(
+  businessName: string,
+  location: string
+): Promise<{ instagram: string; phone: string; email: string }> {
+  try {
+    const text = await exaMcpCall("web_search_exa", {
+      query: `"${businessName}" ${location} instagram contact phone`,
+      numResults: 5,
+    });
+    return {
+      instagram: extractInstagram(text),
+      phone: extractPhone(text),
+      email: extractEmails(text)[0] ?? "",
+    };
+  } catch {
+    return { instagram: "", phone: "", email: "" }; // best-effort — never fail the search
+  }
 }
