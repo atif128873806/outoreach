@@ -130,9 +130,13 @@ CREATE TABLE IF NOT EXISTS contacts (
   bounced       INTEGER NOT NULL DEFAULT 0,
   unsubscribed  INTEGER NOT NULL DEFAULT 0,
   unsub_token   TEXT NOT NULL,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (user_id, email)
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Email is optional (offline businesses are reached by phone/Instagram);
+-- uniqueness applies only to real addresses.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_user_email
+  ON contacts(user_id, email) WHERE email <> '';
 
 CREATE TABLE IF NOT EXISTS campaigns (
   id                     SERIAL PRIMARY KEY,
@@ -253,6 +257,14 @@ async function init(): Promise<Adapter> {
     // Accounts created before email verification existed keep working.
     await db.exec("UPDATE users SET email_verified = 1");
   }
+  // Contacts: replace the hard UNIQUE(user_id, email) with the partial index
+  // so no-email (offline-business) contacts can exist.
+  await db
+    .exec("ALTER TABLE contacts DROP CONSTRAINT IF EXISTS contacts_user_id_email_key")
+    .catch(() => {});
+  await db.exec(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_user_email ON contacts(user_id, email) WHERE email <> ''"
+  );
   return db;
 }
 

@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       ? " AND instagram != ''"
       : channel === "linkedin"
         ? " AND linkedin != ''"
-        : "";
+        : " AND email != ''";
 
   const contact = category
     ? await q1<Contact>(

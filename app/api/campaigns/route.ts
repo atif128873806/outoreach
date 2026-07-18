@@ -84,13 +84,14 @@ export async function POST(req: NextRequest) {
 
   const category = body.category_filter?.trim() ?? "";
 
-  // DM campaigns need a profile to link to; email campaigns just need an address.
+  // Each channel needs its own reachable handle — email campaigns must skip
+  // no-email (offline-business) contacts, DM campaigns need a profile.
   const igClause =
     channel === "instagram"
       ? " AND instagram != ''"
       : channel === "linkedin"
         ? " AND linkedin != ''"
-        : "";
+        : " AND email != ''";
   const recipients = category
     ? await q<{ id: number }>(
         `SELECT id FROM contacts WHERE user_id = $1 AND unsubscribed = 0 AND category = $2${igClause}`,

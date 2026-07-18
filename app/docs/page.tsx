@@ -159,6 +159,15 @@ export default function DocsPage() {
             role to the contact so the AI can personalize further. Owner lookups use 1
             lead credit each.
           </p>
+          <p>
+            <b>Offline-business mode</b> — set the Website filter to{" "}
+            <Code>No website</Code> to find businesses with no site at all: perfect
+            prospects if you sell websites or digital services. These usually have no
+            email either — import them anyway (a business name plus an Instagram
+            handle or phone is enough) and reach them with an Instagram DM campaign
+            or a call. OpenStreetMap and Google Places are the best sources for this
+            mode.
+          </p>
         </Section>
       </div>
 

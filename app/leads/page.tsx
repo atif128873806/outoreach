@@ -63,6 +63,7 @@ export default function LeadsPage() {
   const [niche, setNiche] = useState("");
   const [location, setLocation] = useState("");
   const [count, setCount] = useState(10);
+  const [websiteFilter, setWebsiteFilter] = useState<"any" | "with" | "without">("any");
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -122,7 +123,7 @@ export default function LeadsPage() {
       const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source, niche, location, count }),
+        body: JSON.stringify({ source, niche, location, count, websiteFilter }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Search failed");
@@ -146,8 +147,12 @@ export default function LeadsPage() {
     URL.revokeObjectURL(a.href);
   }
 
+  /** A lead is importable with an email — or, for offline businesses, with a
+   *  name plus another way to reach them (Instagram DM or phone). */
+  const importable = (l: Lead) => Boolean(l.email || (l.business_name && (l.instagram || l.phone)));
+
   async function importToContacts() {
-    const withEmail = (leads ?? []).filter((l) => l.email);
+    const withEmail = (leads ?? []).filter(importable);
     if (withEmail.length === 0) return;
     setImporting(true);
     setImportMsg(null);
@@ -168,6 +173,7 @@ export default function LeadsPage() {
   }
 
   const emailCount = (leads ?? []).filter((l) => l.email).length;
+  const importableCount = (leads ?? []).filter(importable).length;
 
   return (
     <div>
@@ -201,7 +207,7 @@ export default function LeadsPage() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-4 items-end">
+        <div className="grid md:grid-cols-5 gap-4 items-end">
           <label className="block md:col-span-1">
             <div className="text-sm font-medium text-zinc-600 mb-1.5">Niche</div>
             <input
@@ -228,6 +234,18 @@ export default function LeadsPage() {
               ))}
             </select>
           </label>
+          <label className="block md:col-span-1">
+            <div className="text-sm font-medium text-zinc-600 mb-1.5">Website</div>
+            <select
+              className={inputCls}
+              value={websiteFilter}
+              onChange={(e) => setWebsiteFilter(e.target.value as "any" | "with" | "without")}
+            >
+              <option value="any">Any</option>
+              <option value="with">Has a website</option>
+              <option value="without">No website (sell them one!)</option>
+            </select>
+          </label>
           <button
             className={`${btnPrimary} justify-center`}
             onClick={search}
@@ -236,6 +254,15 @@ export default function LeadsPage() {
             {searching ? "Searching…" : "Find leads"}
           </button>
         </div>
+        {websiteFilter === "without" && !searching && (
+          <p className="text-xs text-amber-600 mt-3">
+            Offline-business mode: finds businesses with no website — ideal for selling web
+            &amp; digital services.{" "}
+            {source === "web"
+              ? "Tip: OpenStreetMap or Google Places find these much better than web search."
+              : "Results are ranked Instagram-first so you can run DM campaigns; many also include phone numbers."}
+          </p>
+        )}
         {searching && <SearchProgress source={source} />}
         {error && <div className="text-sm text-red-500 mt-3">{error}</div>}
         {note && <div className="text-sm text-amber-600 mt-3">{note}</div>}
@@ -259,9 +286,9 @@ export default function LeadsPage() {
               <button
                 className={btnPrimary}
                 onClick={importToContacts}
-                disabled={importing || emailCount === 0}
+                disabled={importing || importableCount === 0}
               >
-                {importing ? "Importing…" : `Import ${emailCount} with email → Contacts`}
+                {importing ? "Importing…" : `Import ${importableCount} → Contacts`}
               </button>
             </div>
           </div>

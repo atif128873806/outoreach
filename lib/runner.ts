@@ -159,6 +159,10 @@ async function processCampaignBatch(campaign: Campaign, settings: Settings): Pro
       await skip("contact unsubscribed");
       continue;
     }
+    if (campaign.channel === "email" && !contact.email) {
+      await skip("contact has no email address");
+      continue;
+    }
     if (contact.bounced) {
       await skip("contact email bounced previously");
       continue;
