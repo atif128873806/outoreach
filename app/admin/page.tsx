@@ -22,9 +22,34 @@ interface Instance {
   globalAi: string | null;
 }
 
+interface Funnel {
+  signed_up: number;
+  verified: number;
+  used_leads: number;
+  has_contacts: number;
+  created_campaign: number;
+  generated: number;
+  sent_real: number;
+  got_reply: number;
+  smtp_connected: number;
+  imap_connected: number;
+}
+
+/** The activation path, in order — each stage a place users can get stuck. */
+const FUNNEL_STAGES: { key: keyof Funnel; label: string; hint: string }[] = [
+  { key: "signed_up", label: "Signed up", hint: "created an account" },
+  { key: "verified", label: "Verified email", hint: "clicked the confirmation link" },
+  { key: "has_contacts", label: "Added contacts", hint: "lead finder or CSV import" },
+  { key: "created_campaign", label: "Created a campaign", hint: "wrote a brief" },
+  { key: "generated", label: "Messages generated", hint: "campaign actually ran" },
+  { key: "sent_real", label: "Sent real email", hint: "via their own SMTP — went live" },
+  { key: "got_reply", label: "Got a reply", hint: "the value moment" },
+];
+
 export default function AdminPage() {
   const router = useRouter();
   const [users, setUsers] = useState<Row[]>([]);
+  const [funnel, setFunnel] = useState<Funnel | null>(null);
   const [instance, setInstance] = useState<Instance | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "forbidden">("loading");
   const [planMsg, setPlanMsg] = useState<string | null>(null);
@@ -55,6 +80,7 @@ export default function AdminPage() {
         }
         const d = await r.json();
         setUsers(d.users);
+        setFunnel(d.funnel ?? null);
         setInstance(d.instance);
         setState("ok");
       })
@@ -102,6 +128,56 @@ export default function AdminPage() {
           ok={!instance?.signupsDisabled}
         />
       </div>
+
+      {funnel && funnel.signed_up > 0 && (
+        <Card className="p-6 mb-6">
+          <div className="flex items-baseline justify-between">
+            <div>
+              <div className="font-semibold">Activation funnel</div>
+              <div className="text-xs text-zinc-400 mt-0.5">
+                Where users are on the path from signup to first reply — computed live from the database
+              </div>
+            </div>
+            <div className="text-xs text-zinc-400">
+              SMTP connected <b className="text-zinc-600">{funnel.smtp_connected}</b> · IMAP{" "}
+              <b className="text-zinc-600">{funnel.imap_connected}</b> · used Lead Finder{" "}
+              <b className="text-zinc-600">{funnel.used_leads}</b>
+            </div>
+          </div>
+          <div className="mt-5 space-y-3">
+            {FUNNEL_STAGES.map((stage, idx) => {
+              const value = funnel[stage.key];
+              const total = funnel.signed_up;
+              const prev = idx === 0 ? total : funnel[FUNNEL_STAGES[idx - 1].key];
+              const pct = Math.round((value / total) * 100);
+              const dropped = prev - value;
+              return (
+                <div key={stage.key}>
+                  <div className="flex items-baseline justify-between text-sm">
+                    <span className="font-medium text-zinc-700">
+                      {stage.label}{" "}
+                      <span className="font-normal text-xs text-zinc-400">— {stage.hint}</span>
+                    </span>
+                    <span className="tabular-nums text-zinc-600">
+                      <b className="text-zinc-900">{value}</b>{" "}
+                      <span className="text-xs text-zinc-400">({pct}%)</span>
+                      {dropped > 0 && idx > 0 && (
+                        <span className="ml-2 text-xs text-amber-600">−{dropped} stuck</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-zinc-100">
+                    <div
+                      className="h-full rounded-full bg-blue-600 transition-all"
+                      style={{ width: value > 0 ? `${Math.max(pct, 2)}%` : "0%" }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {planMsg && <div className="text-sm text-red-500 mb-3">{planMsg}</div>}
       <Card className="p-0 overflow-hidden">

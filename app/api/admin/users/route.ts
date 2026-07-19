@@ -32,8 +32,38 @@ export async function GET() {
     groq_model: "",
   } as never);
 
+  // Activation funnel — every stage a user must cross between signing up and
+  // getting value. One aggregate pass over existing data; nothing is tracked
+  // client-side, so the numbers can't lie.
+  const funnel = await q1<{
+    signed_up: number;
+    verified: number;
+    used_leads: number;
+    has_contacts: number;
+    created_campaign: number;
+    generated: number;
+    sent_real: number;
+    got_reply: number;
+    smtp_connected: number;
+    imap_connected: number;
+  }>(
+    `SELECT
+       COUNT(*)::int AS signed_up,
+       COUNT(*) FILTER (WHERE u.email_verified = 1)::int AS verified,
+       COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM usage_daily ud WHERE ud.user_id = u.id AND ud.kind = 'leads'))::int AS used_leads,
+       COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM contacts c WHERE c.user_id = u.id))::int AS has_contacts,
+       COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM campaigns cp WHERE cp.user_id = u.id))::int AS created_campaign,
+       COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM emails e WHERE e.user_id = u.id AND e.status IN ('sent','ready')))::int AS generated,
+       COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM emails e WHERE e.user_id = u.id AND e.status = 'sent' AND e.via LIKE 'smtp%'))::int AS sent_real,
+       COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM replies r WHERE r.user_id = u.id))::int AS got_reply,
+       COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM settings s WHERE s.user_id = u.id AND s.key = 'smtp_host' AND s.value <> ''))::int AS smtp_connected,
+       COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM settings s WHERE s.user_id = u.id AND s.key IN ('imap_host','imap_user') AND s.value <> ''))::int AS imap_connected
+     FROM users u`
+  );
+
   return NextResponse.json({
     users,
+    funnel,
     instance: {
       signupsDisabled: process.env.SIGNUPS_DISABLED === "true",
       systemMailer: isSystemMailerConfigured(),
