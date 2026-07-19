@@ -282,6 +282,102 @@ campaign stats screenshot (the app's results page).**
 
 ---
 
+## FEATURE-LAUNCH PACK — the new Lead Finder intelligence (post any Mon/Wed/Fri slot)
+
+All four are true and shipped — post them in this order, 2–4 days apart.
+Visual for each: a real Lead Finder screenshot (blur any real emails/phones).
+
+### F1 — Offline-business mode (the contrarian hook)
+**Visual:** results table in "No website" mode showing IG handles + phones.
+
+> Every lead tool finds businesses that have websites.
+>
+> I built the opposite: a mode that finds businesses with NO website at all.
+>
+> Why? Because if you sell websites, THOSE are your customers.
+>
+> The hard part wasn't finding them — map data is full of them. The hard part
+> was reaching them: no website usually means no email. So my tool now hunts
+> each business's public footprint automatically and comes back with their
+> Instagram handle and phone number.
+>
+> Search "barbers in Brooklyn" → businesses with no website → their IG and
+> phone attached → import → run an Instagram DM campaign (drafted by AI, sent
+> by you — no ban-risk automation).
+>
+> A user asked for this last week. It shipped in two days.
+>
+> outreach.sakodev.com — free plan, no card.
+
+### F2 — Outdated-website detector
+**Visual:** the "⚠ needs redesign · 2 issues" badges with the reasons visible.
+
+> My lead finder now audits websites and tells you which businesses need a
+> redesign — with the evidence.
+>
+> Pick "Outdated website" and every site found gets checked for concrete,
+> verifiable problems:
+>
+> ✗ No HTTPS (browser literally says "Not secure")
+> ✗ Not mobile-friendly
+> ✗ Hosted on a free builder — or a Facebook page pretending to be a website
+> ✗ Copyright footer stuck in 2016
+> ✗ Website doesn't load at all (my favorite — the hottest prospect there is)
+>
+> Only flawed sites are kept, and the specific issues are saved on each lead.
+> So the AI opens your email with: "I noticed your site isn't mobile-friendly…"
+>
+> Not flattery. Not a template. A fact about THEIR business.
+>
+> That's what personalization is supposed to mean.
+>
+> outreach.sakodev.com
+
+### F3 — Tech-stack + ad-spend intelligence
+**Visual:** the filter chips row (All · WordPress · Runs marketing tags) + badges.
+
+> New: my lead finder reads what every business's website is built with.
+>
+> WordPress. Shopify. Wix. Squarespace. Webflow. One click filters your
+> results by stack:
+>
+> → Sell WordPress maintenance? Filter: WordPress.
+> → Sell Shopify apps or CRO? Filter: Shopify.
+> → Sell "time to leave the site builder"? Filter: Wix.
+>
+> And the part I'm most proud of: it also detects Facebook Pixels and Google
+> tags — the businesses SPENDING MONEY on marketing.
+>
+> A business running Facebook ads to an outdated website?
+> That's not a lead. That's a client who hasn't met you yet.
+>
+> Agencies pay data vendors real money for "WordPress site lists."
+> It's a free filter in my tool now.
+>
+> outreach.sakodev.com
+
+### F4 — The "shipped your idea" trust post
+**Visual:** none, or a before/after of the feature request → the shipped UI.
+
+> A user emailed me last week: "Your tool finds businesses that already have
+> websites. I'm a freelance developer — I need the ones that DON'T."
+>
+> He was right. And he'd found a gap every big lead tool ignores.
+>
+> Within a few days, Outreach Studio shipped:
+> • A no-website mode (map data + automatic Instagram/phone hunting)
+> • An outdated-website auditor (finds sites with real, listable problems)
+> • Tech-stack detection (filter leads by WordPress/Shopify/Wix)
+>
+> This is the actual advantage of buying from a solo founder: your feedback
+> doesn't go into a "roadmap survey." It goes into next week's release.
+>
+> If you do outreach and something's missing — tell me. Apparently I ship it.
+>
+> outreach.sakodev.com
+
+---
+
 ## Spare posts (swap in any slot)
 
 **A. Feature spotlight — reply triage.** "Most outreach tools stop at
