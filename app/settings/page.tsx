@@ -36,6 +36,8 @@ export default function SettingsPage() {
   const [wizBusy, setWizBusy] = useState(false);
   const [wizProvider, setWizProvider] = useState<ProviderPreset | null>(null);
   const [wizMsg, setWizMsg] = useState<string | null>(null);
+  const [verBusy, setVerBusy] = useState(false);
+  const [verMsg, setVerMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [dnsResult, setDnsResult] = useState<{
     domain: string;
     summary: string;
@@ -106,6 +108,37 @@ export default function SettingsPage() {
     if (!id) return;
     const email = wizEmail.trim().toLowerCase() || settings.from_email || "";
     applyPreset(resolvePreset(PROVIDER_PRESETS[id], email), email);
+  }
+
+  /** Live login check against the mail server (no email sent); saves on success. */
+  async function verifySmtpAndSave() {
+    setVerBusy(true);
+    setVerMsg(null);
+    try {
+      const res = await fetch("/api/settings/verify-smtp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          host: settings.smtp_host,
+          port: settings.smtp_port,
+          secure: settings.smtp_secure,
+          user: settings.smtp_user,
+          pass: settings.smtp_pass,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Verification failed");
+      await save();
+      setSmtpConfigured(true);
+      setVerMsg({
+        ok: true,
+        text: `Connected as ${settings.smtp_user} — password verified, settings saved. You're ready to send.`,
+      });
+    } catch (err) {
+      setVerMsg({ ok: false, text: err instanceof Error ? err.message : "Verification failed" });
+    } finally {
+      setVerBusy(false);
+    }
   }
 
   async function save() {
@@ -360,6 +393,43 @@ export default function SettingsPage() {
                     Open App Password page ↗
                   </a>
                 )}
+
+                {/* Last step: paste the password, verify the login live, save */}
+                <div className="mt-3 border-t border-zinc-100 pt-3">
+                  <div className="mb-1.5 text-xs font-medium text-zinc-600">
+                    Last step — paste the {wizProvider.appPasswordUrl ? "App Password" : "mailbox password"}:
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="password"
+                      className={`${inputCls} max-w-xs`}
+                      value={settings.smtp_pass ?? ""}
+                      onChange={set("smtp_pass")}
+                      placeholder={wizProvider.appPasswordUrl ? "16-character App Password" : "Mailbox password"}
+                    />
+                    <button
+                      className={btnPrimary}
+                      onClick={verifySmtpAndSave}
+                      disabled={verBusy || !(settings.smtp_pass ?? "").trim()}
+                    >
+                      {verBusy ? "Checking login…" : "Verify & save"}
+                    </button>
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-zinc-400">
+                    We log in to the mail server to confirm it works — no email is sent.
+                  </p>
+                  {verMsg && (
+                    <div
+                      className={`mt-2 rounded-lg px-3 py-2 text-sm ${
+                        verMsg.ok
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-red-50 text-red-600"
+                      }`}
+                    >
+                      {verMsg.ok ? "✓ " : ""}{verMsg.text}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
