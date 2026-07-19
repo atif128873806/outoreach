@@ -99,12 +99,11 @@ export default function DocsPage() {
           </p>
           <p>
             <b>Email delivery (SMTP)</b> — works with any mailbox: Google Workspace,
-            Zoho, Namecheap/cPanel, Outlook. You need: host (e.g.{" "}
-            <Code>mail.yourdomain.com</Code>), port (<Code>465</Code> with SSL on, or{" "}
-            <Code>587</Code> with SSL off), username (usually the full email address),
-            and password. For Gmail/Google Workspace, create an{" "}
-            <b>App Password</b> (Google Account → Security → 2-Step Verification → App
-            passwords) — your normal password won&apos;t work. Use{" "}
+            Zoho, Namecheap/cPanel, Outlook. Easiest path: use <b>⚡ Quick setup</b> —
+            type the email you&apos;ll send from and every field (host, port, SSL,
+            IMAP) is detected and filled automatically; you only paste the password.
+            For Gmail/Outlook/Zoho/Yahoo that password is an <b>App Password</b> —
+            the wizard links you straight to the right page to create one. Then use{" "}
             <b>Send test email</b> to confirm before launching anything.
           </p>
           <p>

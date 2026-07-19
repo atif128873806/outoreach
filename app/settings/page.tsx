@@ -8,6 +8,11 @@ import {
   btnSecondary,
   inputCls,
 } from "../components/ui";
+import {
+  PROVIDER_PRESETS,
+  resolvePreset,
+  type ProviderPreset,
+} from "@/lib/email-providers";
 
 type SettingsMap = Record<string, string>;
 
@@ -27,6 +32,10 @@ export default function SettingsPage() {
   const [testing, setTesting] = useState(false);
   const [imapMsg, setImapMsg] = useState<string | null>(null);
   const [imapTesting, setImapTesting] = useState(false);
+  const [wizEmail, setWizEmail] = useState("");
+  const [wizBusy, setWizBusy] = useState(false);
+  const [wizProvider, setWizProvider] = useState<ProviderPreset | null>(null);
+  const [wizMsg, setWizMsg] = useState<string | null>(null);
   const [dnsResult, setDnsResult] = useState<{
     domain: string;
     summary: string;
@@ -55,6 +64,49 @@ export default function SettingsPage() {
 
   const setToggle = (key: string, value: boolean) =>
     setSettings((s) => ({ ...s, [key]: value ? "true" : "false" }));
+
+  /** Fills every SMTP/IMAP field from a provider preset — user only adds the password. */
+  function applyPreset(preset: ProviderPreset, email: string) {
+    setWizProvider(preset);
+    setWizMsg(null);
+    setSettings((s) => ({
+      ...s,
+      smtp_host: preset.smtp.host,
+      smtp_port: preset.smtp.port,
+      smtp_secure: preset.smtp.secure,
+      smtp_user: email || s.smtp_user || "",
+      from_email: email || s.from_email || "",
+      imap_host: preset.imap.host,
+      imap_port: preset.imap.port,
+      imap_user: email || s.imap_user || "",
+    }));
+  }
+
+  async function detectProvider() {
+    setWizBusy(true);
+    setWizMsg(null);
+    setWizProvider(null);
+    try {
+      const res = await fetch("/api/settings/detect-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: wizEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Detection failed");
+      applyPreset(data.provider as ProviderPreset, data.email as string);
+    } catch (err) {
+      setWizMsg(err instanceof Error ? err.message : "Detection failed");
+    } finally {
+      setWizBusy(false);
+    }
+  }
+
+  function pickProvider(id: string) {
+    if (!id) return;
+    const email = wizEmail.trim().toLowerCase() || settings.from_email || "";
+    applyPreset(resolvePreset(PROVIDER_PRESETS[id], email), email);
+  }
 
   async function save() {
     setSaving(true);
@@ -241,10 +293,77 @@ export default function SettingsPage() {
         <Card className="p-6">
           <SectionTitle
             title="Email delivery (SMTP)"
-            subtitle="Until SMTP is configured, campaign sends are simulated — the full pipeline runs, but nothing is delivered."
+            subtitle="Optional until you go live — everything works in simulation mode without it. Connect your mailbox when you're ready to send for real."
             badge={smtpConfigured ? "configured" : "simulation mode"}
             badgeOk={smtpConfigured}
           />
+
+          {/* Quick setup wizard: detect the provider from the email's MX records */}
+          <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/40 p-4">
+            <div className="text-sm font-medium text-zinc-700">⚡ Quick setup</div>
+            <p className="mt-0.5 mb-3 text-xs text-zinc-500">
+              Type the email address you&apos;ll send from — we detect your provider and
+              fill every field below. You only paste the password.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="email"
+                className={`${inputCls} max-w-xs`}
+                value={wizEmail}
+                onChange={(e) => setWizEmail(e.target.value)}
+                placeholder="you@yourcompany.com"
+              />
+              <button
+                className={btnPrimary}
+                onClick={detectProvider}
+                disabled={wizBusy || !wizEmail.trim()}
+              >
+                {wizBusy ? "Detecting…" : "Detect settings"}
+              </button>
+              <select
+                className={`${inputCls} max-w-[220px]`}
+                value={wizProvider?.id ?? ""}
+                onChange={(e) => pickProvider(e.target.value)}
+              >
+                <option value="">…or pick your provider</option>
+                {Object.values(PROVIDER_PRESETS).map((p) => (
+                  <option key={p.id} value={p.id}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+            {wizMsg && <div className="mt-2 text-sm text-red-500">{wizMsg}</div>}
+            {wizProvider && (
+              <div className="mt-3 rounded-lg border border-zinc-200 bg-white p-3.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                    ✓ {wizProvider.label}
+                  </span>
+                  <span className="text-xs text-zinc-400">
+                    — settings filled in below, just add the password and Save
+                  </span>
+                </div>
+                <ul className="mt-2.5 space-y-1.5 text-xs leading-relaxed text-zinc-600">
+                  {wizProvider.guide.map((g) => (
+                    <li key={g} className="flex gap-2">
+                      <span className="text-zinc-300">•</span>
+                      {g}
+                    </li>
+                  ))}
+                </ul>
+                {wizProvider.appPasswordUrl && (
+                  <a
+                    href={wizProvider.appPasswordUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2.5 inline-block rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-700"
+                  >
+                    Open App Password page ↗
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="grid md:grid-cols-2 gap-4 mt-4">
             <Field label="SMTP host">
               <input className={inputCls} value={settings.smtp_host ?? ""} onChange={set("smtp_host")} placeholder="smtp.gmail.com" />
