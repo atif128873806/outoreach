@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { checkInbox } from "@/lib/inbox";
 import { getImapConfig, getSettings, getKv } from "@/lib/settings";
 import { getUserId } from "@/lib/auth";
+import { friendlyMailboxError } from "@/lib/mail-host";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -22,7 +23,10 @@ export async function POST() {
 
   const result = await checkInbox(userId, settings, cfg);
   if (!result.ok) {
-    return NextResponse.json({ error: result.error ?? "IMAP check failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: await friendlyMailboxError(new Error(result.error ?? "IMAP check failed"), cfg.host) },
+      { status: 500 }
+    );
   }
   return NextResponse.json({
     ok: true,

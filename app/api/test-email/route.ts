@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendMail } from "@/lib/mailer";
 import { getSettings, isSmtpConfigured } from "@/lib/settings";
 import { getUserId } from "@/lib/auth";
+import { friendlyMailboxError } from "@/lib/mail-host";
 
 export const runtime = "nodejs";
 
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, to: recipient });
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Send failed" },
+      { error: await friendlyMailboxError(err, settings.smtp_host) },
       { status: 500 }
     );
   }
