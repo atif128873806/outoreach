@@ -10,20 +10,20 @@ export interface DayPoint {
 }
 
 /**
- * 14-day outreach activity line chart (inline SVG, no library).
- * Palette: categorical slots 1–3 (blue/aqua/yellow) in fixed order, validated
- * for CVD separation; sub-3:1 slots are relieved by direct labels + tooltip.
+ * 14-day outreach activity. Two things a user actually wants to know:
+ *  1. the rates (headline KPI tiles) — you think in "open rate", not counts;
+ *  2. the daily shape (chart) — sent as volume bars, opened/replied as thin
+ *     lines on the SAME count axis (never a second scale).
+ * Inline SVG, no chart library. Palette validated for CVD + ≥3:1 contrast.
  */
 
-const SERIES = [
-  { key: "sent", label: "Sent", color: "#2a78d6" },
-  { key: "opened", label: "Opened", color: "#1baf7a" },
-  { key: "replied", label: "Replied", color: "#eda100" },
-] as const;
+const SENT = "#2a78d6";
+const OPENED = "#0e9f6e";
+const REPLIED = "#d97706";
 
 const W = 720;
-const H = 210;
-const PAD = { top: 14, right: 96, bottom: 26, left: 36 };
+const H = 190;
+const PAD = { top: 12, right: 14, bottom: 24, left: 30 };
 const IW = W - PAD.left - PAD.right;
 const IH = H - PAD.top - PAD.bottom;
 
@@ -32,163 +32,221 @@ function fmtDay(date: string): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
+function Tile({
+  label,
+  value,
+  sub,
+  dot,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  dot: string;
+}) {
+  return (
+    <div className="rounded-xl border border-zinc-100 bg-white px-4 py-3">
+      <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+        <span className="inline-block h-2 w-2 rounded-full" style={{ background: dot }} />
+        {label}
+      </div>
+      <div className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{value}</div>
+      <div className="text-xs text-zinc-400">{sub}</div>
+    </div>
+  );
+}
+
 export default function ActivityChart({ data }: { data: DayPoint[] }) {
   const [hover, setHover] = useState<{ i: number; px: number; cw: number } | null>(null);
 
   if (!data.length) return null;
-  const empty = data.every((d) => d.sent === 0 && d.opened === 0 && d.replied === 0);
+
+  const totalSent = data.reduce((a, d) => a + d.sent, 0);
+  const totalOpened = data.reduce((a, d) => a + d.opened, 0);
+  const totalReplied = data.reduce((a, d) => a + d.replied, 0);
+  const openRate = totalSent ? Math.round((totalOpened / totalSent) * 100) : 0;
+  const replyRate = totalSent ? Math.round((totalReplied / totalSent) * 100) : 0;
+  const perDay = totalSent ? (totalSent / data.length).toFixed(1) : "0";
+
+  const empty = totalSent === 0 && totalOpened === 0 && totalReplied === 0;
+
+  // KPI tiles always render — they read even when the chart is empty.
+  const tiles = (
+    <div className="grid grid-cols-3 gap-3">
+      <Tile label="Sent" value={String(totalSent)} sub={`${perDay}/day avg`} dot={SENT} />
+      <Tile
+        label="Open rate"
+        value={`${openRate}%`}
+        sub={`${totalOpened} opened`}
+        dot={OPENED}
+      />
+      <Tile
+        label="Reply rate"
+        value={`${replyRate}%`}
+        sub={`${totalReplied} replied`}
+        dot={REPLIED}
+      />
+    </div>
+  );
+
   if (empty) {
     return (
-      <p className="text-sm text-zinc-400 py-10 text-center">
-        No activity in the last 14 days — the chart fills in as campaigns send.
-      </p>
+      <div>
+        {tiles}
+        <p className="text-sm text-zinc-400 py-8 text-center">
+          No activity in the last 14 days — this fills in as your campaigns send.
+        </p>
+      </div>
     );
   }
 
   const yMax = Math.max(4, ...data.flatMap((d) => [d.sent, d.opened, d.replied]));
-  const x = (i: number) => PAD.left + (data.length === 1 ? IW / 2 : (i * IW) / (data.length - 1));
+  const n = data.length;
+  const band = IW / n; // one slot per day
+  const cx = (i: number) => PAD.left + band * (i + 0.5);
+  const barW = Math.min(22, band * 0.6);
   const y = (v: number) => PAD.top + IH - (v / yMax) * IH;
   const ticks = [0, Math.round(yMax / 2), yMax];
 
-  const path = (key: (typeof SERIES)[number]["key"]) =>
-    data.map((d, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(d[key]).toFixed(1)}`).join(" ");
-
-  // Direct labels at line ends, nudged apart so they never overlap
-  const endLabels = SERIES.map((s) => ({ ...s, ly: y(data[data.length - 1][s.key]) }))
-    .sort((a, b) => a.ly - b.ly);
-  for (let i = 1; i < endLabels.length; i++) {
-    if (endLabels[i].ly - endLabels[i - 1].ly < 14) {
-      endLabels[i].ly = endLabels[i - 1].ly + 14;
-    }
-  }
+  const line = (key: "opened" | "replied") =>
+    data.map((d, i) => `${i === 0 ? "M" : "L"}${cx(i).toFixed(1)},${y(d[key]).toFixed(1)}`).join(" ");
 
   function onMove(e: React.MouseEvent<SVGSVGElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
     const scale = rect.width / W;
     const sx = (e.clientX - rect.left) / scale;
-    const i = Math.max(
-      0,
-      Math.min(data.length - 1, Math.round(((sx - PAD.left) / IW) * (data.length - 1)))
-    );
-    setHover({ i, px: x(i) * scale, cw: rect.width });
+    const i = Math.max(0, Math.min(n - 1, Math.floor((sx - PAD.left) / band)));
+    setHover({ i, px: cx(i) * scale, cw: rect.width });
   }
 
   const hovered = hover ? data[hover.i] : null;
 
   return (
-    <div className="relative">
-      <div className="flex items-center gap-4 mb-2">
-        {SERIES.map((s) => (
-          <span key={s.key} className="inline-flex items-center gap-1.5 text-xs text-zinc-500">
-            <span className="inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />
-            {s.label}
-          </span>
-        ))}
-      </div>
+    <div>
+      {tiles}
 
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="w-full"
-        role="img"
-        aria-label={`Outreach activity over the last 14 days: sent, opened, and replied per day`}
-        onMouseMove={onMove}
-        onMouseLeave={() => setHover(null)}
-      >
-        {/* gridlines + y ticks */}
-        {ticks.map((t) => (
-          <g key={t}>
-            <line
-              x1={PAD.left}
-              x2={W - PAD.right}
-              y1={y(t)}
-              y2={y(t)}
-              stroke={t === 0 ? "#c3c2b7" : "#e9e8e2"}
-              strokeWidth={1}
-            />
-            <text
-              x={PAD.left - 8}
-              y={y(t) + 3.5}
-              textAnchor="end"
-              fontSize={11}
-              fill="#898781"
-              style={{ fontVariantNumeric: "tabular-nums" }}
-            >
-              {t}
-            </text>
-          </g>
-        ))}
-
-        {/* x labels every other day */}
-        {data.map((d, i) =>
-          i % 2 === 1 ? (
-            <text key={d.date} x={x(i)} y={H - 8} textAnchor="middle" fontSize={11} fill="#898781">
-              {fmtDay(d.date)}
-            </text>
-          ) : null
-        )}
-
-        {/* crosshair */}
-        {hover && (
-          <line
-            x1={x(hover.i)}
-            x2={x(hover.i)}
-            y1={PAD.top}
-            y2={PAD.top + IH}
-            stroke="#c3c2b7"
-            strokeWidth={1}
-          />
-        )}
-
-        {/* series lines */}
-        {SERIES.map((s) => (
-          <path key={s.key} d={path(s.key)} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" />
-        ))}
-
-        {/* hover markers with surface ring */}
-        {hover &&
-          SERIES.map((s) => (
-            <circle
-              key={s.key}
-              cx={x(hover.i)}
-              cy={y(data[hover.i][s.key])}
-              r={4}
-              fill={s.color}
-              stroke="#ffffff"
-              strokeWidth={2}
-            />
-          ))}
-
-        {/* direct labels at line ends (relief for sub-3:1 slots) */}
-        {endLabels.map((s) => (
-          <g key={s.key}>
-            <circle cx={W - PAD.right + 10} cy={s.ly} r={3} fill={s.color} />
-            <text x={W - PAD.right + 17} y={s.ly + 3.5} fontSize={11} fill="#52514e">
-              {s.label}
-            </text>
-          </g>
-        ))}
-      </svg>
-
-      {hovered && hover && (
-        <div
-          className="pointer-events-none absolute z-10 rounded-lg border border-zinc-200 bg-white px-3 py-2 shadow-sm text-xs"
-          style={{
-            left: Math.min(hover.px + 12, hover.cw - 130),
-            top: 30,
-          }}
-        >
-          <div className="font-medium text-zinc-700 mb-1">{fmtDay(hovered.date)}</div>
-          {SERIES.map((s) => (
-            <div key={s.key} className="flex items-center gap-1.5 text-zinc-500">
-              <span className="inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />
-              {s.label}
-              <span className="ml-auto pl-3 font-medium text-zinc-700 tabular-nums">
-                {hovered[s.key]}
-              </span>
-            </div>
+      <div className="relative mt-5">
+        {/* legend */}
+        <div className="mb-2 flex items-center gap-4">
+          {[
+            ["Sent", SENT],
+            ["Opened", OPENED],
+            ["Replied", REPLIED],
+          ].map(([label, color]) => (
+            <span key={label} className="inline-flex items-center gap-1.5 text-xs text-zinc-500">
+              <span className="inline-block h-2 w-2 rounded-full" style={{ background: color }} />
+              {label}
+            </span>
           ))}
         </div>
-      )}
+
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="w-full"
+          role="img"
+          aria-label="Outreach activity over the last 14 days: emails sent, opened, and replied per day"
+          onMouseMove={onMove}
+          onMouseLeave={() => setHover(null)}
+        >
+          {/* gridlines + y ticks */}
+          {ticks.map((t) => (
+            <g key={t}>
+              <line
+                x1={PAD.left}
+                x2={W - PAD.right}
+                y1={y(t)}
+                y2={y(t)}
+                stroke={t === 0 ? "#d4d4d8" : "#f0efe9"}
+                strokeWidth={1}
+              />
+              <text
+                x={PAD.left - 7}
+                y={y(t) + 3.5}
+                textAnchor="end"
+                fontSize={11}
+                fill="#a1a1aa"
+                style={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                {t}
+              </text>
+            </g>
+          ))}
+
+          {/* hover column highlight */}
+          {hover && (
+            <rect
+              x={PAD.left + band * hover.i}
+              y={PAD.top}
+              width={band}
+              height={IH}
+              fill="#2a78d6"
+              opacity={0.05}
+            />
+          )}
+
+          {/* SENT — volume bars */}
+          {data.map((d, i) => (
+            <rect
+              key={d.date}
+              x={cx(i) - barW / 2}
+              y={y(d.sent)}
+              width={barW}
+              height={Math.max(0, PAD.top + IH - y(d.sent))}
+              rx={3}
+              fill={SENT}
+              opacity={hover && hover.i !== i ? 0.35 : 0.9}
+            />
+          ))}
+
+          {/* OPENED / REPLIED — thin lines on the same axis */}
+          <path d={line("opened")} fill="none" stroke={OPENED} strokeWidth={2} strokeLinejoin="round" />
+          <path d={line("replied")} fill="none" stroke={REPLIED} strokeWidth={2} strokeLinejoin="round" />
+
+          {/* markers so sparse data is visible */}
+          {data.map((d, i) => (
+            <g key={d.date}>
+              <circle cx={cx(i)} cy={y(d.opened)} r={2.6} fill={OPENED} />
+              <circle cx={cx(i)} cy={y(d.replied)} r={2.6} fill={REPLIED} />
+            </g>
+          ))}
+
+          {/* hover markers with white ring */}
+          {hover && (
+            <g>
+              <circle cx={cx(hover.i)} cy={y(data[hover.i].opened)} r={4} fill={OPENED} stroke="#fff" strokeWidth={2} />
+              <circle cx={cx(hover.i)} cy={y(data[hover.i].replied)} r={4} fill={REPLIED} stroke="#fff" strokeWidth={2} />
+            </g>
+          )}
+
+          {/* x labels every other day */}
+          {data.map((d, i) =>
+            i % 2 === 1 ? (
+              <text key={d.date} x={cx(i)} y={H - 7} textAnchor="middle" fontSize={11} fill="#a1a1aa">
+                {fmtDay(d.date)}
+              </text>
+            ) : null
+          )}
+        </svg>
+
+        {hovered && hover && (
+          <div
+            className="pointer-events-none absolute z-10 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs shadow-md"
+            style={{ left: Math.min(hover.px + 12, hover.cw - 140), top: 24 }}
+          >
+            <div className="mb-1 font-medium text-zinc-700">{fmtDay(hovered.date)}</div>
+            {[
+              ["Sent", hovered.sent, SENT],
+              ["Opened", hovered.opened, OPENED],
+              ["Replied", hovered.replied, REPLIED],
+            ].map(([label, val, color]) => (
+              <div key={label as string} className="flex items-center gap-1.5 text-zinc-500">
+                <span className="inline-block h-2 w-2 rounded-full" style={{ background: color as string }} />
+                {label}
+                <span className="ml-auto pl-4 font-medium tabular-nums text-zinc-700">{val as number}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
