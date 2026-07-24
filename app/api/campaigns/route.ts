@@ -60,6 +60,8 @@ export async function POST(req: NextRequest) {
     send_window_end?: number | null;
     ab_test?: boolean;
     send_now?: boolean;
+    /** >0 = send this many first, then auto-pause for review */
+    test_batch?: number;
   };
 
   if (!body.name?.trim()) {
@@ -131,8 +133,8 @@ export async function POST(req: NextRequest) {
       `INSERT INTO campaigns
          (user_id, name, description, tone, channel, category_filter, scheduled_at,
           throttle_per_hour, followup_count, followup_interval_days,
-          send_window_start, send_window_end, ab_test, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
+          send_window_start, send_window_end, ab_test, test_batch, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
       [
         userId,
         body.name!.trim(),
@@ -148,6 +150,7 @@ export async function POST(req: NextRequest) {
         windowStart,
         windowEnd,
         channel === "email" && body.ab_test ? 1 : 0,
+        Math.min(20, Math.max(0, Math.round(body.test_batch ?? 0))),
         body.send_now ? "running" : "scheduled",
       ]
     );

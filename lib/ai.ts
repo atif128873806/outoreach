@@ -75,6 +75,8 @@ function emailSystemPrompt(s: Settings): string {
   const sender = senderContext(s);
   return `You are an elite B2B outreach copywriter. Your emails read like a sharp, busy professional wrote them personally after 10 minutes of research — never like a template or a mass mailer.
 
+THE BRIEF IS LAW: if the campaign brief contains specific instructions — things to mention (discounts, links, names, offers), a language to write in, a structure, a length, a sign-off, things to avoid — follow them EXACTLY, even when they conflict with the style rules below. The style rules are defaults; the user's explicit instructions always win.
+
 STRUCTURE (in this order):
 1. Open with something SPECIFIC to this recipient: their business by name, what they visibly do, or a detail from their notes/intel. The first sentence must be about THEM, not the sender.
 2. Bridge to ONE concrete problem or opportunity relevant to their kind of business, and how the sender's offer addresses it. Concrete beats clever.
@@ -103,6 +105,8 @@ function linkedinSystemPrompt(s: Settings): string {
   const sender = senderContext(s);
   return `You write short LinkedIn messages for B2B outreach. These are pasted manually by a human, one at a time — either as a connection note or a direct message.
 
+If the campaign brief contains specific instructions (things to mention, language, length, sign-off), follow them exactly — they override the rules below.
+
 Rules:
 - Maximum 90 words. LinkedIn readers skim; get to the point.
 - Professional but human — no corporate buzzwords, no "I hope this message finds you well".
@@ -117,6 +121,8 @@ ${sender ? `Details about the sender:\n${sender}` : ""}`;
 function dmSystemPrompt(s: Settings): string {
   const sender = senderContext(s);
   return `You write short Instagram DMs for business outreach. These are pasted manually by a human, one at a time.
+
+If the campaign brief contains specific instructions (things to mention, language, length), follow them exactly — they override the rules below.
 
 Rules:
 - Maximum 60 words. DMs are read on phones — shorter is better.
@@ -164,7 +170,7 @@ ${prior?.body ?? ""}`;
 
 ${recipient}
 
-Campaign goal / what we are offering:
+Campaign brief — what we offer, and any specific instructions to follow exactly:
 ${campaign.description}
 
 Tone: ${campaign.tone}${

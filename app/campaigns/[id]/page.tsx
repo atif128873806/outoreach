@@ -26,8 +26,14 @@ interface Campaign {
   send_window_start: number | null;
   send_window_end: number | null;
   ab_test: number;
+  test_batch: number;
+  test_done: number;
   status: string;
 }
+
+const TONES = ["professional", "friendly", "casual", "enthusiastic", "formal"];
+const inputCls =
+  "w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400";
 
 interface EmailItem {
   id: number;
@@ -57,6 +63,11 @@ export default function CampaignDetailPage() {
   const [emails, setEmails] = useState<EmailItem[]>([]);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [templateCount, setTemplateCount] = useState(0);
+  const [editOpen, setEditOpen] = useState(false);
+  const [edit, setEdit] = useState<Record<string, string>>({});
+  const [editSaving, setEditSaving] = useState(false);
+  const [editMsg, setEditMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/campaigns/${id}`);
@@ -64,7 +75,52 @@ export default function CampaignDetailPage() {
     const data = await res.json();
     setCampaign(data.campaign);
     setEmails(data.emails);
+    setTemplateCount(data.templateCount ?? 0);
   }, [id]);
+
+  function openEdit() {
+    if (!campaign) return;
+    setEdit({
+      name: campaign.name,
+      description: campaign.description,
+      tone: campaign.tone,
+      throttle_per_hour: String(campaign.throttle_per_hour),
+      followup_count: String(campaign.followup_count),
+      followup_interval_days: String(campaign.followup_interval_days),
+    });
+    setEditMsg(null);
+    setEditOpen(true);
+  }
+
+  async function saveEdit() {
+    setEditSaving(true);
+    setEditMsg(null);
+    try {
+      const res = await fetch(`/api/campaigns/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "edit",
+          fields: {
+            name: edit.name,
+            description: edit.description,
+            tone: edit.tone,
+            throttle_per_hour: Number(edit.throttle_per_hour),
+            followup_count: Number(edit.followup_count),
+            followup_interval_days: Number(edit.followup_interval_days),
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Save failed");
+      setEditOpen(false);
+      await load();
+    } catch (err) {
+      setEditMsg(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setEditSaving(false);
+    }
+  }
 
   useEffect(() => {
     load();
@@ -158,6 +214,25 @@ export default function CampaignDetailPage() {
         }
       />
 
+      {campaign.status === "paused" && campaign.test_batch > 0 && campaign.test_done === 1 && (
+        <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5 text-sm text-blue-800">
+          <b>Test batch complete</b> — the first {campaign.test_batch} message
+          {campaign.test_batch > 1 ? "s" : ""} went out and the campaign paused itself, as you asked.
+          Review the results below (opens, replies, how the AI wrote), make any edits, then hit{" "}
+          <b>▶ Resume</b> to send the rest.
+        </div>
+      )}
+
+      {templateCount > 0 && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm text-amber-800">
+          <b>{templateCount} message{templateCount > 1 ? "s were" : " was"} written by the built-in
+          template engine</b> instead of the AI (usually the daily included-AI limit, or a brief
+          provider hiccup). Templates personalize per business but don&apos;t follow custom
+          instructions from your brief. AI writing resumes automatically — or add your own API key
+          in Settings for unlimited AI.
+        </div>
+      )}
+
       <Card className="p-5 mb-6">
         <div className="flex items-center justify-between mb-3">
           <div className="text-sm text-zinc-500">
@@ -239,6 +314,11 @@ export default function CampaignDetailPage() {
               ✕ Cancel
             </button>
           )}
+          {["scheduled", "paused", "running"].includes(campaign.status) && (
+            <button className={btnSecondary} onClick={() => (editOpen ? setEditOpen(false) : openEdit())}>
+              ✎ Edit
+            </button>
+          )}
           <button
             className={`${btnSecondary} text-red-500 border-red-200 hover:bg-red-50`}
             onClick={remove}
@@ -247,6 +327,68 @@ export default function CampaignDetailPage() {
           </button>
         </div>
         {error && <div className="text-sm text-red-500 mt-3">{error}</div>}
+
+        {editOpen && (
+          <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
+            <div className="mb-3 text-sm font-medium text-zinc-700">
+              Edit campaign
+              <span className="ml-2 text-xs font-normal text-zinc-400">
+                — changes apply to every message that hasn&apos;t been sent yet (the audience stays fixed)
+              </span>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="block">
+                <div className="mb-1 text-xs font-medium text-zinc-500">Name</div>
+                <input className={inputCls} value={edit.name ?? ""} onChange={(e) => setEdit((s) => ({ ...s, name: e.target.value }))} />
+              </label>
+              <label className="block">
+                <div className="mb-1 text-xs font-medium text-zinc-500">Tone</div>
+                <select className={inputCls} value={edit.tone ?? "professional"} onChange={(e) => setEdit((s) => ({ ...s, tone: e.target.value }))}>
+                  {TONES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block md:col-span-2">
+                <div className="mb-1 text-xs font-medium text-zinc-500">
+                  Campaign brief <span className="font-normal text-zinc-400">— the AI writes every remaining message from this; specific instructions here are followed exactly</span>
+                </div>
+                <textarea rows={4} className={inputCls} value={edit.description ?? ""} onChange={(e) => setEdit((s) => ({ ...s, description: e.target.value }))} />
+              </label>
+              <label className="block">
+                <div className="mb-1 text-xs font-medium text-zinc-500">Speed (messages/hour)</div>
+                <input type="number" min={1} max={600} className={inputCls} value={edit.throttle_per_hour ?? ""} onChange={(e) => setEdit((s) => ({ ...s, throttle_per_hour: e.target.value }))} />
+              </label>
+              {campaign.channel === "email" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block">
+                    <div className="mb-1 text-xs font-medium text-zinc-500">Follow-ups</div>
+                    <select className={inputCls} value={edit.followup_count ?? "0"} onChange={(e) => setEdit((s) => ({ ...s, followup_count: e.target.value }))}>
+                      {[0, 1, 2, 3].map((n) => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <div className="mb-1 text-xs font-medium text-zinc-500">Days apart</div>
+                    <input type="number" min={1} max={30} className={inputCls} value={edit.followup_interval_days ?? ""} onChange={(e) => setEdit((s) => ({ ...s, followup_interval_days: e.target.value }))} />
+                  </label>
+                </div>
+              )}
+            </div>
+            {editMsg && <div className="mt-2 text-sm text-red-500">{editMsg}</div>}
+            <div className="mt-3 flex gap-2">
+              <button
+                className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
+                onClick={saveEdit}
+                disabled={editSaving}
+              >
+                {editSaving ? "Saving…" : "Save changes"}
+              </button>
+              <button className={btnSecondary} onClick={() => setEditOpen(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card className="p-5 mb-6">

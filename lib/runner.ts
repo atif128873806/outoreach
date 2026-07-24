@@ -109,6 +109,31 @@ async function processCampaignBatch(campaign: Campaign, settings: Settings): Pro
 
   if (!insideSendWindow(campaign, settings)) return; // outside allowed hours; try next tick
 
+  // Test batch: after the first N messages have gone out, pause once so the
+  // user can review results before the rest of the campaign sends.
+  let processedCount = 0;
+  const testBatchActive = campaign.test_batch > 0 && !campaign.test_done;
+  if (testBatchActive) {
+    processedCount = Number(
+      (
+        await q1<{ n: string | number }>(
+          "SELECT COUNT(*) n FROM emails WHERE campaign_id = $1 AND status != 'pending'",
+          [campaign.id]
+        )
+      )?.n ?? 0
+    );
+    if (processedCount >= campaign.test_batch) {
+      await q(
+        "UPDATE campaigns SET status = 'paused', test_done = 1 WHERE id = $1 AND status = 'running'",
+        [campaign.id]
+      );
+      console.log(
+        `[runner] campaign #${campaign.id} test batch of ${campaign.test_batch} complete — paused for review`
+      );
+      return;
+    }
+  }
+
   // Real SMTP sending requires a verified email address (when the instance
   // enforces verification). Simulated sends stay open for testing.
   if (
@@ -138,6 +163,28 @@ async function processCampaignBatch(campaign: Campaign, settings: Settings): Pro
   );
 
   for (const email of batch) {
+    // Test batch boundary can land mid-batch — re-count and stop exactly at N.
+    if (testBatchActive) {
+      processedCount = Number(
+        (
+          await q1<{ n: string | number }>(
+            "SELECT COUNT(*) n FROM emails WHERE campaign_id = $1 AND status != 'pending'",
+            [campaign.id]
+          )
+        )?.n ?? 0
+      );
+      if (processedCount >= campaign.test_batch) {
+        await q(
+          "UPDATE campaigns SET status = 'paused', test_done = 1 WHERE id = $1 AND status = 'running'",
+          [campaign.id]
+        );
+        console.log(
+          `[runner] campaign #${campaign.id} test batch of ${campaign.test_batch} complete — paused for review`
+        );
+        return;
+      }
+    }
+
     // Re-check campaign status each iteration so pause/cancel takes effect mid-batch.
     const current = await q1<{ status: string }>(
       "SELECT status FROM campaigns WHERE id = $1",

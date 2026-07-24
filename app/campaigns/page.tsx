@@ -176,6 +176,7 @@ function NewCampaignForm({
   const [followups, setFollowups] = useState(0);
   const [followupDays, setFollowupDays] = useState(3);
   const [abTest, setAbTest] = useState(false);
+  const [testBatch, setTestBatch] = useState(0);
   const [windowEnabled, setWindowEnabled] = useState(false);
   const [windowStart, setWindowStart] = useState(9);
   const [windowEnd, setWindowEnd] = useState(17);
@@ -279,6 +280,7 @@ function NewCampaignForm({
           followup_count: channel === "email" ? followups : 0,
           followup_interval_days: followupDays,
           ab_test: channel === "email" && abTest,
+          test_batch: testBatch,
           send_window_start: windowEnabled ? windowStart : null,
           send_window_end: windowEnabled ? windowEnd : null,
         }),
@@ -475,6 +477,41 @@ function NewCampaignForm({
               </div>
             </div>
           )}
+
+          <div>
+            <label className="flex items-center gap-2 text-sm text-zinc-600">
+              <input
+                type="checkbox"
+                checked={testBatch > 0}
+                onChange={(e) => setTestBatch(e.target.checked ? 5 : 0)}
+              />
+              Start with a test batch
+            </label>
+            <div className="text-xs text-zinc-400 mt-1 ml-6">
+              {channel === "email"
+                ? "Sends only the first few emails, then pauses automatically so you can check the results before the rest goes out."
+                : "Drafts only the first few messages, then pauses so you can review the AI's writing before the rest are generated."}
+            </div>
+            {testBatch > 0 && (
+              <div className="mt-2 ml-6 flex items-center gap-2 text-sm text-zinc-600">
+                Batch size:
+                {[5, 10].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setTestBatch(n)}
+                    className={`rounded-lg px-3 py-1 text-xs font-medium ${
+                      testBatch === n
+                        ? "bg-zinc-900 text-white"
+                        : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div>
             <label className="flex items-center gap-2 text-sm text-zinc-600">

@@ -153,6 +153,8 @@ CREATE TABLE IF NOT EXISTS campaigns (
   send_window_start      INTEGER,
   send_window_end        INTEGER,
   ab_test                INTEGER NOT NULL DEFAULT 0,
+  test_batch             INTEGER NOT NULL DEFAULT 0,
+  test_done              INTEGER NOT NULL DEFAULT 0,
   status                 TEXT NOT NULL DEFAULT 'scheduled',
   created_at             TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -265,6 +267,10 @@ async function init(): Promise<Adapter> {
   await db.exec(
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_user_email ON contacts(user_id, email) WHERE email <> ''"
   );
+  await db.exec(
+    `ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS test_batch INTEGER NOT NULL DEFAULT 0;
+     ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS test_done INTEGER NOT NULL DEFAULT 0`
+  );
   return db;
 }
 
@@ -373,6 +379,10 @@ export interface Campaign {
   send_window_end: number | null;
   /** 1 = alternate two AI subject-line styles and compare open rates */
   ab_test: number;
+  /** >0 = send this many first, then auto-pause for review */
+  test_batch: number;
+  /** 1 = the test batch already ran and paused once */
+  test_done: number;
   status: CampaignStatus;
   created_at: string;
 }
