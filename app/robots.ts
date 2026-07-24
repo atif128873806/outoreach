@@ -15,7 +15,9 @@ export default function robots(): MetadataRoute.Robots {
         "/leads",
         "/settings",
         "/admin",
+        "/billing",
       ],
     },
+    sitemap: "https://outreach.sakodev.com/sitemap.xml",
   };
 }
