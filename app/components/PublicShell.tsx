@@ -62,6 +62,7 @@ export default function PublicShell({
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
             <Link href="/pricing" className="hover:text-zinc-600">Pricing</Link>
+            <Link href="/guides" className="hover:text-zinc-600">Guides</Link>
             <Link href="/tools/spam-checker" className="hover:text-zinc-600">Spam checker</Link>
             <Link href="/tools/dns-checker" className="hover:text-zinc-600">DNS checker</Link>
             <Link href="/terms" className="hover:text-zinc-600">Terms</Link>

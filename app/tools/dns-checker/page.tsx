@@ -67,6 +67,13 @@ export default function DnsCheckerPage() {
           <li>
             Records can take 15–60 minutes to propagate — re-check after saving.
           </li>
+          <li>
+            Want the full picture — warm-up schedules, volume rules, monitoring? Read the{" "}
+            <Link href="/guides/cold-email-deliverability" className="text-blue-600 underline">
+              complete deliverability guide
+            </Link>
+            .
+          </li>
         </ul>
       </Section>
 

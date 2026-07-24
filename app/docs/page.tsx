@@ -103,8 +103,10 @@ export default function DocsPage() {
             type the email you&apos;ll send from and every field (host, port, SSL,
             IMAP) is detected and filled automatically; you only paste the password.
             For Gmail/Outlook/Zoho/Yahoo that password is an <b>App Password</b> —
-            the wizard links you straight to the right page to create one. Then use{" "}
-            <b>Send test email</b> to confirm before launching anything.
+            the wizard links you straight to the right page to create one, and{" "}
+            <b>Verify &amp; save</b> checks the login live (no email sent) so only a
+            working configuration is stored. Then use <b>Send test email</b> for the
+            final proof.
           </p>
           <p>
             <b>Reply detection (IMAP)</b> — lets the app watch your inbox for replies
@@ -239,6 +241,16 @@ export default function DocsPage() {
               open rates per arm on the campaign page.
             </li>
             <li>
+              <b>Test batch</b> — check &quot;Start with a test batch&quot; and only the
+              first 5 or 10 messages go out; the campaign then pauses itself so you can
+              review results (and edit) before hitting Resume for the rest.
+            </li>
+            <li>
+              <b>Editing</b> — the ✎ Edit button on any scheduled, paused, or running
+              campaign changes the name, brief, tone, speed, and follow-ups. Messages are
+              written at send time, so edits apply to everything not yet sent.
+            </li>
+            <li>
               <b>Preview</b> — always generate a sample before scheduling: it shows the
               real AI output for a real contact, runs the spam-filter check, and can
               email the sample to your own inbox.
@@ -347,7 +359,15 @@ export default function DocsPage() {
             <li>
               <b>&quot;Provider is busy&quot; / temporary AI errors</b> — wait a
               minute and retry; campaigns fall back to the template engine
-              automatically, so sending never stops.
+              automatically, so sending never stops. When that happens the campaign
+              page shows how many messages used templates — templates personalize
+              per business but don&apos;t follow custom brief instructions.
+            </li>
+            <li>
+              <b>&quot;My custom instructions weren&apos;t followed&quot;</b> — put them
+              in the campaign brief (they override the AI&apos;s style rules), and check
+              the campaign page for a template-fallback notice: template-written
+              messages are the usual cause.
             </li>
             <li>
               <b>Anything else</b> — email{" "}

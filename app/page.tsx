@@ -81,6 +81,10 @@ const FAQS = [
     a: "Yes, by design. Those platforms ban automated cold DMs, so Outreach Studio never sends them for you. It drafts a personalized message per contact and gives you copy → open profile → mark sent. Your account behaves like a human, because it is one.",
   },
   {
+    q: "Who's accountable for what the AI writes?",
+    a: "You are — and the product is built so you actually can be. Preview any message before a campaign exists, send a 5–10 email test batch that auto-pauses for your review, edit the brief mid-campaign, and see a full log of every message. Instagram/LinkedIn messages are never auto-sent. The AI drafts; the human decides.",
+  },
+  {
     q: "Is this compliant with anti-spam laws?",
     a: "The tooling is built for it: every email carries a one-click unsubscribe link and List-Unsubscribe header, opt-outs are enforced forever, and bounced addresses are excluded automatically. You remain responsible for using it on appropriate business contacts under the laws that apply to you (CAN-SPAM, GDPR, PECR…).",
   },
@@ -608,6 +612,7 @@ export default function LandingPage() {
           <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-zinc-100 pt-6 text-xs md:flex-row">
             <div>© {new Date().getFullYear()} Outreach Studio</div>
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+              <Link href="/guides" className="hover:text-zinc-600">Guides</Link>
               <Link href="/tools/spam-checker" className="hover:text-zinc-600">Free spam checker</Link>
               <Link href="/tools/dns-checker" className="hover:text-zinc-600">Free SPF/DKIM checker</Link>
               <Link href="/terms" className="hover:text-zinc-600">Terms of Service</Link>

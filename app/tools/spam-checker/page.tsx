@@ -66,6 +66,13 @@ export default function SpamCheckerPage() {
           <li>Personalize genuinely: their business, their industry, their problem</li>
           <li>One clear, low-friction ask (a reply beats a booking link)</li>
           <li>Always include a working unsubscribe option</li>
+          <li>
+            The full playbook — authentication, warm-up, volume, monitoring — is in the{" "}
+            <Link href="/guides/cold-email-deliverability" className="text-blue-600 underline">
+              deliverability guide
+            </Link>
+            .
+          </li>
         </ul>
       </Section>
     </PublicShell>

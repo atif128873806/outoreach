@@ -715,6 +715,40 @@ export default function FeaturesPage() {
         </div>
       </section>
 
+      {/* ============================== HUMAN IN CONTROL ============================== */}
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">
+          Accountability
+        </p>
+        <h2 className="text-center text-3xl font-semibold tracking-tight sm:text-4xl">
+          The AI writes. You stay in control.
+        </h2>
+        <p className="mx-auto mt-4 max-w-2xl text-center text-zinc-500">
+          &quot;Who&apos;s responsible for AI-written outreach?&quot; — you are. That&apos;s why
+          every send path has a human checkpoint built in, not bolted on.
+        </p>
+        <div className="mx-auto mt-12 grid max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            ["Preview before anything sends", "Generate a real sample for a real contact, spam-checked, before a campaign exists."],
+            ["Test batches", "Send just the first 5–10, auto-pause, review the results — then release the rest."],
+            ["Edit mid-campaign", "Messages are written at send time, so brief and tone edits apply to everything not yet sent."],
+            ["DMs are never auto-sent", "Instagram and LinkedIn messages are drafts you send by hand — the platforms ban bots, so we never fake one."],
+            ["Full transparency", "Every message is logged; if the template engine ever writes instead of the AI, the campaign says so."],
+            ["Opt-outs are forever", "One-click unsubscribe on every email, enforced permanently and automatically."],
+          ].map(([t, b]) => (
+            <div key={t} className="rounded-2xl border border-zinc-200 bg-white p-5">
+              <div className="flex items-center gap-2 font-medium">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+                  <Icon d="M9 12l2 2 4-4M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" className="h-3.5 w-3.5" />
+                </span>
+                {t}
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-500">{b}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ============================== DELIVERABILITY (dark) ============================== */}
       <section className="relative overflow-hidden bg-zinc-950">
         <div

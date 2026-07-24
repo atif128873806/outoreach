@@ -19,6 +19,7 @@ const PUBLIC_PREFIXES = [
   "/features",
   "/demo",
   "/docs",
+  "/guides",
   "/tools",
   "/api/tools/",
   "/pricing",
