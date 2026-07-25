@@ -232,6 +232,18 @@ export default function LandingPage() {
               }}
             />
             <HeroFilm />
+            <div className="relative mt-7 flex flex-wrap items-center justify-center gap-x-3.5 gap-y-2 text-sm">
+              <span className="text-zinc-500">
+                22 seconds · no narration · the actual product
+              </span>
+              <span className="hidden h-4 w-px bg-zinc-200 sm:block" />
+              <Link
+                href="/demo"
+                className="font-medium text-blue-600 transition-colors hover:text-blue-700"
+              >
+                Click through it yourself →
+              </Link>
+            </div>
           </div>
         </div>
       </section>
