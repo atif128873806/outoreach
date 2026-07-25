@@ -219,9 +219,9 @@ export default function LandingPage() {
             No credit card · Bring your own AI key · Self-hostable with one command
           </p>
 
-          {/* Product mock */}
-          <div className="rise rise-4 relative mx-auto mt-16 max-w-4xl">
-            {/* gradient halo behind the mock */}
+          {/* Launch film — the real product, 22s, silent-legible */}
+          <div className="rise rise-4 relative mx-auto mt-16 max-w-5xl">
+            {/* gradient halo behind the film */}
             <div
               className="pointer-events-none absolute -inset-6 rounded-[28px] opacity-60"
               style={{
@@ -230,88 +230,24 @@ export default function LandingPage() {
                 filter: "blur(28px)",
               }}
             />
-            {/* floating badges */}
-            <div className="float-soft absolute -top-5 -left-3 z-10 hidden items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium shadow-lg shadow-zinc-900/5 sm:flex">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">✓</span>
-              Reply detected — <span className="text-emerald-600">interested</span>
-            </div>
-            <div
-              className="float-soft absolute -right-4 top-24 z-10 hidden flex-col rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-left shadow-lg shadow-zinc-900/5 sm:flex"
-              style={{ animationDelay: "1.4s" }}
+            <video
+              className="relative block aspect-video w-full rounded-2xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/10"
+              poster="/launch-film.jpg"
+              preload="metadata"
+              autoPlay
+              muted
+              loop
+              playsInline
+              aria-label="Outreach Studio in 22 seconds: finding leads with emails, AI writing a personal email, sending at a human pace, and replies arriving sorted"
             >
-              <span className="text-[10px] uppercase tracking-wide text-zinc-400">open rate</span>
-              <span className="text-lg font-semibold tabular-nums text-zinc-900">61%</span>
-            </div>
-
-            <div className="relative rounded-2xl border border-zinc-200 bg-white p-5 text-left shadow-2xl shadow-zinc-900/10">
-              <div className="mb-4 flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-red-300" />
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
-                <span className="ml-3 text-xs text-zinc-400">outreach dashboard</span>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-3">
-                {[
-                  { label: "Emails sent", value: "412", sub: "38 queued" },
-                  { label: "Open rate", value: "61%", sub: "252 opened" },
-                  { label: "Replies", value: "34", sub: "12 interested" },
-                ].map((s) => (
-                  <div key={s.label} className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-4">
-                    <div className="text-xs text-zinc-400">{s.label}</div>
-                    <div className="mt-1 text-2xl font-semibold tabular-nums">{s.value}</div>
-                    <div className="mt-0.5 text-xs text-zinc-400">{s.sub}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 grid gap-4 sm:grid-cols-5">
-                <div className="rounded-xl border border-zinc-100 p-4 sm:col-span-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-xs font-medium text-zinc-500">Last 14 days</span>
-                    <span className="flex items-center gap-3 text-[10px] text-zinc-400">
-                      <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[#2a78d6]" />sent</span>
-                      <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[#1baf7a]" />opened</span>
-                    </span>
-                  </div>
-                  <svg viewBox="0 0 300 80" className="w-full" aria-hidden>
-                    <defs>
-                      <linearGradient id="lgA" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#2a78d6" stopOpacity="0.14" />
-                        <stop offset="100%" stopColor="#2a78d6" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <line x1="0" y1="70" x2="300" y2="70" stroke="#e4e4e7" />
-                    <path
-                      d="M0,62 L23,58 L46,60 L69,49 L92,52 L115,40 L138,44 L161,30 L184,34 L207,22 L230,27 L253,14 L276,18 L300,8 L300,70 L0,70 Z"
-                      fill="url(#lgA)"
-                    />
-                    <path
-                      d="M0,62 L23,58 L46,60 L69,49 L92,52 L115,40 L138,44 L161,30 L184,34 L207,22 L230,27 L253,14 L276,18 L300,8"
-                      fill="none" stroke="#2a78d6" strokeWidth="2"
-                    />
-                    <path
-                      d="M0,68 L23,66 L46,67 L69,60 L92,63 L115,54 L138,58 L161,47 L184,51 L207,41 L230,46 L253,34 L276,39 L300,28"
-                      fill="none" stroke="#1baf7a" strokeWidth="2"
-                    />
-                    <circle cx="300" cy="8" r="3" fill="#2a78d6" stroke="#fff" strokeWidth="1.5" />
-                  </svg>
-                </div>
-                <div className="rounded-xl border border-zinc-100 p-4 sm:col-span-2">
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                      interested
-                    </span>
-                    <span className="text-xs text-zinc-400">reply · Joe&apos;s Pizza</span>
-                  </div>
-                  <p className="text-xs leading-relaxed text-zinc-600">
-                    “Sounds interesting — can you send pricing?”
-                  </p>
-                  <div className="mt-3 rounded-lg border border-violet-100 bg-violet-50 p-2.5 text-xs leading-relaxed text-zinc-600">
-                    <span className="font-medium text-violet-700">✨ Suggested reply drafted</span>
-                    {" "}— happy to! The fastest way is a quick call…
-                  </div>
-                </div>
-              </div>
-            </div>
+              <source src="/launch-film.mp4" type="video/mp4" />
+            </video>
+            <p className="relative mt-4 text-xs text-zinc-400">
+              22 seconds, no narration — the actual product.{" "}
+              <Link href="/demo" className="underline hover:text-zinc-600">
+                Prefer to click through it yourself?
+              </Link>
+            </p>
           </div>
         </div>
       </section>

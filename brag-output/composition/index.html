@@ -198,12 +198,12 @@
         data-volume="0.34"
       ></audio>
 
-      <audio id="sfx-k1" data-track-index="21" src="assets/sfx/keyboard/keypress-001.wav" data-start="0.62" data-duration="0.3" data-volume="0.36"></audio>
-      <audio id="sfx-k2" data-track-index="22" src="assets/sfx/keyboard/keypress-003.wav" data-start="0.9" data-duration="0.3" data-volume="0.32"></audio>
-      <audio id="sfx-k3" data-track-index="23" src="assets/sfx/keyboard/keypress-005.wav" data-start="1.16" data-duration="0.3" data-volume="0.36"></audio>
-      <audio id="sfx-k4" data-track-index="24" src="assets/sfx/keyboard/keypress-003.wav" data-start="1.66" data-duration="0.3" data-volume="0.32"></audio>
-      <audio id="sfx-k5" data-track-index="25" src="assets/sfx/keyboard/keypress-001.wav" data-start="1.94" data-duration="0.3" data-volume="0.36"></audio>
-      <audio id="sfx-k6" data-track-index="26" src="assets/sfx/keyboard/keypress-005.wav" data-start="2.2" data-duration="0.3" data-volume="0.32"></audio>
+      <audio id="sfx-k1" data-track-index="21" src="assets/sfx/keyboard/keypress-001.wav" data-start="0.37" data-duration="0.3" data-volume="0.36"></audio>
+      <audio id="sfx-k2" data-track-index="22" src="assets/sfx/keyboard/keypress-003.wav" data-start="0.65" data-duration="0.3" data-volume="0.32"></audio>
+      <audio id="sfx-k3" data-track-index="23" src="assets/sfx/keyboard/keypress-005.wav" data-start="0.91" data-duration="0.3" data-volume="0.36"></audio>
+      <audio id="sfx-k4" data-track-index="24" src="assets/sfx/keyboard/keypress-003.wav" data-start="1.41" data-duration="0.3" data-volume="0.32"></audio>
+      <audio id="sfx-k5" data-track-index="25" src="assets/sfx/keyboard/keypress-001.wav" data-start="1.69" data-duration="0.3" data-volume="0.36"></audio>
+      <audio id="sfx-k6" data-track-index="26" src="assets/sfx/keyboard/keypress-005.wav" data-start="1.95" data-duration="0.3" data-volume="0.32"></audio>
 
       <audio id="sfx-click" src="assets/sfx/interface/click_001.ogg" data-start="2.68" data-duration="0.3" data-track-index="27" data-volume="0.42"></audio>
 
@@ -425,7 +425,6 @@
       const nicheOut = document.getElementById("s1-niche");
       const locOut = document.getElementById("s1-loc");
 
-      tl.from("#s1-inner", { opacity: 0, y: 26, duration: 0.5, ease: "power2.out" }, 0.1);
       tl.to(
         typed,
         {
@@ -436,12 +435,12 @@
             nicheOut.textContent = NICHE.slice(0, Math.round(typed.niche));
           },
         },
-        0.55
+        0.3
       );
       // caret hands over to the second field
       tl.set("#s1-caret2", { opacity: 0 }, 0);
-      tl.set("#s1-caret1", { opacity: 0 }, 1.42);
-      tl.set("#s1-caret2", { opacity: 1 }, 1.42);
+      tl.set("#s1-caret1", { opacity: 0 }, 1.17);
+      tl.set("#s1-caret2", { opacity: 1 }, 1.17);
       tl.to(
         typed,
         {
@@ -452,7 +451,7 @@
             locOut.textContent = LOC.slice(0, Math.round(typed.loc));
           },
         },
-        1.46
+        1.21
       );
       // click the Find button
       tl.to("#s1-btn", { scale: 0.955, duration: 0.12, ease: "power2.in" }, 2.62);
