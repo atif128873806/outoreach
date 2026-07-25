@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LogoTile } from "./components/Logo";
 import ToolsDropdown from "./components/ToolsDropdown";
+import HeroFilm from "./components/HeroFilm";
 
 /**
  * Public marketing landing page. Signed-in visitors never see this —
@@ -230,24 +231,7 @@ export default function LandingPage() {
                 filter: "blur(28px)",
               }}
             />
-            <video
-              className="relative block aspect-video w-full rounded-2xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/10"
-              poster="/launch-film.jpg"
-              preload="metadata"
-              autoPlay
-              muted
-              loop
-              playsInline
-              aria-label="Outreach Studio in 22 seconds: finding leads with emails, AI writing a personal email, sending at a human pace, and replies arriving sorted"
-            >
-              <source src="/launch-film.mp4" type="video/mp4" />
-            </video>
-            <p className="relative mt-4 text-xs text-zinc-400">
-              22 seconds, no narration — the actual product.{" "}
-              <Link href="/demo" className="underline hover:text-zinc-600">
-                Prefer to click through it yourself?
-              </Link>
-            </p>
+            <HeroFilm />
           </div>
         </div>
       </section>
