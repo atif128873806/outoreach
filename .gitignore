@@ -45,3 +45,8 @@ data/
 backups/
 .env
 !.env.example
+
+# brag video workspace (keep brag.mp4/brag.jpg/plan; skip the render workspace + audio library)
+brag-output/composition/assets/
+brag-output/composition/snapshots/
+brag-output/composition/renders/

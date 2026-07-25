@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Outreach Studio — launch film</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Geist";
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: block;
+        src: url("assets/fonts/geist-latin.woff2") format("woff2");
+      }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      html, body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #f7f7f8;
+      }
+
+      body {
+        font-family: "Geist", "Inter", system-ui, sans-serif;
+        color: #18181b;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+
+      /* full-bleed canvas layer — never put the scene fill on the root itself */
+      .canvas { position: absolute; inset: 0; background: #f7f7f8; }
+
+      .clip {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 90px 140px;
+      }
+
+      /* ---------- shared UI language (mirrors the real product) ---------- */
+      .kicker {
+        font-size: 28px;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #2563eb;
+        margin-bottom: 26px;
+      }
+      .card {
+        width: 100%;
+        background: #ffffff;
+        border: 1px solid #e8e8eb;
+        border-radius: 22px;
+        box-shadow: 0 32px 70px -34px rgba(24, 24, 27, 0.22);
+        padding: 44px 48px;
+      }
+      .stage { width: 100%; max-width: 1480px; }
+      .row-label { font-size: 24px; font-weight: 500; color: #71717a; margin-bottom: 12px; }
+      .field {
+        display: flex;
+        align-items: center;
+        height: 78px;
+        padding: 0 26px;
+        border: 1px solid #e4e4e7;
+        border-radius: 14px;
+        font-size: 33px;
+        color: #18181b;
+        background: #fff;
+      }
+      .btn-dark {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 78px;
+        padding: 0 40px;
+        border-radius: 14px;
+        background: #18181b;
+        color: #fff;
+        font-size: 30px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .caret {
+        display: inline-block;
+        width: 3px;
+        height: 34px;
+        background: #2563eb;
+        margin-left: 3px;
+        vertical-align: -6px;
+      }
+      .meta { font-size: 26px; color: #71717a; }
+      .meta strong { color: #52525b; font-weight: 600; }
+
+      .lead {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        padding: 26px 4px;
+        border-top: 1px solid #f1f1f4;
+      }
+      .avatar {
+        width: 60px; height: 60px; flex: none;
+        border-radius: 14px;
+        background: #f4f4f5;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 24px; font-weight: 600; color: #71717a;
+      }
+      .lead-name { font-size: 31px; font-weight: 500; }
+      .lead-sub { font-size: 23px; color: #71717a; margin-top: 4px; }
+      .pill {
+        display: inline-flex; align-items: center;
+        height: 46px; padding: 0 20px;
+        border-radius: 999px;
+        font-size: 22px; font-weight: 500;
+        white-space: nowrap;
+      }
+      .pill-green { background: #ecfdf5; color: #0b7a55; }
+      .pill-blue { background: #eff6ff; color: #1d4ed8; }
+      .pill-violet { background: #f5f3ff; color: #6d28d9; }
+      .pill-zinc { background: #f4f4f5; color: #52525b; }
+      .pill-ghost { border: 1px solid #e4e4e7; color: #52525b; }
+
+      /* email preview */
+      .subject { font-size: 34px; font-weight: 600; }
+      .body-line { font-size: 31px; line-height: 1.62; color: #3f3f46; }
+      .hl { background: #dbeafe; color: #1e3a8a; border-radius: 4px; padding: 0 4px; }
+
+      /* campaign progress */
+      .bar-track {
+        display: block;
+        width: 100%; height: 16px;
+        border-radius: 999px;
+        background: #f1f1f4;
+        overflow: hidden;
+      }
+      .bar-fill {
+        display: block;
+        width: 100%; height: 16px;
+        border-radius: 999px;
+        background: #2563eb;
+        transform-origin: left center;
+      }
+
+      /* KPI tiles */
+      .tiles { display: flex; gap: 30px; width: 100%; max-width: 1480px; }
+      .tile {
+        flex: 1;
+        background: #fff;
+        border: 1px solid #e8e8eb;
+        border-radius: 20px;
+        padding: 36px 38px;
+        box-shadow: 0 24px 50px -30px rgba(24, 24, 27, 0.2);
+      }
+      .tile-label { font-size: 25px; color: #71717a; display: flex; align-items: center; gap: 12px; }
+      .dot { width: 14px; height: 14px; border-radius: 999px; display: inline-block; }
+      .tile-value { font-size: 92px; font-weight: 600; letter-spacing: -0.02em; margin-top: 10px; line-height: 1; }
+      .tile-sub { font-size: 24px; color: #71717a; margin-top: 10px; }
+
+      /* closing card */
+      .closing {
+        position: absolute; inset: 0;
+        background: #09090b;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+      }
+      .logo-lockup { display: flex; align-items: center; gap: 26px; }
+      .wordmark { font-size: 76px; font-weight: 600; color: #fff; letter-spacing: -0.02em; }
+      .wordmark span { color: #8b8b93; }
+      .tagline { font-size: 40px; color: #e4e4e7; margin-top: 40px; font-weight: 400; }
+      .url { font-size: 26px; color: #b4b4bb; margin-top: 46px; letter-spacing: 0.04em; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="22"
+      data-width="1920"
+      data-height="1080"
+    >
+      <div class="canvas"></div>
+
+      <!-- ===== audio: music bed + sparse motion-matched SFX ===== -->
+      <audio
+        id="bgm"
+        src="assets/music/happy-beats-business-moves-vol-9-by-ende-dot-app.mp3"
+        data-start="0"
+        data-duration="22"
+        data-track-index="20"
+        data-volume="0.34"
+      ></audio>
+
+      <audio id="sfx-k1" data-track-index="21" src="assets/sfx/keyboard/keypress-001.wav" data-start="0.62" data-duration="0.3" data-volume="0.36"></audio>
+      <audio id="sfx-k2" data-track-index="22" src="assets/sfx/keyboard/keypress-003.wav" data-start="0.9" data-duration="0.3" data-volume="0.32"></audio>
+      <audio id="sfx-k3" data-track-index="23" src="assets/sfx/keyboard/keypress-005.wav" data-start="1.16" data-duration="0.3" data-volume="0.36"></audio>
+      <audio id="sfx-k4" data-track-index="24" src="assets/sfx/keyboard/keypress-003.wav" data-start="1.66" data-duration="0.3" data-volume="0.32"></audio>
+      <audio id="sfx-k5" data-track-index="25" src="assets/sfx/keyboard/keypress-001.wav" data-start="1.94" data-duration="0.3" data-volume="0.36"></audio>
+      <audio id="sfx-k6" data-track-index="26" src="assets/sfx/keyboard/keypress-005.wav" data-start="2.2" data-duration="0.3" data-volume="0.32"></audio>
+
+      <audio id="sfx-click" src="assets/sfx/interface/click_001.ogg" data-start="2.68" data-duration="0.3" data-track-index="27" data-volume="0.42"></audio>
+
+      <audio id="sfx-row1" src="assets/sfx/interface/drop_002.ogg" data-start="5.2" data-duration="0.4" data-track-index="28" data-volume="0.3"></audio>
+      <audio id="sfx-row2" src="assets/sfx/interface/drop_002.ogg" data-start="5.72" data-duration="0.4" data-track-index="29" data-volume="0.3"></audio>
+      <audio id="sfx-row3" src="assets/sfx/interface/drop_002.ogg" data-start="6.26" data-duration="0.4" data-track-index="30" data-volume="0.3"></audio>
+
+      <audio id="sfx-chip" src="assets/sfx/interface/select_008.ogg" data-start="12.26" data-duration="0.3" data-track-index="31" data-volume="0.4"></audio>
+      <audio id="sfx-reply" src="assets/sfx/interface/bong_001.ogg" data-start="16.34" data-duration="0.4" data-track-index="32" data-volume="0.32"></audio>
+      <audio id="sfx-tiles" src="assets/sfx/interface/switch_002.ogg" data-start="19.5" data-duration="0.5" data-track-index="33" data-volume="0.28"></audio>
+
+      <!-- ============ SCENE 1 — the query (0 → 3.6) ============ -->
+      <section id="s1" class="clip" data-start="0" data-duration="3.6" data-track-index="1">
+        <div id="s1-inner" class="stage">
+          <div class="kicker">Lead Finder</div>
+          <div class="card">
+            <div style="display: flex; gap: 26px; align-items: flex-end">
+              <div style="flex: 1">
+                <div class="row-label">Niche</div>
+                <div class="field"><span id="s1-niche"></span><span id="s1-caret1" class="caret"></span></div>
+              </div>
+              <div style="flex: 1">
+                <div class="row-label">Location</div>
+                <div class="field"><span id="s1-loc"></span><span id="s1-caret2" class="caret"></span></div>
+              </div>
+              <div id="s1-btn" class="btn-dark">Find leads</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SCENE 2 — the leads land (3.6 → 8.8) ============ -->
+      <section id="s2" class="clip" data-start="3.6" data-duration="5.2" data-track-index="2">
+        <div id="s2-inner" class="stage">
+          <div class="kicker">Real businesses · emails included</div>
+          <div class="card" style="padding-top: 34px">
+            <div id="s2-meta" class="meta" style="margin-bottom: 6px">
+              <strong>18 found</strong> · 14 with email · 11 with Instagram
+            </div>
+
+            <div class="lead" id="s2-r1">
+              <div class="avatar">B</div>
+              <div style="flex: 1">
+                <div class="lead-name">Bright Smile Dental</div>
+                <div class="lead-sub">Dentist · Austin</div>
+              </div>
+              <div style="display: flex; gap: 12px">
+                <span class="pill pill-green">✉ info@brightsmile.com</span>
+                <span class="pill pill-ghost">★ owner found</span>
+              </div>
+            </div>
+
+            <div class="lead" id="s2-r2">
+              <div class="avatar">L</div>
+              <div style="flex: 1">
+                <div class="lead-name">Lakeway Family Dentistry</div>
+                <div class="lead-sub">Dentist · Austin</div>
+              </div>
+              <div style="display: flex; gap: 12px">
+                <span class="pill pill-green">✉ hello@lakewaydds.com</span>
+                <span class="pill pill-blue">WordPress</span>
+              </div>
+            </div>
+
+            <div class="lead" id="s2-r3">
+              <div class="avatar">A</div>
+              <div style="flex: 1">
+                <div class="lead-name">Austin Ortho Group</div>
+                <div class="lead-sub">Orthodontist · Austin</div>
+              </div>
+              <div style="display: flex; gap: 12px">
+                <span class="pill pill-green">✉ contact@atxortho.com</span>
+                <span class="pill pill-violet">@atxortho</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SCENE 3 — the AI writes it (8.8 → 14.4) ============ -->
+      <section id="s3" class="clip" data-start="8.8" data-duration="5.6" data-track-index="3">
+        <div id="s3-inner" class="stage">
+          <div class="kicker">Written for this one business</div>
+          <div class="card">
+            <div id="s3-subject" class="subject">Fewer no-shows for Bright Smile</div>
+            <div style="height: 1px; background: #f1f1f4; margin: 26px 0 28px"></div>
+            <div id="s3-l1" class="body-line">Hi Bright Smile team,</div>
+            <div id="s3-l2" class="body-line" style="margin-top: 20px">
+              Most <span class="hl">dental practices in Austin</span> lose 4–6 appointments a week to
+              no-shows. Since <span class="hl">you handle family and cosmetic work</span>, every empty
+              chair is expensive.
+            </div>
+            <div id="s3-l3" class="body-line" style="margin-top: 20px">
+              We build automated reminder flows that fill those gaps. Worth a 15-minute look this week?
+            </div>
+            <div id="s3-l4" class="body-line" style="margin-top: 20px; color: #71717a">— Atif, SakoDev</div>
+            <div id="s3-chips" style="display: flex; gap: 14px; margin-top: 34px">
+              <span class="pill pill-green">✓ 0 spam-filter flags</span>
+              <span class="pill pill-zinc">Written by AI · 96 words</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SCENE 4 — sends safely, replies sorted (14.4 → 19.4) ============ -->
+      <section id="s4" class="clip" data-start="14.4" data-duration="5" data-track-index="4">
+        <div id="s4-inner" class="stage">
+          <div class="kicker">Sent at a human pace · replies sorted</div>
+
+          <div class="card" style="padding-bottom: 38px">
+            <div style="display: flex; align-items: center; justify-content: space-between">
+              <div style="font-size: 31px; font-weight: 500">Austin dentists — March push</div>
+              <span class="pill pill-green">● running</span>
+            </div>
+            <div style="margin-top: 22px">
+              <span class="bar-track"><span id="s4-fill" class="bar-fill"></span></span>
+            </div>
+            <div class="meta" style="display: flex; justify-content: space-between; margin-top: 12px">
+              <span>112 of 180 sent</span>
+              <span>12 / hour · send window 09:00–17:00</span>
+            </div>
+            <div
+              id="s4-follow"
+              style="display: flex; justify-content: space-between; align-items: center; margin-top: 26px; border: 1px solid #f1f1f4; border-radius: 14px; padding: 18px 22px"
+            >
+              <span style="font-size: 25px; color: #52525b">Follow-up 2 · Austin Ortho Group</span>
+              <span id="s4-stopped" style="font-size: 25px; font-weight: 600; color: #0b7a55">stopped — replied ✓</span>
+            </div>
+          </div>
+
+          <div
+            id="s4-reply"
+            class="card"
+            style="margin-top: 24px; border-color: #bbf7d0; background: #f6fefb; padding: 32px 40px"
+          >
+            <div style="display: flex; align-items: center; gap: 16px">
+              <span class="pill pill-green">● interested</span>
+              <span style="font-size: 26px; font-weight: 500; color: #3f3f46">Bright Smile Dental</span>
+              <span class="meta">· 4 min ago</span>
+            </div>
+            <div class="body-line" style="margin-top: 18px">
+              “This is actually something we've been meaning to fix. Do you have time Thursday?”
+            </div>
+            <div
+              style="margin-top: 22px; background: #fff; border: 1px solid #e4e4e7; border-radius: 14px; padding: 22px 26px"
+            >
+              <div style="font-size: 23px; font-weight: 600; color: #52525b">✨ Suggested reply</div>
+              <div style="font-size: 25px; color: #52525b; margin-top: 10px; line-height: 1.55">
+                Thursday works great — does 10:30 suit you? I'll bring a two-minute walkthrough of the
+                reminder flow we'd set up for Bright Smile…
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SCENE 5 — KPI tiles (19.4 → 21.1) ============ -->
+      <section id="s5" class="clip" data-start="19.4" data-duration="1.7" data-track-index="5">
+        <div class="tiles">
+          <div class="tile" id="s5-t1">
+            <div class="tile-label"><span class="dot" style="background: #2563eb"></span>Sent</div>
+            <div class="tile-value">412</div>
+            <div class="tile-sub">29/day avg · warmed up</div>
+          </div>
+          <div class="tile" id="s5-t2">
+            <div class="tile-label"><span class="dot" style="background: #0e9f6e"></span>Open rate</div>
+            <div class="tile-value">51%</div>
+            <div class="tile-sub">210 opened</div>
+          </div>
+          <div class="tile" id="s5-t3">
+            <div class="tile-label"><span class="dot" style="background: #d97706"></span>Reply rate</div>
+            <div class="tile-value">13%</div>
+            <div class="tile-sub">54 replied</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SCENE 6 — closing card (21.1 → 22) ============ -->
+      <section id="s6" class="clip" data-start="21.1" data-duration="0.9" data-track-index="6" style="padding: 0">
+        <div class="closing">
+          <div class="logo-lockup">
+            <svg id="s6-mark" width="112" height="112" viewBox="0 0 64 64" aria-hidden="true">
+              <defs>
+                <linearGradient id="os-grad" x1="0" y1="1" x2="1" y2="0">
+                  <stop offset="0" stop-color="#2563eb" />
+                  <stop offset="1" stop-color="#7c3aed" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M35.13 16.27 A18 18 0 1 0 49.73 30.87"
+                fill="none"
+                stroke="url(#os-grad)"
+                stroke-width="7"
+                stroke-linecap="round"
+              />
+              <circle cx="44.73" cy="21.27" r="2.6" fill="url(#os-grad)" opacity="0.45" />
+              <circle cx="51.8" cy="14.2" r="5.5" fill="url(#os-grad)" />
+            </svg>
+            <div id="s6-word" class="wordmark">Outreach<span> Studio</span></div>
+          </div>
+          <div id="s6-tag" class="tagline">Every email different. Every one from you.</div>
+          <div id="s6-url" class="url">outreach.sakodev.com</div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      /* ---- music: gentle fade in, fade out under the closing line ---- */
+      tl.fromTo("#bgm", { volume: 0 }, { volume: 0.34, duration: 0.5, ease: "none" }, 0);
+      tl.to("#bgm", { volume: 0.07, duration: 1.1, ease: "none" }, 20.7);
+
+      /* ---------------- Scene 1 — typed query (0 → 3.6) ---------------- */
+      const NICHE = "dentists";
+      const LOC = "Austin, TX";
+      const typed = { niche: 0, loc: 0 };
+      const nicheOut = document.getElementById("s1-niche");
+      const locOut = document.getElementById("s1-loc");
+
+      tl.from("#s1-inner", { opacity: 0, y: 26, duration: 0.5, ease: "power2.out" }, 0.1);
+      tl.to(
+        typed,
+        {
+          niche: NICHE.length,
+          duration: 0.72,
+          ease: "none",
+          onUpdate: () => {
+            nicheOut.textContent = NICHE.slice(0, Math.round(typed.niche));
+          },
+        },
+        0.55
+      );
+      // caret hands over to the second field
+      tl.set("#s1-caret2", { opacity: 0 }, 0);
+      tl.set("#s1-caret1", { opacity: 0 }, 1.42);
+      tl.set("#s1-caret2", { opacity: 1 }, 1.42);
+      tl.to(
+        typed,
+        {
+          loc: LOC.length,
+          duration: 0.82,
+          ease: "none",
+          onUpdate: () => {
+            locOut.textContent = LOC.slice(0, Math.round(typed.loc));
+          },
+        },
+        1.46
+      );
+      // click the Find button
+      tl.to("#s1-btn", { scale: 0.955, duration: 0.12, ease: "power2.in" }, 2.62);
+      tl.to("#s1-btn", { scale: 1, duration: 0.22, ease: "power2.out" }, 2.74);
+      tl.to("#s1-inner", { opacity: 0, duration: 0.42, ease: "power2.inOut" }, 3.16);
+      tl.set("#s1-inner", { visibility: "hidden" }, 3.6);
+
+      /* ---------------- Scene 2 — leads land (3.6 → 8.8) ---------------- */
+      tl.from("#s2-inner", { opacity: 0, duration: 0.45, ease: "power2.out" }, 3.72);
+      tl.from("#s2-meta", { opacity: 0, y: 12, duration: 0.4, ease: "power2.out" }, 4.12);
+      tl.from("#s2-r1", { opacity: 0, y: 22, duration: 0.5, ease: "power3.out" }, 5.12);
+      tl.from("#s2-r2", { opacity: 0, y: 22, duration: 0.5, ease: "power3.out" }, 5.64);
+      tl.from("#s2-r3", { opacity: 0, y: 22, duration: 0.5, ease: "power3.out" }, 6.18);
+      tl.to("#s2-inner", { opacity: 0, duration: 0.45, ease: "power2.inOut" }, 8.3);
+
+      /* ---------------- Scene 3 — AI writes it (8.8 → 14.4) ---------------- */
+      tl.from("#s3-inner", { opacity: 0, duration: 0.45, ease: "power2.out" }, 8.92);
+      tl.from("#s3-subject", { opacity: 0, y: 14, duration: 0.45, ease: "power2.out" }, 9.28);
+      tl.from("#s3-l1", { opacity: 0, y: 14, duration: 0.4, ease: "power2.out" }, 9.78);
+      tl.from("#s3-l2", { opacity: 0, y: 16, duration: 0.55, ease: "power2.out" }, 10.22);
+      tl.from("#s3-l3", { opacity: 0, y: 16, duration: 0.5, ease: "power2.out" }, 11.14);
+      tl.from("#s3-l4", { opacity: 0, y: 12, duration: 0.4, ease: "power2.out" }, 11.72);
+      tl.from("#s3-chips", { opacity: 0, y: 16, scale: 0.97, duration: 0.46, ease: "back.out(1.5)" }, 12.2);
+      tl.to("#s3-inner", { opacity: 0, duration: 0.45, ease: "power2.inOut" }, 13.9);
+
+      /* ---------------- Scene 4 — sends + replies (14.4 → 19.4) ---------------- */
+      tl.from("#s4-inner", { opacity: 0, duration: 0.45, ease: "power2.out" }, 14.52);
+      tl.set("#s4-fill", { scaleX: 0.12 }, 14.52);
+      tl.to("#s4-fill", { scaleX: 0.62, duration: 1.5, ease: "power1.inOut" }, 14.86);
+      tl.from("#s4-follow", { opacity: 0, y: 14, duration: 0.4, ease: "power2.out" }, 15.46);
+      tl.from("#s4-stopped", { opacity: 0, duration: 0.35, ease: "power2.out" }, 15.92);
+      tl.from("#s4-reply", { opacity: 0, y: 26, duration: 0.6, ease: "power3.out" }, 16.28);
+      tl.to("#s4-inner", { opacity: 0, duration: 0.45, ease: "power2.inOut" }, 18.9);
+
+      /* ---------------- Scene 5 — KPI tiles (19.4 → 21.1) ---------------- */
+      tl.from("#s5-t1", { opacity: 0, y: 26, duration: 0.45, ease: "power3.out" }, 19.5);
+      tl.from("#s5-t2", { opacity: 0, y: 26, duration: 0.45, ease: "power3.out" }, 19.62);
+      tl.from("#s5-t3", { opacity: 0, y: 26, duration: 0.45, ease: "power3.out" }, 19.74);
+      tl.to(["#s5-t1", "#s5-t2", "#s5-t3"], { opacity: 0, duration: 0.35, ease: "power2.inOut" }, 20.72);
+      tl.set(["#s5-t1", "#s5-t2", "#s5-t3"], { visibility: "hidden" }, 21.1);
+
+      /* ---------------- Scene 6 — closing card (21.1 → 22) ---------------- */
+      tl.from("#s6-mark", { opacity: 0, scale: 0.86, duration: 0.42, ease: "back.out(1.6)" }, 21.14);
+      tl.from("#s6-word", { opacity: 0, x: -18, duration: 0.42, ease: "power2.out" }, 21.24);
+      tl.from("#s6-tag", { opacity: 0, y: 14, duration: 0.42, ease: "power2.out" }, 21.4);
+      tl.from("#s6-url", { opacity: 0, duration: 0.38, ease: "power2.out" }, 21.58);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
