@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en" data-resolution="portrait">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Outreach Studio — launch film (vertical)</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Geist";
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: block;
+        src: url("assets/fonts/geist-latin.woff2") format("woff2");
+      }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      html, body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #f7f7f8;
+      }
+
+      body {
+        font-family: "Geist", "Inter", system-ui, sans-serif;
+        color: #18181b;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; }
+
+      .canvas { position: absolute; inset: 0; background: #f7f7f8; }
+
+      /*
+        Vertical safe zone: platforms overlay their own UI on the top ~170px
+        (handle / sound pill) and the bottom ~380px (caption, action buttons).
+        All content lives between, so nothing important is ever covered.
+      */
+      .clip {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 210px 60px 400px;
+      }
+
+      .stage { width: 100%; }
+
+      .kicker {
+        font-size: 34px;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #2563eb;
+        margin-bottom: 30px;
+      }
+      .card {
+        width: 100%;
+        background: #ffffff;
+        border: 1px solid #e8e8eb;
+        border-radius: 28px;
+        box-shadow: 0 40px 90px -40px rgba(24, 24, 27, 0.26);
+        padding: 46px 44px;
+      }
+      .row-label { font-size: 30px; font-weight: 500; color: #71717a; margin-bottom: 14px; }
+      .field {
+        display: flex;
+        align-items: center;
+        height: 104px;
+        padding: 0 30px;
+        border: 1px solid #e4e4e7;
+        border-radius: 18px;
+        font-size: 42px;
+        color: #18181b;
+        background: #fff;
+      }
+      .btn-dark {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 104px;
+        border-radius: 18px;
+        background: #18181b;
+        color: #fff;
+        font-size: 40px;
+        font-weight: 600;
+      }
+      .caret {
+        display: inline-block;
+        width: 4px;
+        height: 46px;
+        background: #2563eb;
+        margin-left: 4px;
+        vertical-align: -8px;
+      }
+      .meta { font-size: 32px; color: #71717a; }
+      .meta strong { color: #3f3f46; font-weight: 600; }
+
+      .lead { padding: 30px 2px; border-top: 1px solid #f1f1f4; }
+      .lead-top { display: flex; align-items: center; gap: 22px; }
+      .avatar {
+        width: 74px; height: 74px; flex: none;
+        border-radius: 18px;
+        background: #f4f4f5;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 32px; font-weight: 600; color: #71717a;
+      }
+      .lead-name { font-size: 40px; font-weight: 500; }
+      .lead-sub { font-size: 28px; color: #71717a; margin-top: 4px; }
+      .pill {
+        display: inline-flex; align-items: center;
+        height: 56px; padding: 0 24px;
+        border-radius: 999px;
+        font-size: 28px; font-weight: 500;
+        white-space: nowrap;
+      }
+      .pill-green { background: #ecfdf5; color: #0b7a55; }
+      .pill-blue { background: #eff6ff; color: #1d4ed8; }
+      .pill-violet { background: #f5f3ff; color: #6d28d9; }
+      .pill-zinc { background: #f4f4f5; color: #52525b; }
+
+      .subject { font-size: 46px; font-weight: 600; line-height: 1.25; }
+      .body-line { font-size: 40px; line-height: 1.55; color: #3f3f46; }
+      .hl { background: #dbeafe; color: #1e3a8a; border-radius: 6px; padding: 0 6px; }
+
+      .bar-track {
+        display: block;
+        width: 100%; height: 22px;
+        border-radius: 999px;
+        background: #f1f1f4;
+        overflow: hidden;
+      }
+      .bar-fill {
+        display: block;
+        width: 100%; height: 22px;
+        border-radius: 999px;
+        background: #2563eb;
+        transform-origin: left center;
+      }
+
+      .tiles { display: flex; flex-direction: column; gap: 26px; width: 100%; }
+      .tile {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #fff;
+        border: 1px solid #e8e8eb;
+        border-radius: 24px;
+        padding: 34px 44px;
+        box-shadow: 0 30px 60px -36px rgba(24, 24, 27, 0.24);
+      }
+      .tile-label { font-size: 34px; color: #52525b; display: flex; align-items: center; gap: 16px; }
+      .dot { width: 18px; height: 18px; border-radius: 999px; display: inline-block; }
+      .tile-value { font-size: 92px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; text-align: right; }
+      .tile-sub { font-size: 28px; color: #71717a; margin-top: 8px; text-align: right; }
+
+      .closing {
+        position: absolute; inset: 0;
+        background: #09090b;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 210px 70px 400px;
+      }
+      .wordmark { font-size: 82px; font-weight: 600; color: #fff; letter-spacing: -0.02em; margin-top: 34px; }
+      .wordmark span { color: #8b8b93; }
+      .tagline {
+        font-size: 46px; line-height: 1.35; color: #e4e4e7;
+        margin-top: 40px; font-weight: 400; text-align: center;
+      }
+      .url { font-size: 34px; color: #b4b4bb; margin-top: 52px; letter-spacing: 0.04em; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="22"
+      data-width="1080"
+      data-height="1920"
+    >
+      <div class="canvas"></div>
+
+      <!-- ===== audio: identical cues to the landscape cut ===== -->
+      <audio
+        id="bgm"
+        src="assets/music/happy-beats-business-moves-vol-9-by-ende-dot-app.mp3"
+        data-start="0"
+        data-duration="22"
+        data-track-index="20"
+        data-volume="0.34"
+      ></audio>
+
+      <audio id="sfx-k1" data-track-index="21" src="assets/sfx/keyboard/keypress-001.wav" data-start="0.37" data-duration="0.3" data-volume="0.36"></audio>
+      <audio id="sfx-k2" data-track-index="22" src="assets/sfx/keyboard/keypress-003.wav" data-start="0.65" data-duration="0.3" data-volume="0.32"></audio>
+      <audio id="sfx-k3" data-track-index="23" src="assets/sfx/keyboard/keypress-005.wav" data-start="0.91" data-duration="0.3" data-volume="0.36"></audio>
+      <audio id="sfx-k4" data-track-index="24" src="assets/sfx/keyboard/keypress-003.wav" data-start="1.41" data-duration="0.3" data-volume="0.32"></audio>
+      <audio id="sfx-k5" data-track-index="25" src="assets/sfx/keyboard/keypress-001.wav" data-start="1.69" data-duration="0.3" data-volume="0.36"></audio>
+      <audio id="sfx-k6" data-track-index="26" src="assets/sfx/keyboard/keypress-005.wav" data-start="1.95" data-duration="0.3" data-volume="0.32"></audio>
+
+      <audio id="sfx-click" src="assets/sfx/interface/click_001.ogg" data-start="2.68" data-duration="0.3" data-track-index="27" data-volume="0.42"></audio>
+
+      <audio id="sfx-row1" src="assets/sfx/interface/drop_002.ogg" data-start="5.2" data-duration="0.4" data-track-index="28" data-volume="0.3"></audio>
+      <audio id="sfx-row2" src="assets/sfx/interface/drop_002.ogg" data-start="5.72" data-duration="0.4" data-track-index="29" data-volume="0.3"></audio>
+      <audio id="sfx-row3" src="assets/sfx/interface/drop_002.ogg" data-start="6.26" data-duration="0.4" data-track-index="30" data-volume="0.3"></audio>
+
+      <audio id="sfx-chip" src="assets/sfx/interface/select_008.ogg" data-start="12.26" data-duration="0.3" data-track-index="31" data-volume="0.4"></audio>
+      <audio id="sfx-reply" src="assets/sfx/interface/bong_001.ogg" data-start="16.34" data-duration="0.4" data-track-index="32" data-volume="0.32"></audio>
+      <audio id="sfx-tiles" src="assets/sfx/interface/switch_002.ogg" data-start="19.5" data-duration="0.5" data-track-index="33" data-volume="0.28"></audio>
+
+      <!-- ============ SCENE 1 — the query (0 → 3.6) ============ -->
+      <section id="s1" class="clip" data-start="0" data-duration="3.6" data-track-index="1">
+        <div id="s1-inner" class="stage">
+          <div class="kicker">Lead Finder</div>
+          <div class="card">
+            <div class="row-label">Niche</div>
+            <div class="field"><span id="s1-niche"></span><span id="s1-caret1" class="caret"></span></div>
+            <div class="row-label" style="margin-top: 34px">Location</div>
+            <div class="field"><span id="s1-loc"></span><span id="s1-caret2" class="caret"></span></div>
+            <div id="s1-btn" class="btn-dark" style="margin-top: 38px">Find leads</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SCENE 2 — the leads land (3.6 → 8.8) ============ -->
+      <section id="s2" class="clip" data-start="3.6" data-duration="5.2" data-track-index="2">
+        <div id="s2-inner" class="stage">
+          <div class="kicker">Real businesses · emails included</div>
+          <div class="card" style="padding-top: 36px">
+            <div id="s2-meta" class="meta" style="margin-bottom: 8px">
+              <strong>18 found</strong> · 14 with email
+            </div>
+
+            <div class="lead" id="s2-r1">
+              <div class="lead-top">
+                <div class="avatar">B</div>
+                <div>
+                  <div class="lead-name">Bright Smile Dental</div>
+                  <div class="lead-sub">Dentist · Austin</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 14px; margin-top: 18px; padding-left: 96px">
+                <span class="pill pill-green">✉ info@brightsmile.com</span>
+              </div>
+            </div>
+
+            <div class="lead" id="s2-r2">
+              <div class="lead-top">
+                <div class="avatar">L</div>
+                <div>
+                  <div class="lead-name">Lakeway Family Dentistry</div>
+                  <div class="lead-sub">Dentist · Austin</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 14px; margin-top: 18px; padding-left: 96px">
+                <span class="pill pill-green">✉ hello@lakewaydds.com</span>
+                <span class="pill pill-blue">WordPress</span>
+              </div>
+            </div>
+
+            <div class="lead" id="s2-r3">
+              <div class="lead-top">
+                <div class="avatar">A</div>
+                <div>
+                  <div class="lead-name">Austin Ortho Group</div>
+                  <div class="lead-sub">Orthodontist · Austin</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 14px; margin-top: 18px; padding-left: 96px">
+                <span class="pill pill-green">✉ contact@atxortho.com</span>
+                <span class="pill pill-violet">@atxortho</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SCENE 3 — the AI writes it (8.8 → 14.4) ============ -->
+      <section id="s3" class="clip" data-start="8.8" data-duration="5.6" data-track-index="3">
+        <div id="s3-inner" class="stage">
+          <div class="kicker">Written for this one business</div>
+          <div class="card">
+            <div id="s3-subject" class="subject">Fewer no-shows for Bright Smile</div>
+            <div style="height: 1px; background: #f1f1f4; margin: 30px 0 32px"></div>
+            <div id="s3-l1" class="body-line">Hi Bright Smile team,</div>
+            <div id="s3-l2" class="body-line" style="margin-top: 26px">
+              Most <span class="hl">dental practices in Austin</span> lose 4–6 appointments a week
+              to no-shows. Since <span class="hl">you handle family and cosmetic work</span>, every
+              empty chair is expensive.
+            </div>
+            <div id="s3-l3" class="body-line" style="margin-top: 26px">
+              Worth a 15-minute look this week?
+            </div>
+            <div id="s3-l4" class="body-line" style="margin-top: 26px; color: #71717a">— Atif, SakoDev</div>
+            <div id="s3-chips" style="display: flex; gap: 16px; margin-top: 38px; flex-wrap: wrap">
+              <span class="pill pill-green">✓ 0 spam-filter flags</span>
+              <span class="pill pill-zinc">Written by AI · 96 words</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SCENE 4 — sends safely, replies sorted (14.4 → 19.4) ============ -->
+      <section id="s4" class="clip" data-start="14.4" data-duration="5" data-track-index="4">
+        <div id="s4-inner" class="stage">
+          <div class="kicker">Human pace · replies sorted</div>
+
+          <div class="card" style="padding-bottom: 40px">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 20px">
+              <div style="font-size: 38px; font-weight: 500">Austin dentists</div>
+              <span class="pill pill-green">● running</span>
+            </div>
+            <div style="margin-top: 26px">
+              <span class="bar-track"><span id="s4-fill" class="bar-fill"></span></span>
+            </div>
+            <div class="meta" style="display: flex; justify-content: space-between; margin-top: 16px">
+              <span>112 of 180 sent</span>
+              <span>12 / hour</span>
+            </div>
+            <div
+              id="s4-follow"
+              style="margin-top: 30px; border: 1px solid #f1f1f4; border-radius: 18px; padding: 24px 26px"
+            >
+              <div style="font-size: 30px; color: #52525b">Follow-up 2 · Austin Ortho</div>
+              <div id="s4-stopped" style="font-size: 30px; font-weight: 600; color: #0b7a55; margin-top: 8px">
+                stopped — replied ✓
+              </div>
+            </div>
+          </div>
+
+          <div
+            id="s4-reply"
+            class="card"
+            style="margin-top: 28px; border-color: #bbf7d0; background: #f6fefb; padding: 36px 40px"
+          >
+            <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap">
+              <span class="pill pill-green">● interested</span>
+              <span style="font-size: 32px; font-weight: 500; color: #3f3f46">Bright Smile Dental</span>
+            </div>
+            <div class="body-line" style="margin-top: 22px">“Do you have time Thursday?”</div>
+            <div
+              style="margin-top: 26px; background: #fff; border: 1px solid #e4e4e7; border-radius: 18px; padding: 26px 28px"
+            >
+              <div style="font-size: 28px; font-weight: 600; color: #52525b">✨ Suggested reply</div>
+              <div style="font-size: 32px; color: #52525b; margin-top: 12px; line-height: 1.5">
+                Thursday works great — does 10:30 suit you?
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SCENE 5 — KPI tiles (19.4 → 21.1) ============ -->
+      <section id="s5" class="clip" data-start="19.4" data-duration="1.7" data-track-index="5">
+        <div class="tiles">
+          <div class="tile" id="s5-t1">
+            <div class="tile-label"><span class="dot" style="background: #2563eb"></span>Sent</div>
+            <div>
+              <div class="tile-value">412</div>
+              <div class="tile-sub">warmed up</div>
+            </div>
+          </div>
+          <div class="tile" id="s5-t2">
+            <div class="tile-label"><span class="dot" style="background: #0e9f6e"></span>Open rate</div>
+            <div>
+              <div class="tile-value">51%</div>
+              <div class="tile-sub">210 opened</div>
+            </div>
+          </div>
+          <div class="tile" id="s5-t3">
+            <div class="tile-label"><span class="dot" style="background: #d97706"></span>Reply rate</div>
+            <div>
+              <div class="tile-value">13%</div>
+              <div class="tile-sub">54 replied</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SCENE 6 — closing card (21.1 → 22) ============ -->
+      <section id="s6" class="clip" data-start="21.1" data-duration="0.9" data-track-index="6" style="padding: 0">
+        <div class="closing">
+          <svg id="s6-mark" width="150" height="150" viewBox="0 0 64 64" aria-hidden="true">
+            <defs>
+              <linearGradient id="os-grad" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0" stop-color="#2563eb" />
+                <stop offset="1" stop-color="#7c3aed" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M35.13 16.27 A18 18 0 1 0 49.73 30.87"
+              fill="none"
+              stroke="url(#os-grad)"
+              stroke-width="7"
+              stroke-linecap="round"
+            />
+            <circle cx="44.73" cy="21.27" r="2.6" fill="url(#os-grad)" opacity="0.45" />
+            <circle cx="51.8" cy="14.2" r="5.5" fill="url(#os-grad)" />
+          </svg>
+          <div id="s6-word" class="wordmark">Outreach<span> Studio</span></div>
+          <div id="s6-tag" class="tagline">Every email different. Every one from you.</div>
+          <div id="s6-url" class="url">outreach.sakodev.com</div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      /* music: fade in, then duck under the closing line */
+      tl.fromTo("#bgm", { volume: 0 }, { volume: 0.34, duration: 0.5, ease: "none" }, 0);
+      tl.to("#bgm", { volume: 0.07, duration: 1.1, ease: "none" }, 20.7);
+
+      /* ---------------- Scene 1 — typed query ---------------- */
+      const NICHE = "dentists";
+      const LOC = "Austin, TX";
+      const typed = { niche: 0, loc: 0 };
+      const nicheOut = document.getElementById("s1-niche");
+      const locOut = document.getElementById("s1-loc");
+
+      tl.to(
+        typed,
+        {
+          niche: NICHE.length,
+          duration: 0.72,
+          ease: "none",
+          onUpdate: () => {
+            nicheOut.textContent = NICHE.slice(0, Math.round(typed.niche));
+          },
+        },
+        0.3
+      );
+      tl.set("#s1-caret2", { opacity: 0 }, 0);
+      tl.set("#s1-caret1", { opacity: 0 }, 1.17);
+      tl.set("#s1-caret2", { opacity: 1 }, 1.17);
+      tl.to(
+        typed,
+        {
+          loc: LOC.length,
+          duration: 0.82,
+          ease: "none",
+          onUpdate: () => {
+            locOut.textContent = LOC.slice(0, Math.round(typed.loc));
+          },
+        },
+        1.21
+      );
+      tl.to("#s1-btn", { scale: 0.96, duration: 0.12, ease: "power2.in" }, 2.62);
+      tl.to("#s1-btn", { scale: 1, duration: 0.22, ease: "power2.out" }, 2.74);
+      tl.to("#s1-inner", { opacity: 0, duration: 0.42, ease: "power2.inOut" }, 3.16);
+      tl.set("#s1-inner", { visibility: "hidden" }, 3.6);
+
+      /* ---------------- Scene 2 — leads land ---------------- */
+      tl.from("#s2-inner", { opacity: 0, duration: 0.45, ease: "power2.out" }, 3.72);
+      tl.from("#s2-meta", { opacity: 0, y: 14, duration: 0.4, ease: "power2.out" }, 4.12);
+      tl.from("#s2-r1", { opacity: 0, y: 28, duration: 0.5, ease: "power3.out" }, 5.12);
+      tl.from("#s2-r2", { opacity: 0, y: 28, duration: 0.5, ease: "power3.out" }, 5.64);
+      tl.from("#s2-r3", { opacity: 0, y: 28, duration: 0.5, ease: "power3.out" }, 6.18);
+      tl.to("#s2-inner", { opacity: 0, duration: 0.45, ease: "power2.inOut" }, 8.3);
+
+      /* ---------------- Scene 3 — AI writes it ---------------- */
+      tl.from("#s3-inner", { opacity: 0, duration: 0.45, ease: "power2.out" }, 8.92);
+      tl.from("#s3-subject", { opacity: 0, y: 18, duration: 0.45, ease: "power2.out" }, 9.28);
+      tl.from("#s3-l1", { opacity: 0, y: 16, duration: 0.4, ease: "power2.out" }, 9.78);
+      tl.from("#s3-l2", { opacity: 0, y: 20, duration: 0.55, ease: "power2.out" }, 10.22);
+      tl.from("#s3-l3", { opacity: 0, y: 18, duration: 0.5, ease: "power2.out" }, 11.14);
+      tl.from("#s3-l4", { opacity: 0, y: 14, duration: 0.4, ease: "power2.out" }, 11.72);
+      tl.from("#s3-chips", { opacity: 0, y: 18, scale: 0.97, duration: 0.46, ease: "back.out(1.5)" }, 12.2);
+      tl.to("#s3-inner", { opacity: 0, duration: 0.45, ease: "power2.inOut" }, 13.9);
+
+      /* ---------------- Scene 4 — sends + replies ---------------- */
+      tl.from("#s4-inner", { opacity: 0, duration: 0.45, ease: "power2.out" }, 14.52);
+      tl.set("#s4-fill", { scaleX: 0.12 }, 14.52);
+      tl.to("#s4-fill", { scaleX: 0.62, duration: 1.5, ease: "power1.inOut" }, 14.86);
+      tl.from("#s4-follow", { opacity: 0, y: 16, duration: 0.4, ease: "power2.out" }, 15.46);
+      tl.from("#s4-stopped", { opacity: 0, duration: 0.35, ease: "power2.out" }, 15.92);
+      tl.from("#s4-reply", { opacity: 0, y: 30, duration: 0.6, ease: "power3.out" }, 16.28);
+      tl.to("#s4-inner", { opacity: 0, duration: 0.45, ease: "power2.inOut" }, 18.9);
+
+      /* ---------------- Scene 5 — KPI tiles ---------------- */
+      tl.from("#s5-t1", { opacity: 0, y: 30, duration: 0.45, ease: "power3.out" }, 19.5);
+      tl.from("#s5-t2", { opacity: 0, y: 30, duration: 0.45, ease: "power3.out" }, 19.62);
+      tl.from("#s5-t3", { opacity: 0, y: 30, duration: 0.45, ease: "power3.out" }, 19.74);
+      tl.to(["#s5-t1", "#s5-t2", "#s5-t3"], { opacity: 0, duration: 0.35, ease: "power2.inOut" }, 20.72);
+      tl.set(["#s5-t1", "#s5-t2", "#s5-t3"], { visibility: "hidden" }, 21.1);
+
+      /* ---------------- Scene 6 — closing card ---------------- */
+      tl.from("#s6-mark", { opacity: 0, scale: 0.86, duration: 0.42, ease: "back.out(1.6)" }, 21.14);
+      tl.from("#s6-word", { opacity: 0, y: 16, duration: 0.42, ease: "power2.out" }, 21.24);
+      tl.from("#s6-tag", { opacity: 0, y: 16, duration: 0.42, ease: "power2.out" }, 21.4);
+      tl.from("#s6-url", { opacity: 0, duration: 0.38, ease: "power2.out" }, 21.58);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
