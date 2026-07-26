@@ -274,7 +274,13 @@ export default function DocsPage() {
           </p>
           <p>
             Instagram and LinkedIn drafts live here too: copy → open profile → mark
-            sent, one click each.
+            sent, one click each. LinkedIn sequences start with a connection note
+            (kept under LinkedIn&apos;s 200-character cap) followed by direct
+            messages; marking a draft sent queues the next follow-up after your
+            campaign&apos;s interval, and <b>got a reply</b> stops that
+            contact&apos;s sequence instantly. We draft, you send — automating
+            LinkedIn sends violates their terms and risks your account, so we
+            never do it.
           </p>
         </Section>
       </div>

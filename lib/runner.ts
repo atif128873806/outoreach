@@ -41,6 +41,7 @@ async function sentTodayCount(userId: number): Promise<number> {
  * processes the next throttled batch for every running campaign of every user:
  *  - email channel: generate → send (SMTP or simulated) → queue follow-up
  *  - instagram/linkedin: generate → mark "ready" for manual sending
+ *    (the Message Center queues the follow-up when the user marks it sent)
  */
 export async function tick(): Promise<void> {
   if (ticking) return; // a slow batch from the previous tick is still going

@@ -110,7 +110,8 @@ export function templateEmail(
 export function templateLinkedin(
   contact: Contact,
   campaign: Campaign,
-  s: Settings
+  s: Settings,
+  step = 1
 ): Rendered {
   const business = contact.business_name || "your business";
   const cats = pluralCategory(contact.category);
@@ -118,6 +119,18 @@ export function templateLinkedin(
   const who = s.sender_name
     ? `I'm ${s.sender_name}${s.company_name ? ` from ${s.company_name}` : ""}${s.sender_role ? ` (${s.sender_role})` : ""}.`
     : "";
+
+  // Step 1 is a connection request note — LinkedIn caps these at ~200
+  // characters, so it's a reason to connect, not a pitch.
+  if (step === 1) {
+    const notes = [
+      `Hi — I work with ${cats} like ${business} and thought it was worth connecting. ${who}`,
+      `Hi! Came across ${business} and would like to connect. ${who}`,
+      `Hi — connecting with ${cats} in your space. ${who} Would be glad to have you in my network.`,
+    ];
+    const note = pick(notes, seed).replace(/\s+/g, " ").trim();
+    return { subject: "", body: note.length > 200 ? note.slice(0, 197).trimEnd() + "…" : note };
+  }
 
   const openers = [
     `Hi — came across ${business} and wanted to reach out.`,

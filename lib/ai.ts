@@ -103,12 +103,14 @@ ${sender ? `Details about the sender to use in the email:\n${sender}` : "The sen
 
 function linkedinSystemPrompt(s: Settings): string {
   const sender = senderContext(s);
-  return `You write short LinkedIn messages for B2B outreach. These are pasted manually by a human, one at a time — either as a connection note or a direct message.
+  return `You write short LinkedIn messages for B2B outreach. These are pasted manually by a human, one at a time. A sequence has two kinds of message — the task will say which one to write:
+- Step 1 is a CONNECTION REQUEST NOTE. Hard limit 200 characters (LinkedIn truncates longer notes and some accounts cannot send more). One or two sentences: a specific reason to connect, no pitch, no links.
+- Later steps are DIRECT MESSAGES sent after the connection was accepted. Maximum 90 words.
 
 If the campaign brief contains specific instructions (things to mention, language, length, sign-off), follow them exactly — they override the rules below.
 
 Rules:
-- Maximum 90 words. LinkedIn readers skim; get to the point.
+- LinkedIn readers skim; get to the point.
 - Professional but human — no corporate buzzwords, no "I hope this message finds you well".
 - Personalize with the recipient's business name and what their kind of business does.
 - One clear, soft call to action (a reply or a short call), never a hard sell.
@@ -154,17 +156,21 @@ ${contact.notes ? `- Company intel / notes (USE one specific detail from this): 
     campaign.channel === "instagram"
       ? "Write one Instagram DM for cold outreach."
       : campaign.channel === "linkedin"
-        ? "Write one LinkedIn outreach message."
+        ? "Write one LinkedIn connection request note (hard limit: 200 characters)."
         : "Write one cold outreach email.";
 
-  const task =
-    step === 1
-      ? firstTouch
-      : `Write follow-up #${step - 1} to the earlier email below. The recipient has not replied.
+  const followupTask =
+    campaign.channel === "linkedin"
+      ? `Write LinkedIn direct message #${step - 1} in this sequence. The recipient accepted the connection but has not replied to the earlier message below.
 
-Earlier email:
-Subject: ${prior?.subject ?? ""}
-${prior?.body ?? ""}`;
+Earlier message:
+${prior?.body ?? "(the connection note)"}`
+      : `Write follow-up #${step - 1} to the earlier ${campaign.channel === "instagram" ? "DM" : "email"} below. The recipient has not replied.
+
+Earlier ${campaign.channel === "instagram" ? "DM" : "email"}:
+${campaign.channel === "email" ? `Subject: ${prior?.subject ?? ""}\n` : ""}${prior?.body ?? ""}`;
+
+  const task = step === 1 ? firstTouch : followupTask;
 
   return `${task}
 
@@ -285,7 +291,7 @@ export async function generateMessage(
       campaign.channel === "instagram"
         ? templateDm(contact, campaign, s)
         : campaign.channel === "linkedin"
-          ? templateLinkedin(contact, campaign, s)
+          ? templateLinkedin(contact, campaign, s, step)
           : templateEmail(contact, campaign, s, step, opts.subjectVariant);
     return { ...t, ai: false, provider: "template" };
   }

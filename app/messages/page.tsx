@@ -16,6 +16,8 @@ interface Draft {
   via: string;
   created_at: string;
   campaign_id: number;
+  step: number;
+  contact_id: number;
   channel: string;
   business_name: string;
   instagram: string;
@@ -23,6 +25,7 @@ interface Draft {
   contact_email: string;
   category: string;
   campaign_name: string;
+  followup_count: number;
 }
 
 interface Reply {
@@ -83,7 +86,7 @@ export default function MessagesPage() {
     setTimeout(() => setCopiedId((v) => (v === key ? null : v)), 2000);
   }
 
-  async function act(id: number, action: "mark_sent" | "skip") {
+  async function act(id: number, action: "mark_sent" | "skip" | "got_reply") {
     await fetch("/api/messages", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -125,7 +128,9 @@ export default function MessagesPage() {
             <span className="font-medium text-blue-900">How this works:</span>{" "}
             Instagram and LinkedIn ban automated cold DMs, so drafts are prepared
             here for one-click manual sending — <em>copy</em> the message,{" "}
-            <em>open</em> the profile, paste it, then <em>mark sent</em>.
+            <em>open</em> the profile, paste it, then <em>mark sent</em>. Marking
+            sent queues the next follow-up automatically; when someone answers,
+            hit <em>got a reply</em> and their sequence stops.
           </Card>
 
           {!loaded ? (
@@ -142,11 +147,13 @@ export default function MessagesPage() {
             <div className="space-y-4">
               {drafts.map((d) => {
                 const url = profileUrl(d);
+                const isConnectionNote = d.channel === "linkedin" && d.step === 1;
+                const chars = d.body.length;
                 return (
                   <Card key={d.id} className="p-5">
                     <div className="flex items-start justify-between gap-4 mb-3">
                       <div>
-                        <div className="font-medium">
+                        <div className="font-medium flex items-center gap-2 flex-wrap">
                           {d.business_name || d.contact_email}{" "}
                           {url && (
                             <a
@@ -161,6 +168,27 @@ export default function MessagesPage() {
                                 ? `in/${d.linkedin.split("/")[1] ?? d.linkedin}`
                                 : `@${d.instagram}`}
                             </a>
+                          )}
+                          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                            {isConnectionNote
+                              ? "connection note"
+                              : d.step === 1
+                                ? "first message"
+                                : `follow-up ${d.step - 1}`}
+                          </span>
+                          {isConnectionNote && (
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                chars <= 200
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : chars <= 300
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-red-100 text-red-700"
+                              }`}
+                              title="LinkedIn caps connection notes at 200–300 characters depending on account type"
+                            >
+                              {chars} chars
+                            </span>
                           )}
                         </div>
                         <div className="text-xs text-zinc-400 mt-0.5">
@@ -190,6 +218,15 @@ export default function MessagesPage() {
                       <button className={btnPrimary} onClick={() => act(d.id, "mark_sent")}>
                         ✓ Mark sent
                       </button>
+                      {d.step > 1 && (
+                        <button
+                          className={`${btnSecondary} text-emerald-700`}
+                          onClick={() => act(d.id, "got_reply")}
+                          title="They answered — stop this contact's sequence"
+                        >
+                          💬 Got a reply
+                        </button>
+                      )}
                       <button
                         className={`${btnSecondary} text-zinc-400`}
                         onClick={() => act(d.id, "skip")}
