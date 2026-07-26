@@ -17,3 +17,6 @@ data
 backups
 .git
 *.tgz
+
+# Video source projects (renders ship via public/, not from here)
+brag-output
