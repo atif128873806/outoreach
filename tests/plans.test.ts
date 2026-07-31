@@ -6,9 +6,9 @@ const {
   normalizePlan,
   capWithPlan,
   remainingLeads,
-  signupBonusLeads,
-  SIGNUP_BONUS_LEADS,
-  SIGNUP_BONUS_DAYS,
+  upgradeBonusLeads,
+  UPGRADE_BONUS_LEADS,
+  UPGRADE_BONUS_DAYS,
 } = await import("../lib/plans.ts");
 
 test("plan ladder is strictly increasing where limits exist", () => {
@@ -34,8 +34,8 @@ test("normalizePlan collapses unknown values to free", () => {
 });
 
 test("capWithPlan bounds the user's cap by the plan ceiling", () => {
-  assert.equal(capWithPlan(200, PLANS.free), 10); // plan wins when lower
-  assert.equal(capWithPlan(5, PLANS.free), 5); // user's own cap wins when lower
+  assert.equal(capWithPlan(200, PLANS.free), 50); // plan wins when lower
+  assert.equal(capWithPlan(30, PLANS.free), 30); // user's own cap wins when lower
   assert.equal(capWithPlan(9999, PLANS.pro), 500);
   const unlimited = { ...PLANS.pro, emailsPerDay: null };
   assert.equal(capWithPlan(9999, unlimited), 9999);
@@ -51,27 +51,26 @@ test("remainingLeads never goes negative and null means unlimited", () => {
 });
 
 test("remainingLeads includes an active bonus", () => {
-  assert.equal(remainingLeads(PLANS.free, 0, 100), 150);
-  assert.equal(remainingLeads(PLANS.free, 140, 100), 10);
-  assert.equal(remainingLeads(PLANS.free, 150, 100), 0);
+  assert.equal(remainingLeads(PLANS.starter, 0, 100), 500);
+  assert.equal(remainingLeads(PLANS.starter, 490, 100), 10);
+  assert.equal(remainingLeads(PLANS.starter, 500, 100), 0);
 });
 
-test("signupBonusLeads: free accounts get it for the first week only", () => {
+test("upgradeBonusLeads: paid plans get it for their first week only", () => {
   const now = new Date("2026-07-31T12:00:00Z");
   const dayAgo = new Date("2026-07-30T12:00:00Z");
   const sixDaysAgo = new Date("2026-07-25T13:00:00Z");
   const eightDaysAgo = new Date("2026-07-23T12:00:00Z");
 
-  assert.equal(signupBonusLeads(PLANS.free, dayAgo, now), SIGNUP_BONUS_LEADS);
-  assert.equal(signupBonusLeads(PLANS.free, sixDaysAgo, now), SIGNUP_BONUS_LEADS);
-  assert.equal(signupBonusLeads(PLANS.free, eightDaysAgo, now), 0);
+  assert.equal(upgradeBonusLeads(PLANS.starter, dayAgo, now), UPGRADE_BONUS_LEADS);
+  assert.equal(upgradeBonusLeads(PLANS.pro, sixDaysAgo, now), UPGRADE_BONUS_LEADS);
+  assert.equal(upgradeBonusLeads(PLANS.starter, eightDaysAgo, now), 0);
   // exactly at the boundary the bonus is over
-  const boundary = new Date(now.getTime() - SIGNUP_BONUS_DAYS * 86400000);
-  assert.equal(signupBonusLeads(PLANS.free, boundary, now), 0);
+  const boundary = new Date(now.getTime() - UPGRADE_BONUS_DAYS * 86400000);
+  assert.equal(upgradeBonusLeads(PLANS.pro, boundary, now), 0);
   // ISO-string timestamps (what Postgres hands back) work too
-  assert.equal(signupBonusLeads(PLANS.free, dayAgo.toISOString(), now), SIGNUP_BONUS_LEADS);
-  // paid plans and garbage input get nothing
-  assert.equal(signupBonusLeads(PLANS.starter, dayAgo, now), 0);
-  assert.equal(signupBonusLeads(PLANS.pro, dayAgo, now), 0);
-  assert.equal(signupBonusLeads(PLANS.free, "not-a-date", now), 0);
+  assert.equal(upgradeBonusLeads(PLANS.starter, dayAgo.toISOString(), now), UPGRADE_BONUS_LEADS);
+  // the free plan and garbage input get nothing
+  assert.equal(upgradeBonusLeads(PLANS.free, dayAgo, now), 0);
+  assert.equal(upgradeBonusLeads(PLANS.starter, "not-a-date", now), 0);
 });

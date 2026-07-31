@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS users (
   reset_token    TEXT,
   reset_expires  TIMESTAMPTZ,
   plan           TEXT NOT NULL DEFAULT 'free',
+  plan_changed_at TIMESTAMPTZ,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -253,7 +254,8 @@ async function init(): Promise<Adapter> {
      ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_expires TIMESTAMPTZ;
      ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT;
      ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_expires TIMESTAMPTZ;
-     ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free'`
+     ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free';
+     ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_changed_at TIMESTAMPTZ`
   );
   if (hadUsersTable && !hadVerifiedColumn) {
     // Accounts created before email verification existed keep working.

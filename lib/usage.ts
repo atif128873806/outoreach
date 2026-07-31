@@ -3,7 +3,7 @@ import {
   PLANS,
   normalizePlan,
   remainingLeads,
-  signupBonusLeads,
+  upgradeBonusLeads,
   type Plan,
 } from "./plans";
 
@@ -46,18 +46,18 @@ export interface LeadQuota {
   used: number;
   limit: number | null;
   remaining: number | null;
-  /** Active signup-bonus leads included in `limit` (0 once the first week ends). */
+  /** Active upgrade-bonus leads included in `limit` (0 once the first paid week ends). */
   bonus: number;
 }
 
-/** Lead Finder quota status for this user this month (incl. signup bonus). */
+/** Lead Finder quota status for this user this month (incl. upgrade bonus). */
 export async function getLeadQuota(userId: number): Promise<LeadQuota> {
-  const row = await q1<{ plan: string; created_at: string }>(
-    "SELECT plan, created_at FROM users WHERE id = $1",
+  const row = await q1<{ plan: string; created_at: string; plan_changed_at: string | null }>(
+    "SELECT plan, created_at, plan_changed_at FROM users WHERE id = $1",
     [userId]
   );
   const plan = PLANS[normalizePlan(row?.plan)];
-  const bonus = row ? signupBonusLeads(plan, row.created_at) : 0;
+  const bonus = row ? upgradeBonusLeads(plan, row.plan_changed_at ?? row.created_at) : 0;
   const used = await usedThisMonth(userId, "leads");
   const limit = plan.leadsPerMonth == null ? null : plan.leadsPerMonth + bonus;
   return { plan, used, limit, remaining: remainingLeads(plan, used, bonus), bonus };

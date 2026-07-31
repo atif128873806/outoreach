@@ -30,7 +30,7 @@ export const PLANS: Record<PlanId, Plan> = {
     priceMonthlyUsd: 0,
     priceYearlyUsd: 0,
     leadsPerMonth: 50,
-    emailsPerDay: 10,
+    emailsPerDay: 50,
     aiPerDay: 50,
     tagline: "Everything you need to land your first clients.",
   },
@@ -77,27 +77,28 @@ export function remainingLeads(
   return Math.max(0, plan.leadsPerMonth + bonus - usedThisMonth);
 }
 
-// ---------- signup bonus ----------
-// A new free account's first week should feel abundant: enough leads to run
-// a real first campaign before the steady-state quota kicks in.
+// ---------- upgrade bonus ----------
+// A thank-you for going paid: the first week on Starter or Pro comes with
+// extra Lead Finder results so the upgrade feels immediately worth it.
 
-export const SIGNUP_BONUS_LEADS = 100;
-export const SIGNUP_BONUS_DAYS = 7;
+export const UPGRADE_BONUS_LEADS = 100;
+export const UPGRADE_BONUS_DAYS = 7;
 
 /**
- * Extra Lead Finder results this user gets right now. Free plan only (paid
- * plans have plenty), during the first SIGNUP_BONUS_DAYS after signup.
+ * Extra Lead Finder results this user gets right now. Paid plans only,
+ * during the first UPGRADE_BONUS_DAYS after the plan was assigned
+ * (users.plan_changed_at; account creation for legacy rows without it).
  */
-export function signupBonusLeads(
+export function upgradeBonusLeads(
   plan: Plan,
-  createdAt: string | Date,
+  planSince: string | Date,
   now: Date = new Date()
 ): number {
-  if (plan.id !== "free") return 0;
-  const created = new Date(createdAt).getTime();
-  if (Number.isNaN(created)) return 0;
-  const age = now.getTime() - created;
-  return age >= 0 && age < SIGNUP_BONUS_DAYS * 24 * 60 * 60 * 1000
-    ? SIGNUP_BONUS_LEADS
+  if (plan.id === "free") return 0;
+  const since = new Date(planSince).getTime();
+  if (Number.isNaN(since)) return 0;
+  const age = now.getTime() - since;
+  return age >= 0 && age < UPGRADE_BONUS_DAYS * 24 * 60 * 60 * 1000
+    ? UPGRADE_BONUS_LEADS
     : 0;
 }

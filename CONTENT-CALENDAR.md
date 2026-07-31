@@ -194,9 +194,9 @@ campaign stats screenshot (the app's results page).**
 > The tools in my category start at $37/month — and you still buy lead data
 > separately. I priced against that on purpose:
 >
-> • Free — 50 leads/mo (+100 bonus your first week), 10 emails/day, AI included. Enough to land your
+> • Free — 50 leads/mo, 50 emails/day, AI included. Enough to land your
 >   first client before paying me anything.
-> • Starter $9 — for steady weekly outreach.
+> • Starter $9 — for steady weekly outreach (+100 bonus leads your first week).
 > • Pro $29 — unlimited AI writing, 2,500 leads/mo.
 >
 > Why so low? My costs are a VPS and an AI key. No sales team, no office,

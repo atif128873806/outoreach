@@ -95,6 +95,14 @@ export async function PATCH(req: NextRequest) {
   const target = await q1<{ id: number }>("SELECT id FROM users WHERE id = $1", [targetId]);
   if (!target) return NextResponse.json({ error: "No such user" }, { status: 404 });
 
-  await q("UPDATE users SET plan = $1 WHERE id = $2", [normalizePlan(body.plan), targetId]);
+  // Stamp plan_changed_at only on a real change — re-saving the same plan
+  // must not restart the first-week upgrade bonus.
+  await q(
+    `UPDATE users SET
+       plan_changed_at = CASE WHEN plan = $1 THEN plan_changed_at ELSE now() END,
+       plan = $1
+     WHERE id = $2`,
+    [normalizePlan(body.plan), targetId]
+  );
   return NextResponse.json({ ok: true });
 }

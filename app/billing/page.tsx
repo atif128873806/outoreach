@@ -147,7 +147,7 @@ export default function BillingPage() {
           label="Lead Finder"
           hint={
             leads.bonus > 0
-              ? `Includes your +${leads.bonus} first-week signup bonus — resets on the 1st`
+              ? `Includes your +${leads.bonus} first-week upgrade bonus — resets on the 1st`
               : "Results this calendar month — resets on the 1st"
           }
           used={leads.used}

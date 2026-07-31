@@ -388,8 +388,7 @@ export default function LandingPage() {
               badge: null,
               points: [
                 "50 Lead Finder results / month",
-                "+100 bonus leads in your first week",
-                "10 emails / day, your own SMTP",
+                "50 emails / day, your own SMTP",
                 "50 AI generations / day included",
                 "Unlimited contacts & campaigns",
               ],
@@ -404,6 +403,7 @@ export default function LandingPage() {
               badge: null,
               points: [
                 "400 Lead Finder results / month",
+                "+100 bonus leads in your first week",
                 "150 emails / day",
                 "500 AI generations / day included",
                 "Email support",
@@ -419,6 +419,7 @@ export default function LandingPage() {
               badge: "Best value",
               points: [
                 "2,500 Lead Finder results / month",
+                "+100 bonus leads in your first week",
                 "500 emails / day",
                 "Unlimited AI writing included",
                 "Priority support & early access",
