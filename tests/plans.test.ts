@@ -34,9 +34,9 @@ test("capWithPlan bounds the user's cap by the plan ceiling", () => {
 });
 
 test("remainingLeads never goes negative and null means unlimited", () => {
-  assert.equal(remainingLeads(PLANS.free, 0), 150);
-  assert.equal(remainingLeads(PLANS.free, 149), 1);
-  assert.equal(remainingLeads(PLANS.free, 150), 0);
+  assert.equal(remainingLeads(PLANS.free, 0), 50);
+  assert.equal(remainingLeads(PLANS.free, 49), 1);
+  assert.equal(remainingLeads(PLANS.free, 50), 0);
   assert.equal(remainingLeads(PLANS.free, 999), 0);
   const unlimited = { ...PLANS.pro, leadsPerMonth: null };
   assert.equal(remainingLeads(unlimited, 123456), null);

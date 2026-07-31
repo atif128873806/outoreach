@@ -38,7 +38,7 @@ versions included where it matters. Every post is ready to paste as-is.
 > Deliverability is built in: warm-up ramps, daily caps, spam checks, DNS
 > verification.
 >
-> Free plan with AI writing included — 150 leads/month, no card needed.
+> Free plan with AI writing included — 50 leads/month, no card needed.
 >
 > It's live: outreach.sakodev.com
 > I'd genuinely love feedback from anyone who does outreach.
@@ -194,7 +194,7 @@ campaign stats screenshot (the app's results page).**
 > The tools in my category start at $37/month — and you still buy lead data
 > separately. I priced against that on purpose:
 >
-> • Free — 150 leads/mo, 50 emails/day, AI included. Enough to land your
+> • Free — 50 leads/mo, 50 emails/day, AI included. Enough to land your
 >   first client before paying me anything.
 > • Starter $9 — for steady weekly outreach.
 > • Pro $29 — unlimited AI writing, 2,500 leads/mo.

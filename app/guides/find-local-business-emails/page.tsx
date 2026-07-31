@@ -113,7 +113,7 @@ export default function LocalEmailsGuide() {
           </li>
         </ul>
         <p>
-          The free plan includes 150 lead results a month — enough to test whether the quality
+          The free plan includes 50 lead results a month — enough to test whether the quality
           beats your manual afternoon. <Link href="/signup" className="text-blue-600 underline">Try it free</Link>{" "}
           or see <Link href="/features" className="text-blue-600 underline">how the whole pipeline works</Link>.
         </p>
@@ -152,7 +152,7 @@ export default function LocalEmailsGuide() {
             From &quot;dentists in Austin&quot; to a contactable list in 30 seconds
           </div>
           <p className="mt-1 text-sm text-zinc-400">
-            150 free lead results a month, emails and personalization intel included. No card.
+            50 free lead results a month, emails and personalization intel included. No card.
           </p>
         </div>
         <Link

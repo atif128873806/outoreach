@@ -387,7 +387,7 @@ export default function LandingPage() {
               period: "forever",
               badge: null,
               points: [
-                "150 Lead Finder results / month",
+                "50 Lead Finder results / month",
                 "50 emails / day, your own SMTP",
                 "150 AI generations / day included",
                 "Unlimited contacts & campaigns",
