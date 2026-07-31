@@ -75,7 +75,7 @@ const FAQS = [
   },
   {
     q: "Which AI does the writing?",
-    a: "AI writing is included free — no API key needed (up to 150 generations a day on the free plan). Prefer your own model? Add a Groq or Anthropic Claude key in Settings for unlimited use with no per-message markup.",
+    a: "AI writing is included free — no API key needed (up to 50 generations a day on the free plan, more on paid plans). Prefer your own model? Add a Groq or Anthropic Claude key in Settings for unlimited use with no per-message markup.",
   },
   {
     q: "Is the Instagram and LinkedIn outreach safe for my accounts?",
@@ -388,8 +388,9 @@ export default function LandingPage() {
               badge: null,
               points: [
                 "50 Lead Finder results / month",
-                "50 emails / day, your own SMTP",
-                "150 AI generations / day included",
+                "+100 bonus leads in your first week",
+                "10 emails / day, your own SMTP",
+                "50 AI generations / day included",
                 "Unlimited contacts & campaigns",
               ],
               cta: "Create your account",

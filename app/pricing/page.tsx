@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PublicShell from "../components/PublicShell";
 import { SITE } from "@/lib/site";
-import { PLANS } from "@/lib/plans";
+import { PLANS, SIGNUP_BONUS_LEADS } from "@/lib/plans";
 
 export const metadata: Metadata = {
   title: `Pricing — ${SITE.name}`,
@@ -35,6 +35,7 @@ const CARDS = [
     highlight: false,
     features: [
       `${free.leadsPerMonth} Lead Finder results / month`,
+      `+${SIGNUP_BONUS_LEADS} bonus leads in your first week`,
       `${free.emailsPerDay} emails / day through your own SMTP`,
       `${free.aiPerDay} included AI generations / day`,
       "Unlimited contacts & campaigns",

@@ -22,7 +22,7 @@ interface PlanRow {
 interface Billing {
   plan: PlanInfo;
   plans: PlanRow[];
-  leads: { used: number; limit: number | null };
+  leads: { used: number; limit: number | null; bonus: number };
   emails: { used: number; limit: number | null };
   ai: { used: number; limit: number | null; ownKey: boolean };
   supportEmail: string;
@@ -145,7 +145,11 @@ export default function BillingPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Meter
           label="Lead Finder"
-          hint="Results this calendar month — resets on the 1st"
+          hint={
+            leads.bonus > 0
+              ? `Includes your +${leads.bonus} first-week signup bonus — resets on the 1st`
+              : "Results this calendar month — resets on the 1st"
+          }
           used={leads.used}
           limit={leads.limit}
         />

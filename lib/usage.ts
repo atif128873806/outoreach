@@ -1,5 +1,11 @@
 import { q, q1 } from "./db";
-import { PLANS, normalizePlan, remainingLeads, type Plan } from "./plans";
+import {
+  PLANS,
+  normalizePlan,
+  remainingLeads,
+  signupBonusLeads,
+  type Plan,
+} from "./plans";
 
 /** The user's current plan (from users.plan; unknown values collapse to free). */
 export async function getUserPlan(userId: number): Promise<Plan> {
@@ -40,13 +46,21 @@ export interface LeadQuota {
   used: number;
   limit: number | null;
   remaining: number | null;
+  /** Active signup-bonus leads included in `limit` (0 once the first week ends). */
+  bonus: number;
 }
 
-/** Lead Finder quota status for this user this month. */
+/** Lead Finder quota status for this user this month (incl. signup bonus). */
 export async function getLeadQuota(userId: number): Promise<LeadQuota> {
-  const plan = await getUserPlan(userId);
+  const row = await q1<{ plan: string; created_at: string }>(
+    "SELECT plan, created_at FROM users WHERE id = $1",
+    [userId]
+  );
+  const plan = PLANS[normalizePlan(row?.plan)];
+  const bonus = row ? signupBonusLeads(plan, row.created_at) : 0;
   const used = await usedThisMonth(userId, "leads");
-  return { plan, used, limit: plan.leadsPerMonth, remaining: remainingLeads(plan, used) };
+  const limit = plan.leadsPerMonth == null ? null : plan.leadsPerMonth + bonus;
+  return { plan, used, limit, remaining: remainingLeads(plan, used, bonus), bonus };
 }
 
 /** Standard message when the lead quota is exhausted. */

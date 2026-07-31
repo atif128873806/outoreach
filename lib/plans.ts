@@ -30,8 +30,8 @@ export const PLANS: Record<PlanId, Plan> = {
     priceMonthlyUsd: 0,
     priceYearlyUsd: 0,
     leadsPerMonth: 50,
-    emailsPerDay: 50,
-    aiPerDay: 150,
+    emailsPerDay: 10,
+    aiPerDay: 50,
     tagline: "Everything you need to land your first clients.",
   },
   starter: {
@@ -68,7 +68,36 @@ export function capWithPlan(userCap: number, plan: Plan): number {
 }
 
 /** Remaining lead-scrape quota given this month's usage. null = unlimited. */
-export function remainingLeads(plan: Plan, usedThisMonth: number): number | null {
+export function remainingLeads(
+  plan: Plan,
+  usedThisMonth: number,
+  bonus = 0
+): number | null {
   if (plan.leadsPerMonth == null) return null;
-  return Math.max(0, plan.leadsPerMonth - usedThisMonth);
+  return Math.max(0, plan.leadsPerMonth + bonus - usedThisMonth);
+}
+
+// ---------- signup bonus ----------
+// A new free account's first week should feel abundant: enough leads to run
+// a real first campaign before the steady-state quota kicks in.
+
+export const SIGNUP_BONUS_LEADS = 100;
+export const SIGNUP_BONUS_DAYS = 7;
+
+/**
+ * Extra Lead Finder results this user gets right now. Free plan only (paid
+ * plans have plenty), during the first SIGNUP_BONUS_DAYS after signup.
+ */
+export function signupBonusLeads(
+  plan: Plan,
+  createdAt: string | Date,
+  now: Date = new Date()
+): number {
+  if (plan.id !== "free") return 0;
+  const created = new Date(createdAt).getTime();
+  if (Number.isNaN(created)) return 0;
+  const age = now.getTime() - created;
+  return age >= 0 && age < SIGNUP_BONUS_DAYS * 24 * 60 * 60 * 1000
+    ? SIGNUP_BONUS_LEADS
+    : 0;
 }

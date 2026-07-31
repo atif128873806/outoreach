@@ -222,7 +222,7 @@ export default function FeaturesPage() {
           <div className="rise rise-4 mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               ["3", "lead sources"],
-              ["150/day", "free AI writing"],
+              ["50/day", "free AI writing"],
               ["3", "channels, one pipeline"],
               ["$0", "per-message markup"],
             ].map(([v, l]) => (

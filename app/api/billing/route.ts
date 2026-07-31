@@ -62,7 +62,7 @@ export async function GET() {
       emailsPerDay: p.emailsPerDay,
       aiPerDay: p.aiPerDay,
     })),
-    leads: { used: leadQuota.used, limit: leadQuota.limit },
+    leads: { used: leadQuota.used, limit: leadQuota.limit, bonus: leadQuota.bonus },
     emails: { used: emailsUsed, limit: emailsLimit },
     ai: {
       used: Number(aiRow?.count ?? 0),
