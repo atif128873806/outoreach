@@ -75,14 +75,15 @@ Rule of thumb: never edit facts (prices, limits, features) without checking
 > **Learn** — Open, click, and reply rates per campaign and per A/B arm, a
 > 14-day activity chart, and a full per-message log.
 >
-> **Compliance by design** — Every email carries one-click unsubscribe +
-> List-Unsubscribe headers, opt-outs are enforced permanently, and Instagram/
+> **Compliance safeguards** — Every email carries an RFC 8058 one-click unsubscribe,
+> a visible unsubscribe link, and the sender's postal address; opt-outs are enforced
+> permanently, and Instagram/
 > LinkedIn messages are drafted for manual sending (automated DMs get accounts
 > banned — Outreach Studio never fakes them).
 >
-> **Pricing** — Free forever plan (50 leads/mo, 50 emails/day, 50 AI
+> **Pricing** — Free forever plan (50 leads/mo, 25 emails/day, 50 AI
 > writes/day). Starter $9/mo. Pro $29/mo with unlimited AI writing. Your data
-> stays in your own Postgres; SMTP passwords and API keys are encrypted at rest.
+> is isolated in Postgres; SMTP passwords and API keys are encrypted at rest.
 
 ## 3. Product Hunt kit
 

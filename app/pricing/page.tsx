@@ -78,11 +78,11 @@ const CARDS = [
 const BILLING_FAQS = [
   {
     q: "How does billing work?",
-    a: "Payments are processed by Paddle, our merchant of record. Paddle handles the checkout, invoices, and any applicable sales tax or VAT for your country. Cards and PayPal are supported.",
+    a: "Paid plans are currently activated personally by our team after payment. Email support from inside the app and we will confirm the available payment method, invoice, plan, and renewal terms before you pay. Self-serve checkout is not live yet.",
   },
   {
     q: "Can I cancel anytime?",
-    a: "Yes. Cancel in one click and your plan stays active until the end of the period you've paid for. No cancellation fees, and your data stays intact on the free plan.",
+    a: "Yes. Email support before your next paid period. Your plan stays active until the end of the period you've paid for, with no cancellation fee, and your data stays intact when the account returns to the free plan.",
   },
   {
     q: "Is there a refund policy?",
@@ -150,8 +150,9 @@ export default function PricingPage() {
       </div>
 
       <p className="mt-6 text-center text-xs text-zinc-400">
-        Paid checkout is rolling out now — create a free account and upgrade from the app.
-        Early accounts lock in these prices.
+        Paid plans are activated personally while self-serve checkout is being prepared.
+        Create a free account and request an upgrade from the app; every price and payment
+        method is confirmed before you pay.
       </p>
 
       {/* Billing FAQ */}

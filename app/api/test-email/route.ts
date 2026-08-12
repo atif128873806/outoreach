@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendMail } from "@/lib/mailer";
-import { getSettings, isSmtpConfigured } from "@/lib/settings";
+import { getSettings, isSmtpConfigured, setKv } from "@/lib/settings";
 import { getUserId } from "@/lib/auth";
 import { friendlyMailboxError } from "@/lib/mail-host";
 
@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
         "This is a test email from your outreach automation dashboard.\n\nIf you're reading this, your SMTP settings work.",
       settings,
     });
+    await setKv(userId, "smtp_tested_at", new Date().toISOString());
     return NextResponse.json({ ok: true, to: recipient });
   } catch (err) {
     return NextResponse.json(

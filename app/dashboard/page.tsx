@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Card, PageHeader, StatusBadge, fmtDate } from "../components/ui";
+import { Card, PageHeader, StatusBadge, btnPrimary, fmtDate } from "../components/ui";
 import ActivityChart, { type DayPoint } from "../components/ActivityChart";
 
 interface DashboardData {
@@ -33,7 +33,34 @@ interface DashboardData {
   }[];
   upcoming: { id: number; name: string; scheduled_at: string; status: string }[];
   daily: DayPoint[];
-  setup: { aiConfigured: boolean; smtpConfigured: boolean; hasContacts: boolean };
+  onboarding: {
+    steps: {
+      id: string;
+      label: string;
+      detail: string;
+      href: string;
+      action: string;
+      done: boolean;
+    }[];
+    completedCount: number;
+    totalSteps: number;
+    progressPercent: number;
+    next: {
+      id: string;
+      label: string;
+      detail: string;
+      href: string;
+      action: string;
+      done: boolean;
+    } | null;
+    complete: boolean;
+  };
+  mailbox: {
+    configured: boolean;
+    status: "not_configured" | "checking" | "healthy" | "stale" | "error";
+    lastCheck: string | null;
+    error: string | null;
+  };
 }
 
 export default function DashboardPage() {
@@ -54,13 +81,15 @@ export default function DashboardPage() {
     return <div className="text-zinc-400 text-sm py-20 text-center">Loading…</div>;
   }
 
-  const { stats, setup } = data;
-  const setupSteps = [
-    { done: setup.aiConfigured, label: "Add an AI API key (Groq or Anthropic)", href: "/settings", detail: "Powers AI-personalized messages" },
-    { done: setup.smtpConfigured, label: "Configure SMTP delivery", href: "/settings", detail: "Until then, sends are simulated (logged, not delivered)" },
-    { done: setup.hasContacts, label: "Import contacts from CSV", href: "/contacts", detail: "Email + business name + category" },
-  ];
-  const incomplete = setupSteps.filter((s) => !s.done);
+  const { stats, onboarding, mailbox } = data;
+  const mailboxProblem = mailbox.status === "error" || mailbox.status === "stale";
+  const mailboxLabel = {
+    not_configured: "Not configured",
+    checking: "Waiting for first check",
+    healthy: "Healthy",
+    stale: "Check overdue",
+    error: "Connection error",
+  }[mailbox.status];
 
   return (
     <div>
@@ -84,19 +113,110 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {incomplete.length > 0 && (
-        <Card className="mb-6 p-5 border-amber-200 bg-amber-50">
-          <div className="font-medium text-amber-900 mb-2">Finish setting up</div>
-          <ul className="space-y-1.5">
-            {incomplete.map((s) => (
-              <li key={s.label} className="text-sm text-amber-800">
-                <Link href={s.href} className="underline font-medium hover:text-amber-950">
-                  {s.label}
-                </Link>{" "}
-                <span className="text-amber-700/70">— {s.detail}</span>
-              </li>
-            ))}
-          </ul>
+      {!onboarding.complete && onboarding.next && (
+        <Card className="mb-6 overflow-hidden border-blue-200">
+          <div className="border-b border-blue-100 bg-blue-50/60 px-5 py-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="font-semibold text-zinc-900">Launch your first safe pilot</div>
+                <div className="mt-0.5 text-xs text-zinc-500">
+                  One step at a time. Preview your campaign before connecting a mailbox.
+                </div>
+              </div>
+              <div className="shrink-0 text-xs font-medium tabular-nums text-blue-700">
+                {onboarding.completedCount}/{onboarding.totalSteps} complete
+              </div>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-blue-100">
+              <div
+                className="h-full rounded-full bg-blue-600 transition-all"
+                style={{ width: `${onboarding.progressPercent}%` }}
+              />
+            </div>
+          </div>
+          <div className="p-5">
+            <div className="text-xs font-medium uppercase tracking-wide text-blue-600">
+              Your next step
+            </div>
+            <div className="mt-1 text-base font-semibold text-zinc-900">
+              {onboarding.next.label}
+            </div>
+            <div className="mt-1 text-sm text-zinc-500">{onboarding.next.detail}</div>
+            <Link href={onboarding.next.href} className={`${btnPrimary} mt-4`}>
+              {onboarding.next.action} →
+            </Link>
+
+            <details className="mt-5 border-t border-zinc-100 pt-4">
+              <summary className="cursor-pointer text-xs font-medium text-zinc-500 hover:text-zinc-700">
+                View all onboarding steps
+              </summary>
+              <ol className="mt-3 space-y-2">
+                {onboarding.steps.map((step, index) => (
+                  <li key={step.id} className="flex items-start gap-2.5 text-sm">
+                    <span
+                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
+                        step.done
+                          ? "bg-emerald-100 text-emerald-700"
+                          : step.id === onboarding.next?.id
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-zinc-100 text-zinc-400"
+                      }`}
+                    >
+                      {step.done ? "✓" : index + 1}
+                    </span>
+                    <div>
+                      <div className={step.done ? "text-zinc-400 line-through" : "text-zinc-700"}>
+                        {step.label}
+                      </div>
+                      {!step.done && <div className="text-xs text-zinc-400">{step.detail}</div>}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          </div>
+        </Card>
+      )}
+
+      {mailbox.configured && (
+        <Card
+          className={`mb-6 p-4 ${
+            mailboxProblem ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50/50"
+          }`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-medium text-zinc-800">
+                Reply detection
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] ${
+                    mailboxProblem
+                      ? "bg-red-100 text-red-700"
+                      : mailbox.status === "healthy"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-zinc-100 text-zinc-600"
+                  }`}
+                >
+                  {mailboxLabel}
+                </span>
+              </div>
+              <div className={`mt-1 text-xs ${mailboxProblem ? "text-red-700" : "text-zinc-500"}`}>
+                {mailbox.status === "error"
+                  ? mailbox.error || "The inbox connection failed."
+                  : mailbox.status === "stale"
+                    ? "No successful inbox check in the last 10 minutes. Replies may not be detected."
+                    : mailbox.status === "healthy"
+                      ? `Replies and bounces are being checked automatically. Last check ${fmtDate(mailbox.lastCheck)}.`
+                      : "The first automatic inbox check is pending."}
+              </div>
+            </div>
+            <Link
+              href="/settings#reply-detection"
+              className="text-xs font-medium text-zinc-700 underline hover:text-zinc-950"
+            >
+              {mailboxProblem ? "Fix connection" : "Mailbox settings"} →
+            </Link>
+          </div>
         </Card>
       )}
 

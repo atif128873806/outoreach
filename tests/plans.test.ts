@@ -34,9 +34,9 @@ test("normalizePlan collapses unknown values to free", () => {
 });
 
 test("capWithPlan bounds the user's cap by the plan ceiling", () => {
-  assert.equal(capWithPlan(200, PLANS.free), 50); // plan wins when lower
-  assert.equal(capWithPlan(30, PLANS.free), 30); // user's own cap wins when lower
-  assert.equal(capWithPlan(9999, PLANS.pro), 500);
+  assert.equal(capWithPlan(200, PLANS.free), 25); // plan wins when lower
+  assert.equal(capWithPlan(20, PLANS.free), 20); // user's own cap wins when lower
+  assert.equal(capWithPlan(9999, PLANS.pro), 50);
   const unlimited = { ...PLANS.pro, emailsPerDay: null };
   assert.equal(capWithPlan(9999, unlimited), 9999);
 });

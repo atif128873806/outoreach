@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: `How ${SITE.name} collects, uses, and protects data.`,
 };
 
-const UPDATED = "July 11, 2026";
+const UPDATED = "August 9, 2026";
 
 export default function PrivacyPage() {
   return (
@@ -78,8 +78,9 @@ export default function PrivacyPage() {
             connect; replies are read from the IMAP inbox you connect.
           </li>
           <li>
-            <b>Paddle</b> — our merchant of record for paid plans. Paddle processes payment
-            details; we never see your full card number.
+            <b>Payment providers</b> — if you purchase a paid plan, the provider and its
+            privacy terms are disclosed before payment. Card or bank details are processed
+            by that provider; we do not store full card numbers.
           </li>
           <li>
             <b>Hosting</b> — the application and database run on servers we rent in the EU.

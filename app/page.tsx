@@ -1,52 +1,51 @@
+import Image from "next/image";
 import Link from "next/link";
 import { LogoTile } from "./components/Logo";
 import ToolsDropdown from "./components/ToolsDropdown";
 import HeroFilm from "./components/HeroFilm";
+import PublicFooter from "./components/PublicFooter";
 
 /**
  * Public marketing landing page. Signed-in visitors never see this —
  * the proxy sends them straight to /dashboard.
  */
 
-const TINTS = [
-  "bg-blue-50 text-blue-600",
-  "bg-emerald-50 text-emerald-600",
-  "bg-amber-50 text-amber-600",
-  "bg-violet-50 text-violet-600",
-  "bg-sky-50 text-sky-600",
-  "bg-rose-50 text-rose-600",
-];
-
-const FEATURES = [
+const PRODUCT_STORIES = [
   {
-    title: "Lead Finder with emails included",
-    body: "Search any niche in any city. AI web search returns businesses with email addresses, phone numbers, Instagram and LinkedIn profiles already attached — plus OpenStreetMap and Google Places sources.",
-    icon: "M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z",
+    kicker: "Find qualified leads",
+    title: "Start with a niche — not a spreadsheet.",
+    body: "Tell Outreach Studio who you want to reach and where. It returns real businesses with contact details already attached, so you can move from an idea to a usable lead list without hours of research.",
+    points: [
+      "Business emails, websites, Instagram, and LinkedIn in one result",
+      "Owner and decision-maker enrichment when available",
+      "Import the leads you want directly into your contact pipeline",
+    ],
+    image: "/product-lead-finder.jpg",
+    alt: "Outreach Studio Lead Finder showing dental businesses in Austin with verified contact emails and owner information",
   },
   {
-    title: "AI writes every message",
-    body: "No mail-merge templates. The AI writes a unique message per contact from their business name, industry, and company intel — in your voice and tone, grounded in what your company does.",
-    icon: "M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z",
+    kicker: "Personalize at scale",
+    title: "Every prospect gets a message written for them.",
+    body: "The AI uses the business, industry, location, and company notes to write a short message in your voice. It is real context, not a mail-merge template with a first name dropped in.",
+    points: [
+      "A different subject and message for every contact",
+      "Your offer, tone, sender identity, and sign-off stay consistent",
+      "Spam-filter checks run before the campaign is scheduled",
+    ],
+    image: "/product-ai-writing.jpg",
+    alt: "A personalized outreach email written by Outreach Studio for a dental business with contextual details highlighted",
   },
   {
-    title: "Follow-ups that stop on reply",
-    body: "Up to three automatic follow-ups, days apart, written with the context of the earlier email. The moment someone replies, their sequence stops. Bounces stop everything.",
-    icon: "M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-14.5-3M4 15a8 8 0 0014.5 3",
-  },
-  {
-    title: "Reply triage with suggested answers",
-    body: "Your inbox is watched for answers. Each reply is classified — interested, question, not interested, out of office — and the AI drafts a response in your voice, ready to send.",
-    icon: "M8 12h8M8 8h8M8 16h4M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
-  },
-  {
-    title: "Deliverability built in",
-    body: "Daily send caps, a warm-up ramp for new domains, business-hours send windows, an SPF/DKIM/DMARC checker, and a spam-filter lint on every message before you schedule it.",
-    icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
-  },
-  {
-    title: "Numbers you can act on",
-    body: "Open, click, and reply rates per campaign. A/B subject-line testing with per-arm results. A 14-day activity chart on your dashboard. Know what works, double down.",
-    icon: "M3 3v18h18M7 15l4-4 3 3 5-6",
+    kicker: "Send and respond",
+    title: "Follow up automatically. Stop the moment they reply.",
+    body: "Campaigns send inside your chosen business hours at a controlled pace. Outreach Studio watches for replies, stops that contact's sequence, classifies the response, and prepares a useful next message.",
+    points: [
+      "Daily caps, send windows, and human-paced throttling built in",
+      "Follow-ups and bounces stop automatically when they should",
+      "Interested replies are surfaced with an AI-suggested response",
+    ],
+    image: "/product-reply-triage.jpg",
+    alt: "An Outreach Studio campaign sending at a controlled pace with a stopped follow-up, interested reply, and suggested response",
   },
 ];
 
@@ -87,30 +86,13 @@ const FAQS = [
   },
   {
     q: "Is this compliant with anti-spam laws?",
-    a: "The tooling is built for it: every email carries a one-click unsubscribe link and List-Unsubscribe header, opt-outs are enforced forever, and bounced addresses are excluded automatically. You remain responsible for using it on appropriate business contacts under the laws that apply to you (CAN-SPAM, GDPR, PECR…).",
+    a: "The product provides compliance safeguards: every real campaign email includes the sender's postal address, a visible opt-out, and RFC 8058 one-click unsubscribe headers; opt-outs are permanent and bounced or clearly invalid addresses are excluded. You remain responsible for having a lawful basis and following the laws that apply to your recipients (CAN-SPAM, GDPR, PECR…).",
   },
   {
     q: "Where does my data live?",
-    a: "In your own Postgres database, on infrastructure you choose — the product ships with a one-command Docker deploy including nightly backups. SMTP passwords and API keys are encrypted at rest.",
+    a: "Hosted accounts are isolated in our Postgres database and protected by encrypted credentials and nightly backups. If you choose the self-hosted edition, the same product can run on infrastructure and a Postgres database you control.",
   },
 ];
-
-function Icon({ d }: { d: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-      aria-hidden
-    >
-      <path d={d} />
-    </svg>
-  );
-}
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
@@ -238,10 +220,10 @@ export default function LandingPage() {
               </span>
               <span className="hidden h-4 w-px bg-zinc-200 sm:block" />
               <Link
-                href="/demo"
+                href="/features"
                 className="font-medium text-blue-600 transition-colors hover:text-blue-700"
               >
-                Click through it yourself →
+                Explore the guided product tour →
               </Link>
             </div>
           </div>
@@ -280,28 +262,66 @@ export default function LandingPage() {
       <section id="features" className="mx-auto max-w-6xl px-6 py-20">
         <Eyebrow>Features</Eyebrow>
         <h2 className="text-center text-3xl font-semibold tracking-tight sm:text-4xl">
-          Everything between a niche and a signed client
+          See how a lead becomes a real conversation
         </h2>
-        <p className="mx-auto mt-3 max-w-xl text-center text-zinc-500">
-          Not another mail-merge tool — a full pipeline with intelligence at every step.
+        <p className="mx-auto mt-3 max-w-2xl text-center text-zinc-500">
+          Three connected stages, shown with the real product — from finding the right
+          business to knowing exactly which reply needs you.
         </p>
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f, i) => (
-            <div
-              key={f.title}
-              className="group rounded-2xl border border-zinc-200 bg-white p-6 transition-all hover:-translate-y-1 hover:border-zinc-300 hover:shadow-lg hover:shadow-zinc-900/5"
+        <div className="mt-16 space-y-20 lg:space-y-28">
+          {PRODUCT_STORIES.map((story, index) => (
+            <article
+              key={story.title}
+              className="grid items-center gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:gap-16"
             >
-              <div
-                className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110 ${TINTS[i % TINTS.length]}`}
-              >
-                <Icon d={f.icon} />
+              <div className={index % 2 === 1 ? "lg:order-2" : undefined}>
+                <div className="relative overflow-hidden rounded-[26px] border border-zinc-200 bg-zinc-50 p-2 shadow-2xl shadow-zinc-900/10">
+                  <div
+                    className="pointer-events-none absolute inset-x-12 -bottom-10 h-28 rounded-full bg-blue-500/10 blur-3xl"
+                    aria-hidden
+                  />
+                  <Image
+                    src={story.image}
+                    alt={story.alt}
+                    width={1620}
+                    height={760}
+                    sizes="(max-width: 1023px) 100vw, 54vw"
+                    className="relative h-auto w-full rounded-[20px] border border-zinc-100"
+                  />
+                </div>
               </div>
-              <h3 className="font-medium">{f.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-500">{f.body}</p>
-            </div>
+
+              <div className={index % 2 === 1 ? "lg:order-1" : undefined}>
+                <div className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-950 text-xs font-semibold text-white">
+                    {index + 1}
+                  </span>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">
+                    {story.kicker}
+                  </p>
+                </div>
+                <h3 className="mt-5 text-2xl font-semibold tracking-tight sm:text-3xl">
+                  {story.title}
+                </h3>
+                <p className="mt-4 leading-relaxed text-zinc-500">{story.body}</p>
+                <ul className="mt-6 space-y-3 text-sm leading-relaxed text-zinc-600">
+                  {story.points.map((point) => (
+                    <li key={point} className="flex gap-3">
+                      <span
+                        className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold text-emerald-700"
+                        aria-hidden
+                      >
+                        ✓
+                      </span>
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </article>
           ))}
         </div>
-        <div className="mt-10 text-center">
+        <div className="mt-16 text-center">
           <Link
             href="/features"
             className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-6 py-3 text-sm font-semibold text-zinc-700 transition-all hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md"
@@ -388,7 +408,7 @@ export default function LandingPage() {
               badge: null,
               points: [
                 "50 Lead Finder results / month",
-                "50 emails / day, your own SMTP",
+                "25 emails / day, your own SMTP",
                 "50 AI generations / day included",
                 "Unlimited contacts & campaigns",
               ],
@@ -404,7 +424,7 @@ export default function LandingPage() {
               points: [
                 "400 Lead Finder results / month",
                 "+100 bonus leads in your first week",
-                "150 emails / day",
+                "40 emails / day",
                 "500 AI generations / day included",
                 "Email support",
               ],
@@ -420,7 +440,7 @@ export default function LandingPage() {
               points: [
                 "2,500 Lead Finder results / month",
                 "+100 bonus leads in your first week",
-                "500 emails / day",
+                "50 emails / day",
                 "Unlimited AI writing included",
                 "Priority support & early access",
               ],
@@ -522,40 +542,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-zinc-100">
-        <div className="mx-auto max-w-6xl px-6 py-10 text-sm text-zinc-400">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div>
-              <span className="font-semibold text-zinc-600">Outreach Studio</span> · AI
-              outreach automation
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-              <Link href="/features" className="hover:text-zinc-600">Features</Link>
-              <Link href="/demo" className="hover:text-zinc-600">Demo</Link>
-              <Link href="/docs" className="hover:text-zinc-600">Docs</Link>
-              <Link href="/pricing" className="hover:text-zinc-600">Pricing</Link>
-              <Link href="/contact" className="hover:text-zinc-600">Contact</Link>
-              <Link href="/login" className="hover:text-zinc-600">Sign in</Link>
-            </div>
-            <div className="max-w-xs text-center text-xs md:text-right">
-              Built for legitimate business outreach. Honor opt-outs and the anti-spam
-              laws that apply to you.
-            </div>
-          </div>
-          <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-zinc-100 pt-6 text-xs md:flex-row">
-            <div>© {new Date().getFullYear()} Outreach Studio</div>
-            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-              <Link href="/guides" className="hover:text-zinc-600">Guides</Link>
-              <Link href="/tools/spam-checker" className="hover:text-zinc-600">Free spam checker</Link>
-              <Link href="/tools/dns-checker" className="hover:text-zinc-600">Free SPF/DKIM checker</Link>
-              <Link href="/terms" className="hover:text-zinc-600">Terms of Service</Link>
-              <Link href="/privacy" className="hover:text-zinc-600">Privacy Policy</Link>
-              <Link href="/refund-policy" className="hover:text-zinc-600">Refund Policy</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

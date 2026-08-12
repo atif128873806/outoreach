@@ -11,7 +11,7 @@ AI-powered business outreach automation. Import a CSV of business contacts, desc
   - **Email** — sent automatically on schedule via SMTP
   - **Instagram DM** — AI drafts a personalized DM per contact; the **Message Center** gives you one-click *copy → open profile → mark sent*. (Instagram bans automated cold DMs, so drafts are sent manually — compliant and ban-safe.)
   - **LinkedIn** — AI drafts a personalized LinkedIn message per contact (professional register, ≤90 words), sent the same compliant way from the Message Center; LinkedIn profiles are captured automatically by the Lead Finder (web search + website scan) and from CSV imports
-- **AI-personalized messages, two providers** — Groq (llama-3.3-70b-versatile by default) or Claude (Anthropic API) writes a unique message per contact using their business name, category, and notes, in your chosen tone, grounded in your sender identity from Settings. Provider is selectable in Settings; "Auto" prefers Anthropic when its key exists, otherwise Groq.
+- **AI-personalized messages, two providers** — Groq (llama-3.3-70b-versatile by default) or Claude (Anthropic API) writes a unique message per contact using their business name, category, and notes, in your chosen tone, grounded in your sender identity from Settings. Provider is selectable in Settings; the included "Auto" path uses the instance key, preferring Groq when configured.
 - **Template engine (no API key needed)** — without any AI key, a built-in engine with rotating, tone-aware variants writes the messages instead, so no two emails in a batch are identical
 - **Follow-up sequences** — up to 3 automatic follow-ups, N days apart, that stop as soon as a contact replies
 - **Reply & bounce detection (IMAP)** — polls your inbox every 2 minutes: a reply auto-marks the contact as *replied* (stopping their follow-ups), and a bounce notice auto-marks them *bounced* (excluding them from all future sends to protect your reputation)
@@ -30,7 +30,8 @@ AI-powered business outreach automation. Import a CSV of business contacts, desc
 - **Scheduled sending** — pick a date/time; a background scheduler (checks every minute) starts the campaign automatically
 - **Throttled delivery** — configurable messages/hour to protect sender reputation
 - **Campaign controls** — pause, resume, start now, cancel; live progress and a full per-message log with follow-up steps
-- **Unsubscribe handling** — every email carries a one-click unsubscribe link (plus `List-Unsubscribe` header); unsubscribed contacts are skipped forever
+- **Recipient safeguards** — every real campaign email includes the sender's postal address, a visible opt-out link, and RFC 8058 `List-Unsubscribe` + `List-Unsubscribe-Post` headers; unsubscribed contacts are skipped forever
+- **Conservative email safety check** — before first send, addresses are checked for valid syntax, known disposable providers, and a working domain mail route. Invalid/risky contacts are skipped without pretending a domain check proves that a specific mailbox exists.
 - **Simulation mode** — without SMTP configured, the whole pipeline runs but sends are only logged, so you can test safely
 - **Multi-user accounts** — email + password sign-up, each account fully isolated (own contacts, campaigns, SMTP/IMAP, API keys, caps); sessions are signed cookies, login attempts are rate-limited; recipient-facing unsubscribe/tracking endpoints stay public
 - **Credentials encrypted at rest** — SMTP/IMAP passwords and API keys are stored AES-256-GCM-encrypted (key from `APP_SECRET` env or an auto-generated `data/.secret`) and are never sent back to the browser

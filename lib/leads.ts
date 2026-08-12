@@ -382,7 +382,6 @@ const BUILDER_HOSTS =
  */
 export function auditWebsiteHtml(html: string, url: string): string[] {
   const flags: string[] = [];
-  const lower = html.toLowerCase();
 
   if (/^http:\/\//i.test(url.trim())) flags.push("no HTTPS (browser shows 'Not secure')");
 

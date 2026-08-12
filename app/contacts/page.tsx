@@ -19,6 +19,7 @@ interface Contact {
   linkedin: string;
   phone: string;
   notes: string;
+  email_status: string;
   replied: number;
   bounced: number;
   unsubscribed: number;
@@ -53,10 +54,6 @@ export default function ContactsPage() {
     setContacts(data.contacts);
     setCategories(data.categories);
   }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   useEffect(() => {
     const t = setTimeout(() => load(query), 250);
@@ -192,7 +189,14 @@ export default function ContactsPage() {
           </div>
           <div className="mt-3 flex items-center gap-3">
             <input className={`${inputCls} flex-1`} placeholder="Notes (used by the AI for personalization)" value={form.notes} onChange={setF("notes")} />
-            <button className={btnPrimary} onClick={addContact} disabled={adding || !form.email}>
+            <button
+              className={btnPrimary}
+              onClick={addContact}
+              disabled={
+                adding ||
+                (!form.email && !(form.business_name && (form.instagram || form.phone)))
+              }
+            >
               {adding ? "Adding…" : "Add contact"}
             </button>
           </div>
@@ -233,7 +237,28 @@ export default function ContactsPage() {
               <tbody className="divide-y divide-zinc-100">
                 {contacts.map((c) => (
                   <tr key={c.id} className="hover:bg-zinc-50">
-                    <td className="px-4 py-2.5 font-medium">{c.email}</td>
+                    <td className="px-4 py-2.5 font-medium">
+                      <div>{c.email || "—"}</div>
+                      {c.email && (
+                        <div
+                          className={`mt-0.5 text-[11px] font-normal ${
+                            c.email_status === "valid"
+                              ? "text-emerald-600"
+                              : c.email_status === "invalid" || c.email_status === "risky"
+                                ? "text-red-500"
+                                : "text-zinc-400"
+                          }`}
+                        >
+                          {c.email_status === "valid"
+                            ? "domain verified"
+                            : c.email_status === "invalid"
+                              ? "invalid domain"
+                              : c.email_status === "risky"
+                                ? "risky address"
+                                : "checked before sending"}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-2.5">{c.business_name || "—"}</td>
                     <td className="px-4 py-2.5">
                       {c.category ? (

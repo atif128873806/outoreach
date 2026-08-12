@@ -5,10 +5,13 @@ import { sendMail } from "./mailer";
 import { isEmailVerified } from "./auth";
 import { getUserPlan } from "./usage";
 import { capWithPlan } from "./plans";
+import { isSendDue, normalizeHourlyRate } from "./throttle";
+import { verificationNeedsRefresh, verifyEmailAddress } from "./email-validation";
 import { hourInTimeZone, isHourInWindow } from "./timewindow";
 import {
   getSettings,
   getEffectiveDailyCap,
+  getPublicBaseUrl,
   isSmtpConfigured,
   startOfTodayIso,
   type Settings,
@@ -17,6 +20,7 @@ import {
 let ticking = false;
 const capNoticeDay = new Map<number, string>();
 const verifyNoticeDay = new Map<number, string>();
+const postalNoticeDay = new Map<number, string>();
 
 // Errors worth retrying: connection/timeout problems, SMTP 4xx "try again
 // later" replies, and provider rate limits. Anything else fails permanently.
@@ -152,8 +156,68 @@ async function processCampaignBatch(campaign: Campaign, settings: Settings): Pro
     return;
   }
 
-  // throttle_per_hour spread across one-minute ticks
-  const batchSize = Math.max(1, Math.round(campaign.throttle_per_hour / 60));
+  if (
+    campaign.channel === "email" &&
+    isSmtpConfigured(settings) &&
+    !getPublicBaseUrl(settings)
+  ) {
+    await q("UPDATE campaigns SET status = 'paused' WHERE id = $1 AND status = 'running'", [
+      campaign.id,
+    ]);
+    await q(
+      `UPDATE emails SET error = $1
+       WHERE campaign_id = $2 AND status = 'pending' AND error = ''`,
+      ["Set the Public base URL in Settings before real sending", campaign.id]
+    );
+    console.log(
+      `[runner] user #${campaign.user_id} needs a public base URL — campaign #${campaign.id} paused`
+    );
+    return;
+  }
+
+  // Commercial email needs a valid sender postal address. Campaign creation
+  // enforces this for new campaigns; this guard safely pauses older scheduled
+  // campaigns created before the setting existed.
+  if (
+    campaign.channel === "email" &&
+    isSmtpConfigured(settings) &&
+    !settings.sender_postal_address.trim()
+  ) {
+    const today = new Date().toDateString();
+    if (postalNoticeDay.get(campaign.user_id) !== today) {
+      postalNoticeDay.set(campaign.user_id, today);
+      console.log(
+        `[runner] user #${campaign.user_id} needs a business postal address — campaign #${campaign.id} paused`
+      );
+    }
+    await q("UPDATE campaigns SET status = 'paused' WHERE id = $1 AND status = 'running'", [
+      campaign.id,
+    ]);
+    await q(
+      `UPDATE emails SET error = $1
+       WHERE campaign_id = $2 AND status = 'pending' AND error = ''`,
+      ["Add a valid business postal address in Settings before real sending", campaign.id]
+    );
+    return;
+  }
+
+  // Exact single-mailbox pacing. The old batch calculation rounded every
+  // rate below 60/hour up to one message per minute, so a configured 10/hour
+  // silently behaved like 60/hour. Successful (including simulated) sends
+  // carry sent_at, giving us a durable interval across restarts.
+  const hourlyRate = normalizeHourlyRate(campaign.throttle_per_hour);
+  if (campaign.channel === "email") {
+    const lastSent = await q1<{ sent_at: string }>(
+      `SELECT sent_at FROM emails
+       WHERE campaign_id = $1 AND status = 'sent' AND sent_at IS NOT NULL
+       ORDER BY sent_at DESC LIMIT 1`,
+      [campaign.id]
+    );
+    if (!isSendDue(lastSent?.sent_at, hourlyRate)) return;
+  }
+
+  // One message per scheduler tick prevents bursts from a single mailbox.
+  const batchSize = 1;
 
   const batch = await q<EmailRow>(
     `SELECT * FROM emails
@@ -211,6 +275,25 @@ async function processCampaignBatch(campaign: Campaign, settings: Settings): Pro
       await skip("contact has no email address");
       continue;
     }
+    if (campaign.channel === "email" && contact.email) {
+      let emailStatus = contact.email_status || "unchecked";
+      if (verificationNeedsRefresh(emailStatus, contact.email_checked_at)) {
+        const verification = await verifyEmailAddress(contact.email);
+        emailStatus = verification.status;
+        await q(
+          `UPDATE contacts SET email_status = $1, email_checked_at = now()
+           WHERE id = $2 AND user_id = $3`,
+          [verification.status, contact.id, campaign.user_id]
+        );
+        if (verification.status === "invalid" || verification.status === "risky") {
+          await skip(`email safety check: ${verification.reason}`);
+          continue;
+        }
+      } else if (emailStatus === "invalid" || emailStatus === "risky") {
+        await skip(`email safety check: address marked ${emailStatus}`);
+        continue;
+      }
+    }
     if (contact.bounced) {
       await skip("contact email bounced previously");
       continue;
@@ -267,7 +350,7 @@ async function processCampaignBatch(campaign: Campaign, settings: Settings): Pro
       if (campaign.channel !== "email") {
         // Drafted for manual sending — Instagram and LinkedIn ban automated cold DMs.
         await q(
-          "UPDATE emails SET status = 'ready', subject = $1, body = $2, via = $3 WHERE id = $4",
+          "UPDATE emails SET status = 'ready', subject = $1, body = $2, via = $3, error = '' WHERE id = $4",
           [generated.subject, generated.body, "draft" + viaSuffix, email.id]
         );
         console.log(
@@ -291,7 +374,7 @@ async function processCampaignBatch(campaign: Campaign, settings: Settings): Pro
       });
       await q(
         `UPDATE emails SET status = 'sent', subject = $1, body = $2, via = $3,
-           sent_at = now(), open_token = $4, variant = $5 WHERE id = $6`,
+           sent_at = now(), open_token = $4, variant = $5, error = '' WHERE id = $6`,
         [generated.subject, generated.body, result.via + viaSuffix, trackToken, variant ?? "", email.id]
       );
       console.log(

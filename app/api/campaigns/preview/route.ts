@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q1, type Campaign, type Contact } from "@/lib/db";
 import { generateMessage } from "@/lib/ai";
-import { getAiConfig, getSettings } from "@/lib/settings";
+import { getAiConfig, getSettings, setKv } from "@/lib/settings";
 import { getUserId } from "@/lib/auth";
 import { checkSpam } from "@/lib/spamcheck";
 import { friendlyProviderError } from "@/lib/friendly-error";
@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
     const settings = await getSettings(userId);
     const msg = await generateMessage(contact, fakeCampaign, { settings });
     const spam = channel === "email" ? checkSpam(msg.subject, msg.body) : null;
+    await setKv(userId, "onboarding_previewed_at", new Date().toISOString());
     return NextResponse.json({
       contact: {
         email: contact.email,

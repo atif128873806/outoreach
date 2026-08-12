@@ -141,7 +141,7 @@ hosts on /api/t/* (wildcard server block). Gate to Pro (`lib/plans.ts` flag).
 - Programmatic SEO pages: "/cold-email-for-dentists" style templates off one
   component (the copy engine you already have could draft these).
 - Blog: deliverability guides — ranks well, matches buyer intent.
-- Affiliate program (Paddle supports this natively — free money post-1.1).
+- Affiliate program after self-serve billing is stable and the payment provider supports it.
 - Public status page + /changelog — trust signals that cost an hour each.
 
 ## Deliberately NOT building (yet)

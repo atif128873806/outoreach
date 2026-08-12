@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: `Refunds and cancellation for ${SITE.name} subscriptions.`,
 };
 
-const UPDATED = "July 11, 2026";
+const UPDATED = "August 9, 2026";
 
 export default function RefundPolicyPage() {
   return (
@@ -29,9 +29,10 @@ export default function RefundPolicyPage() {
 
       <Section heading="Renewals">
         <p>
-          Subscriptions renew automatically. If a renewal charge goes through and you meant
-          to cancel, contact us within 7 days of the renewal and we&apos;ll refund it,
-          provided the account saw no meaningful use in the new period.
+          A paid plan renews only under the terms disclosed with its invoice or payment
+          request. If a disclosed renewal charge goes through and you meant to cancel,
+          contact us within 7 days and we&apos;ll refund it, provided the account saw no
+          meaningful use in the new period.
         </p>
       </Section>
 
@@ -45,10 +46,10 @@ export default function RefundPolicyPage() {
 
       <Section heading="How refunds are processed">
         <p>
-          Payments are handled by Paddle, our merchant of record. Approved refunds are
-          issued by Paddle to your original payment method, typically within 5–10 business
-          days depending on your bank. Taxes collected with the payment are refunded with
-          it.
+          Approved refunds are returned through the original payment provider where
+          possible. We confirm the expected timing when the refund is approved; bank and
+          provider processing times vary. Any refundable taxes collected with the payment
+          are returned with it.
         </p>
       </Section>
 

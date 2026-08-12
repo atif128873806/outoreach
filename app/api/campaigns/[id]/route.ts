@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q, q1, type Campaign } from "@/lib/db";
 import { getUserId } from "@/lib/auth";
+import { normalizeHourlyRate } from "@/lib/throttle";
 
 export const runtime = "nodejs";
 
@@ -100,7 +101,7 @@ export async function PATCH(
     if (f.description !== undefined) push("description", f.description.trim());
     if (f.tone !== undefined) push("tone", f.tone.trim() || "professional");
     if (f.throttle_per_hour !== undefined) {
-      push("throttle_per_hour", Math.min(600, Math.max(1, f.throttle_per_hour || 60)));
+      push("throttle_per_hour", normalizeHourlyRate(f.throttle_per_hour));
     }
     if (f.followup_count !== undefined && campaign.channel === "email") {
       push("followup_count", Math.min(3, Math.max(0, f.followup_count)));

@@ -43,7 +43,8 @@ export default function SignupPage() {
       >
         <div className="text-lg font-semibold tracking-tight">Create your account</div>
         <p className="text-sm text-zinc-400 mt-1 mb-6">
-          The first account on a fresh install automatically adopts any existing local data.
+          Start free — no card required. Find your first prospects and preview a campaign
+          before connecting a mailbox.
         </p>
         <label className="block mb-4">
           <div className="text-sm font-medium text-zinc-600 mb-1.5">Your name</div>

@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import { q, q1 } from "@/lib/db";
-import { getSettings, isSmtpConfigured, getAiConfig } from "@/lib/settings";
-import { getUserId } from "@/lib/auth";
+import {
+  getPublicBaseUrl,
+  getImapConfig,
+  getKv,
+  getSettings,
+  isSmtpConfigured,
+  getAiConfig,
+} from "@/lib/settings";
+import { getUserId, isEmailVerified } from "@/lib/auth";
+import { getOnboardingProgress } from "@/lib/onboarding";
+import { getMailboxHealthStatus } from "@/lib/mailbox-health";
 
 export const runtime = "nodejs";
 
@@ -29,6 +38,9 @@ export async function GET() {
     clicked: await count("SELECT COUNT(*) n FROM emails WHERE user_id = $1 AND clicked_at IS NOT NULL"),
     replies: await count("SELECT COUNT(*) n FROM contacts WHERE user_id = $1 AND replied = 1"),
     bounced: await count("SELECT COUNT(*) n FROM contacts WHERE user_id = $1 AND bounced = 1"),
+    smtpSent: await count(
+      "SELECT COUNT(*) n FROM emails WHERE user_id = $1 AND status = 'sent' AND via LIKE 'smtp%'"
+    ),
   };
 
   const recentEmails = await q(
@@ -80,14 +92,53 @@ export async function GET() {
   });
 
   const settings = await getSettings(userId);
+  const [emailVerified, previewedAt, smtpTestedAt, imapLastCheck, imapLastError] =
+    await Promise.all([
+      isEmailVerified(userId),
+      getKv(userId, "onboarding_previewed_at"),
+      getKv(userId, "smtp_tested_at"),
+      getKv(userId, "imap_last_check"),
+      getKv(userId, "imap_last_error"),
+    ]);
+  const mailboxConfigured = Boolean(getImapConfig(settings));
+  const mailboxStatus = getMailboxHealthStatus({
+    configured: mailboxConfigured,
+    lastCheck: imapLastCheck,
+    lastError: imapLastError,
+  });
+  const onboarding = getOnboardingProgress({
+    emailVerified,
+    senderProfileConfigured: Boolean(
+      settings.sender_name.trim() &&
+        settings.company_name.trim() &&
+        settings.company_description.trim()
+    ),
+    contacts: stats.contacts,
+    // Campaigns created before preview tracking was added count as evidence
+    // that the user already passed this milestone.
+    previewed: Boolean(previewedAt) || stats.campaigns > 0,
+    postalConfigured: Boolean(settings.sender_postal_address.trim()),
+    smtpTested: Boolean(smtpTestedAt),
+    imapHealthy: mailboxStatus === "healthy",
+    realSent: stats.smtpSent,
+  });
   return NextResponse.json({
     stats,
     recentEmails,
     upcoming,
     daily,
+    onboarding,
+    mailbox: {
+      configured: mailboxConfigured,
+      status: mailboxStatus,
+      lastCheck: imapLastCheck || null,
+      error: imapLastError ? imapLastError.slice(0, 200) : null,
+    },
     setup: {
       aiConfigured: Boolean(getAiConfig(settings)),
       smtpConfigured: isSmtpConfigured(settings),
+      postalAddressConfigured: Boolean(settings.sender_postal_address.trim()),
+      publicBaseUrlConfigured: Boolean(getPublicBaseUrl(settings)),
       hasContacts: stats.contacts > 0,
     },
   });

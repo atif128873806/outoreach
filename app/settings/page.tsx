@@ -262,7 +262,7 @@ export default function SettingsPage() {
       )}
 
       <div className="space-y-6">
-        <Card className="p-6">
+        <Card id="sender-identity" className="scroll-mt-6 p-6">
           <SectionTitle
             title="Sender identity"
             subtitle="The AI uses this to write emails in your voice — who you are and what your company does."
@@ -284,6 +284,19 @@ export default function SettingsPage() {
           <div className="mt-4">
             <Field label="What does your company do?" hint="One or two sentences. This becomes context for every AI-written email.">
               <textarea className={`${inputCls} min-h-20`} value={settings.company_description ?? ""} onChange={set("company_description")} placeholder="We design and build fast, affordable websites for local businesses…" />
+            </Field>
+          </div>
+          <div className="mt-4">
+            <Field
+              label="Business postal address"
+              hint="Required before real campaign sending. Commercial email laws such as CAN-SPAM require a valid physical postal address in every message."
+            >
+              <textarea
+                className={`${inputCls} min-h-16`}
+                value={settings.sender_postal_address ?? ""}
+                onChange={set("sender_postal_address")}
+                placeholder="123 Market Street, Suite 4, Austin, TX 78701, USA"
+              />
             </Field>
           </div>
         </Card>
@@ -323,7 +336,7 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card id="email-delivery" className="scroll-mt-6 p-6">
           <SectionTitle
             title="Email delivery (SMTP)"
             subtitle="Optional until you go live — everything works in simulation mode without it. Connect your mailbox when you're ready to send for real."
@@ -481,7 +494,7 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card id="reply-detection" className="scroll-mt-6 p-6">
           <SectionTitle
             title="Reply detection (IMAP)"
             subtitle="Polls your inbox every 2 minutes. Replies auto-mark the contact as replied (stopping follow-ups); bounce notices auto-mark the contact as bounced (stopping all sends). Leave the fields blank to reuse your SMTP mailbox."

@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
-import { isSmtpConfigured, type Settings } from "./settings";
+import { getPublicBaseUrl, isSmtpConfigured, type Settings } from "./settings";
+import { oneClickUnsubscribeOptions } from "./compliance";
 
 export interface SendResult {
   /** "smtp" when actually delivered, "simulated" when SMTP is not configured */
@@ -40,15 +41,21 @@ export async function sendMail(opts: {
   settings: Settings;
 }): Promise<SendResult> {
   const s = opts.settings;
-  const base = s.base_url ? s.base_url.replace(/\/$/, "") : "";
+  const base = getPublicBaseUrl(s);
 
   const unsubUrl =
     opts.unsubToken && base
       ? `${base}/api/unsubscribe?token=${opts.unsubToken}`
       : "";
 
-  const text = unsubUrl
-    ? `${opts.body}\n\n---\nTo stop receiving these emails, visit: ${unsubUrl}`
+  const postalAddress = s.sender_postal_address.trim();
+  const complianceLines = [
+    unsubUrl ? `To stop receiving these emails, visit: ${unsubUrl}` : "",
+    postalAddress ? `Sender postal address: ${postalAddress}` : "",
+  ].filter(Boolean);
+
+  const text = complianceLines.length
+    ? `${opts.body}\n\n---\n${complianceLines.join("\n")}`
     : opts.body;
 
   const track = base && opts.trackToken ? opts.trackToken : undefined;
@@ -57,11 +64,17 @@ export async function sendMail(opts: {
     ? `<img src="${base}/api/t/o/${track}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;" />`
     : "";
 
-  const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#222;white-space:pre-wrap;">${htmlBody}</div>${
+  const footerParts = [
     unsubUrl
-      ? `<p style="font-size:11px;color:#999;margin-top:24px;">Don't want these emails? <a href="${unsubUrl}" style="color:#999;">Unsubscribe</a>.</p>`
-      : ""
-  }${pixel}`;
+      ? `Don't want these emails? <a href="${unsubUrl}" style="color:#777;">Unsubscribe</a>.`
+      : "",
+    postalAddress ? escapeHtml(postalAddress) : "",
+  ].filter(Boolean);
+  const footer = footerParts.length
+    ? `<p style="font-size:11px;line-height:1.5;color:#777;margin-top:24px;white-space:pre-wrap;">${footerParts.join("<br />")}</p>`
+    : "";
+
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#222;white-space:pre-wrap;">${htmlBody}</div>${footer}${pixel}`;
 
   if (!isSmtpConfigured(s)) {
     // Simulation mode: the campaign pipeline runs end to end without a mail
@@ -90,9 +103,7 @@ export async function sendMail(opts: {
     subject: opts.subject,
     text,
     html,
-    ...(unsubUrl
-      ? { list: { unsubscribe: { url: unsubUrl, comment: "Unsubscribe" } } }
-      : {}),
+    ...oneClickUnsubscribeOptions(unsubUrl),
   });
 
   return { via: "smtp" };

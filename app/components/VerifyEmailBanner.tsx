@@ -42,7 +42,7 @@ export default function VerifyEmailBanner() {
   }
 
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+    <div id="verify-email" className="scroll-mt-6 mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
       <svg
         viewBox="0 0 24 24"
         fill="none"

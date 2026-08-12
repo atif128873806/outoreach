@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: `The terms that govern your use of ${SITE.name}.`,
 };
 
-const UPDATED = "July 11, 2026";
+const UPDATED = "August 9, 2026";
 
 export default function TermsPage() {
   return (
@@ -71,15 +71,16 @@ export default function TermsPage() {
       <Section heading="4. Plans, billing, and taxes">
         <p>
           The free plan is provided as-is with usage limits (for example a daily cap on
-          included AI generations). Paid subscriptions, when purchased, are billed through
-          our merchant of record, Paddle, which handles payment processing and applicable
-          sales tax/VAT. Subscription pricing is shown on the{" "}
+          included AI generations). Paid plans are currently activated manually after we
+          confirm the price, payment method, billing period, and any applicable taxes with
+          you before payment. Subscription pricing is shown on the{" "}
           <Link href="/pricing" className="text-blue-600 underline">pricing page</Link>{" "}
-          before checkout.
+          and is confirmed again when you request an upgrade.
         </p>
         <p>
-          Subscriptions renew automatically until cancelled. You can cancel at any time and
-          keep access until the end of the paid period. Refunds are handled per our{" "}
+          A plan renews only under the terms disclosed with its invoice or payment request.
+          You can cancel before the next paid period by contacting support and keep access
+          until the end of the period already paid. Refunds are handled per our{" "}
           <Link href="/refund-policy" className="text-blue-600 underline">refund policy</Link>.
         </p>
       </Section>

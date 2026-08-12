@@ -46,7 +46,7 @@ export default function DeliverabilityGuide() {
           </li>
         </ul>
         <p>
-          Most "why is my cold email in spam?!" posts are a failure at wall #1 — the cheapest one
+          Most &quot;why is my cold email in spam?!&quot; posts are a failure at wall #1 — the cheapest one
           to fix. Start there.
         </p>
       </Section>
@@ -104,7 +104,7 @@ export default function DeliverabilityGuide() {
       <Section heading="Wall 2: Reputation — warm-up, or die on day one">
         <p>
           A brand-new domain (or a domain that never sent bulk) has <i>no</i> reputation. Send
-          200 cold emails on day one and Gmail's models flag the pattern instantly — that domain
+          200 cold emails on day one and Gmail&apos;s models flag the pattern instantly — that domain
           can be effectively dead within a week.
         </p>
         <p>The warm-up schedule that works:</p>

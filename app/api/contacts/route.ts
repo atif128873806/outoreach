@@ -4,6 +4,7 @@ import Papa from "papaparse";
 import { q, getDb, type Contact } from "@/lib/db";
 import { getUserId } from "@/lib/auth";
 import { normalizeLinkedin } from "@/lib/leads";
+import { inspectEmailSyntax } from "@/lib/email-validation";
 
 export const runtime = "nodejs";
 
@@ -68,10 +69,8 @@ function normalizeInstagram(v: string): string {
     .replace(/[/?].*$/, "");
 }
 
-const VALID_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const UPSERT_SQL = `INSERT INTO contacts (user_id, email, business_name, category, website, instagram, linkedin, phone, notes, unsub_token)
- VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+const UPSERT_SQL = `INSERT INTO contacts (user_id, email, business_name, category, website, instagram, linkedin, phone, notes, unsub_token, email_status)
+ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
  ON CONFLICT (user_id, email) WHERE email <> '' DO UPDATE SET
    business_name = CASE WHEN EXCLUDED.business_name != '' THEN EXCLUDED.business_name ELSE contacts.business_name END,
    category      = CASE WHEN EXCLUDED.category != '' THEN EXCLUDED.category ELSE contacts.category END,
@@ -79,7 +78,8 @@ const UPSERT_SQL = `INSERT INTO contacts (user_id, email, business_name, categor
    instagram     = CASE WHEN EXCLUDED.instagram != '' THEN EXCLUDED.instagram ELSE contacts.instagram END,
    linkedin      = CASE WHEN EXCLUDED.linkedin != '' THEN EXCLUDED.linkedin ELSE contacts.linkedin END,
    phone         = CASE WHEN EXCLUDED.phone != '' THEN EXCLUDED.phone ELSE contacts.phone END,
-   notes         = CASE WHEN EXCLUDED.notes != '' THEN EXCLUDED.notes ELSE contacts.notes END`;
+   notes         = CASE WHEN EXCLUDED.notes != '' THEN EXCLUDED.notes ELSE contacts.notes END,
+   email_status  = CASE WHEN contacts.email = EXCLUDED.email THEN contacts.email_status ELSE EXCLUDED.email_status END`;
 
 export async function POST(req: NextRequest) {
   const userId = await getUserId();
@@ -107,8 +107,12 @@ export async function POST(req: NextRequest) {
     const name = (c.business_name ?? "").trim();
     const instagram = normalizeInstagram(c.instagram ?? "");
     const phone = (c.phone ?? "").trim();
-    if (email && !VALID_EMAIL.test(email)) {
+    const emailInspection = inspectEmailSyntax(email);
+    if (email && emailInspection.status === "invalid") {
       return NextResponse.json({ error: "That email address doesn't look valid" }, { status: 400 });
+    }
+    if (email && emailInspection.status === "risky") {
+      return NextResponse.json({ error: "Disposable email addresses can't be added to campaigns" }, { status: 400 });
     }
     if (!email && !(name && (instagram || phone))) {
       return NextResponse.json(
@@ -136,6 +140,7 @@ export async function POST(req: NextRequest) {
       phone,
       (c.notes ?? "").trim(),
       crypto.randomBytes(16).toString("hex"),
+      email ? "unchecked" : "unknown",
     ]);
     return NextResponse.json({ imported: 1, skipped: 0 });
   }
@@ -157,7 +162,8 @@ export async function POST(req: NextRequest) {
   await db.transaction(async (tx) => {
     for (const row of parsed.data) {
       const rawEmail = pick(row, EMAIL_KEYS).toLowerCase();
-      const email = VALID_EMAIL.test(rawEmail) ? rawEmail : "";
+      const inspection = inspectEmailSyntax(rawEmail);
+      const email = inspection.status === "unchecked" ? rawEmail : "";
       const name = pick(row, NAME_KEYS);
       const instagram = normalizeInstagram(pick(row, INSTAGRAM_KEYS));
       const phone = pick(row, PHONE_KEYS);
@@ -189,6 +195,7 @@ export async function POST(req: NextRequest) {
         phone,
         pick(row, NOTES_KEYS),
         crypto.randomBytes(16).toString("hex"),
+        email ? "unchecked" : "unknown",
       ]);
       imported++;
     }

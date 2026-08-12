@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q, getDb, type Campaign } from "@/lib/db";
 import { getUserId } from "@/lib/auth";
+import { normalizeHourlyRate } from "@/lib/throttle";
+import { getPublicBaseUrl, getSettings, isSmtpConfigured } from "@/lib/settings";
 
 export const runtime = "nodejs";
 
@@ -84,6 +86,28 @@ export async function POST(req: NextRequest) {
       ? body.channel
       : "email";
 
+  if (channel === "email") {
+    const settings = await getSettings(userId);
+    if (isSmtpConfigured(settings) && !settings.sender_postal_address.trim()) {
+      return NextResponse.json(
+        {
+          error:
+            "Add your valid business postal address in Settings before launching a real email campaign",
+        },
+        { status: 400 }
+      );
+    }
+    if (isSmtpConfigured(settings) && !getPublicBaseUrl(settings)) {
+      return NextResponse.json(
+        {
+          error:
+            "Set the Public base URL in Settings before launching a real campaign so unsubscribe links work",
+        },
+        { status: 400 }
+      );
+    }
+  }
+
   const category = body.category_filter?.trim() ?? "";
 
   // Each channel needs its own reachable handle — email campaigns must skip
@@ -94,13 +118,17 @@ export async function POST(req: NextRequest) {
       : channel === "linkedin"
         ? " AND linkedin != ''"
         : " AND email != ''";
+  const emailSafetyClause =
+    channel === "email" ? " AND email_status NOT IN ('invalid', 'risky')" : "";
   const recipients = category
     ? await q<{ id: number }>(
-        `SELECT id FROM contacts WHERE user_id = $1 AND unsubscribed = 0 AND category = $2${igClause}`,
+        `SELECT id FROM contacts WHERE user_id = $1 AND unsubscribed = 0
+           AND category = $2${emailSafetyClause}${igClause}`,
         [userId, category]
       )
     : await q<{ id: number }>(
-        `SELECT id FROM contacts WHERE user_id = $1 AND unsubscribed = 0${igClause}`,
+        `SELECT id FROM contacts WHERE user_id = $1 AND unsubscribed = 0
+           ${emailSafetyClause}${igClause}`,
         [userId]
       );
 
@@ -143,7 +171,7 @@ export async function POST(req: NextRequest) {
         channel,
         category,
         scheduledAt,
-        Math.min(600, Math.max(1, body.throttle_per_hour || 60)),
+        normalizeHourlyRate(body.throttle_per_hour),
         // Follow-up sequences are an email feature; DM drafts are one-shot
         channel === "email" ? Math.min(3, Math.max(0, body.followup_count ?? 0)) : 0,
         Math.min(30, Math.max(1, body.followup_interval_days ?? 3)),

@@ -123,9 +123,12 @@ export default function CampaignDetailPage() {
   }
 
   useEffect(() => {
-    load();
+    const initial = setTimeout(() => void load(), 0);
     const t = setInterval(load, 5_000);
-    return () => clearInterval(t);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(t);
+    };
   }, [load]);
 
   async function act(action: string) {
@@ -357,7 +360,7 @@ export default function CampaignDetailPage() {
               </label>
               <label className="block">
                 <div className="mb-1 text-xs font-medium text-zinc-500">Speed (messages/hour)</div>
-                <input type="number" min={1} max={600} className={inputCls} value={edit.throttle_per_hour ?? ""} onChange={(e) => setEdit((s) => ({ ...s, throttle_per_hour: e.target.value }))} />
+                <input type="number" min={1} max={60} className={inputCls} value={edit.throttle_per_hour ?? ""} onChange={(e) => setEdit((s) => ({ ...s, throttle_per_hour: e.target.value }))} />
               </label>
               {campaign.channel === "email" && (
                 <div className="grid grid-cols-2 gap-3">

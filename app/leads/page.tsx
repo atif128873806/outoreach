@@ -184,7 +184,6 @@ export default function LeadsPage() {
     }
   }
 
-  const emailCount = (leads ?? []).filter((l) => l.email).length;
   const importableCount = visible.filter(({ l }) => importable(l)).length;
 
   // Chip options derived from the current results (stack names by frequency).

@@ -7,6 +7,7 @@
  */
 
 import path from "path";
+import fs from "fs";
 
 export interface Queryable {
   query<T = Record<string, unknown>>(text: string, params?: unknown[]): Promise<T[]>;
@@ -60,7 +61,9 @@ async function createAdapter(): Promise<Adapter> {
 
   // Embedded Postgres for local development (single connection, serialized)
   const { PGlite } = await import("@electric-sql/pglite");
-  const lite = new PGlite(path.join(process.cwd(), "data", "pg"));
+  const storagePath = path.join(process.cwd(), "data", "pg");
+  fs.mkdirSync(path.dirname(storagePath), { recursive: true });
+  const lite = new PGlite(storagePath);
   await lite.waitReady;
   let chain: Promise<unknown> = Promise.resolve(); // serialize transactions
 
@@ -127,6 +130,8 @@ CREATE TABLE IF NOT EXISTS contacts (
   linkedin      TEXT NOT NULL DEFAULT '',
   phone         TEXT NOT NULL DEFAULT '',
   notes         TEXT NOT NULL DEFAULT '',
+  email_status  TEXT NOT NULL DEFAULT 'unchecked',
+  email_checked_at TIMESTAMPTZ,
   replied       INTEGER NOT NULL DEFAULT 0,
   bounced       INTEGER NOT NULL DEFAULT 0,
   unsubscribed  INTEGER NOT NULL DEFAULT 0,
@@ -257,6 +262,10 @@ async function init(): Promise<Adapter> {
      ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free';
      ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_changed_at TIMESTAMPTZ`
   );
+  await db.exec(
+    `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS email_status TEXT NOT NULL DEFAULT 'unchecked';
+     ALTER TABLE contacts ADD COLUMN IF NOT EXISTS email_checked_at TIMESTAMPTZ`
+  );
   if (hadUsersTable && !hadVerifiedColumn) {
     // Accounts created before email verification existed keep working.
     await db.exec("UPDATE users SET email_verified = 1");
@@ -329,6 +338,9 @@ export interface Contact {
   linkedin: string;
   phone: string;
   notes: string;
+  /** Domain-level safety check: unchecked | valid | risky | invalid | unknown. */
+  email_status: string;
+  email_checked_at: string | null;
   replied: number;
   bounced: number;
   unsubscribed: number;

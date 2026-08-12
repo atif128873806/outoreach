@@ -4,8 +4,28 @@ import { getUserId, isAdmin } from "@/lib/auth";
 import { isSystemMailerConfigured } from "@/lib/system-mailer";
 import { getAiConfig } from "@/lib/settings";
 import { normalizePlan } from "@/lib/plans";
+import { getActivationState } from "@/lib/activation";
 
 export const runtime = "nodejs";
+
+interface AdminUserRow {
+  id: number;
+  email: string;
+  name: string;
+  is_admin: number;
+  plan: string;
+  created_at: string;
+  email_verified: number;
+  contacts: number;
+  campaigns: number;
+  sent: number;
+  generated: number;
+  sent_real: number;
+  replies: number;
+  smtp_connected: number;
+  imap_connected: number;
+  postal_configured: number;
+}
 
 /** Admin-only: all accounts with basic usage counts, plus instance status. */
 export async function GET() {
@@ -15,14 +35,44 @@ export async function GET() {
     return NextResponse.json({ error: "Admins only" }, { status: 403 });
   }
 
-  const users = await q(
-    `SELECT u.id, u.email, u.name, u.is_admin, u.plan, u.created_at,
+  const userRows = await q<AdminUserRow>(
+    `SELECT u.id, u.email, u.name, u.is_admin, u.plan, u.created_at, u.email_verified,
         (SELECT COUNT(*) FROM contacts c WHERE c.user_id = u.id)::int AS contacts,
         (SELECT COUNT(*) FROM campaigns cp WHERE cp.user_id = u.id)::int AS campaigns,
-        (SELECT COUNT(*) FROM emails e WHERE e.user_id = u.id AND e.status = 'sent')::int AS sent
+        (SELECT COUNT(*) FROM emails e WHERE e.user_id = u.id AND e.status = 'sent')::int AS sent,
+        (SELECT COUNT(*) FROM emails e WHERE e.user_id = u.id AND e.status IN ('sent','ready'))::int AS generated,
+        (SELECT COUNT(*) FROM emails e WHERE e.user_id = u.id AND e.status = 'sent' AND e.via LIKE 'smtp%')::int AS sent_real,
+        (SELECT COUNT(*) FROM replies r WHERE r.user_id = u.id)::int AS replies,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM settings s
+          WHERE s.user_id = u.id AND s.key = 'smtp_host' AND btrim(s.value) <> ''
+        ) THEN 1 ELSE 0 END::int AS smtp_connected,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM settings s
+          WHERE s.user_id = u.id AND s.key IN ('imap_host','imap_user') AND btrim(s.value) <> ''
+        ) THEN 1 ELSE 0 END::int AS imap_connected,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM settings s
+          WHERE s.user_id = u.id AND s.key = 'sender_postal_address' AND btrim(s.value) <> ''
+        ) THEN 1 ELSE 0 END::int AS postal_configured
      FROM users u
      ORDER BY u.id`
   );
+
+  const users = userRows.map((user) => ({
+    ...user,
+    activation: getActivationState({
+      verified: user.email_verified === 1,
+      contacts: user.contacts,
+      campaigns: user.campaigns,
+      generated: user.generated,
+      sentReal: user.sent_real,
+      replies: user.replies,
+      smtpConnected: user.smtp_connected === 1,
+      imapConnected: user.imap_connected === 1,
+      postalConfigured: user.postal_configured === 1,
+    }),
+  }));
 
   // AI is provided instance-wide when a global key is set (env), regardless of per-user settings.
   const globalAi = getAiConfig({
@@ -73,7 +123,7 @@ export async function GET() {
 }
 
 /**
- * Admin-only: change an account's plan — { userId, plan }. Until Paddle
+ * Admin-only: change an account's plan — { userId, plan }. Until self-serve
  * checkout is wired in, this is how paid plans are assigned after purchase.
  */
 export async function PATCH(req: NextRequest) {

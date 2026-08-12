@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SITE } from "@/lib/site";
 import { LogoTile } from "./Logo";
+import PublicFooter from "./PublicFooter";
 import ToolsDropdown from "./ToolsDropdown";
 
 /**
@@ -54,24 +55,7 @@ export default function PublicShell({
         <div className="mt-10">{children}</div>
       </main>
 
-      <footer className="border-t border-zinc-100">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-10 text-sm text-zinc-400 md:flex-row">
-          <div>
-            <span className="font-semibold text-zinc-600">{SITE.name}</span> · AI outreach
-            automation · operated by {SITE.operator}
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-            <Link href="/pricing" className="hover:text-zinc-600">Pricing</Link>
-            <Link href="/guides" className="hover:text-zinc-600">Guides</Link>
-            <Link href="/tools/spam-checker" className="hover:text-zinc-600">Spam checker</Link>
-            <Link href="/tools/dns-checker" className="hover:text-zinc-600">DNS checker</Link>
-            <Link href="/terms" className="hover:text-zinc-600">Terms</Link>
-            <Link href="/privacy" className="hover:text-zinc-600">Privacy</Link>
-            <Link href="/refund-policy" className="hover:text-zinc-600">Refunds</Link>
-            <Link href="/contact" className="hover:text-zinc-600">Contact</Link>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

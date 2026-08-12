@@ -75,9 +75,12 @@ export default function MessagesPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    const initial = setTimeout(() => void load(), 0);
     const t = setInterval(load, 10_000);
-    return () => clearInterval(t);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(t);
+    };
   }, [load]);
 
   async function copyText(key: string, text: string) {

@@ -8,6 +8,8 @@ export const SETTING_KEYS = [
   "company_name",
   "company_description",
   "signature",
+  // Required in the footer of commercial email (for example CAN-SPAM).
+  "sender_postal_address",
   // Email delivery
   "from_email",
   "from_name",
@@ -144,6 +146,11 @@ export function getAiConfig(s: Settings): AiConfig | null {
 
 export function isSmtpConfigured(s: Settings): boolean {
   return Boolean(s.smtp_host && s.from_email);
+}
+
+/** Public origin used by recipient-facing tracking and unsubscribe links. */
+export function getPublicBaseUrl(s: Settings): string {
+  return (s.base_url || process.env.APP_URL || "").trim().replace(/\/$/, "");
 }
 
 // ---------- internal per-user key-value state (not exposed in the settings UI) ----------

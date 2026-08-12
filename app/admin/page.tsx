@@ -14,6 +14,15 @@ interface Row {
   contacts: number;
   campaigns: number;
   sent: number;
+  activation: {
+    key: string;
+    label: string;
+    step: number;
+    totalSteps: number;
+    progressPercent: number;
+    nextAction: string;
+    activated: boolean;
+  };
 }
 
 interface Instance {
@@ -108,7 +117,7 @@ export default function AdminPage() {
 
   return (
     <div>
-      <PageHeader title="Admin" subtitle="Accounts and instance status" />
+      <PageHeader title="Admin" subtitle="Accounts, activation blockers, and instance status" />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Stat label="Accounts" value={users.length} />
@@ -186,6 +195,7 @@ export default function AdminPage() {
             <thead>
               <tr className="text-left text-xs text-zinc-400 uppercase tracking-wide">
                 <th className="px-4 py-2.5 font-medium">Account</th>
+                <th className="px-4 py-2.5 font-medium">Activation</th>
                 <th className="px-4 py-2.5 font-medium">Plan</th>
                 <th className="px-4 py-2.5 font-medium">Joined</th>
                 <th className="px-4 py-2.5 font-medium">Contacts</th>
@@ -206,6 +216,31 @@ export default function AdminPage() {
                       )}
                     </div>
                     {u.name && <div className="text-xs text-zinc-400">{u.name}</div>}
+                  </td>
+                  <td className="px-4 py-2.5 min-w-64">
+                    <div className="flex items-center justify-between gap-3">
+                      <span
+                        className={`text-xs font-medium ${
+                          u.activation.activated ? "text-emerald-700" : "text-zinc-700"
+                        }`}
+                      >
+                        {u.activation.label}
+                      </span>
+                      <span className="text-[11px] tabular-nums text-zinc-400">
+                        {u.activation.step}/{u.activation.totalSteps}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-zinc-100">
+                      <div
+                        className={`h-full rounded-full ${
+                          u.activation.activated ? "bg-emerald-500" : "bg-blue-600"
+                        }`}
+                        style={{ width: `${u.activation.progressPercent}%` }}
+                      />
+                    </div>
+                    <div className="mt-1 text-[11px] leading-4 text-zinc-500">
+                      Next: {u.activation.nextAction}
+                    </div>
                   </td>
                   <td className="px-4 py-2.5">
                     <select

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LogoTile } from "../components/Logo";
+import PublicFooter from "../components/PublicFooter";
 import ToolsDropdown from "../components/ToolsDropdown";
 
 export const metadata: Metadata = {
@@ -813,7 +814,7 @@ export default function FeaturesPage() {
             ["Sends from your own mailbox", "Any SMTP works — Google Workspace, Zoho, cPanel. Replies land in your real inbox."],
             ["Credentials encrypted at rest", "SMTP passwords and API keys are AES-256-GCM encrypted and never sent back to the browser."],
             ["AI included, or bring your own", "Free AI writing is built in. Add your own Groq or Anthropic key any time for unlimited use — no per-message markup."],
-            ["No lock-in", "Export leads as CSV. Your contact list, campaigns, and results live in your own Postgres database."],
+            ["No lock-in", "Export leads as CSV. Hosted workspaces are isolated in Postgres; the self-hosted edition can run on infrastructure you control."],
           ].map(([t, b]) => (
             <div key={t} className="flex gap-3">
               <Tick />
@@ -861,35 +862,7 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      {/* Footer — same as landing */}
-      <footer className="border-t border-zinc-100">
-        <div className="mx-auto max-w-6xl px-6 py-10 text-sm text-zinc-400">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div>
-              <span className="font-semibold text-zinc-600">Outreach Studio</span> · AI
-              outreach automation
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-              <span className="text-zinc-600">Features</span>
-              <Link href="/pricing" className="hover:text-zinc-600">Pricing</Link>
-              <Link href="/contact" className="hover:text-zinc-600">Contact</Link>
-              <Link href="/login" className="hover:text-zinc-600">Sign in</Link>
-            </div>
-            <div className="max-w-xs text-center text-xs md:text-right">
-              Built for legitimate business outreach. Honor opt-outs and the anti-spam
-              laws that apply to you.
-            </div>
-          </div>
-          <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-zinc-100 pt-6 text-xs md:flex-row">
-            <div>© {new Date().getFullYear()} Outreach Studio</div>
-            <div className="flex items-center gap-5">
-              <Link href="/terms" className="hover:text-zinc-600">Terms of Service</Link>
-              <Link href="/privacy" className="hover:text-zinc-600">Privacy Policy</Link>
-              <Link href="/refund-policy" className="hover:text-zinc-600">Refund Policy</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

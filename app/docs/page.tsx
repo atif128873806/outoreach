@@ -96,6 +96,8 @@ export default function DocsPage() {
             <b>Sender identity</b> — name, role, company, company description, and
             sign-off. Used by the AI for every message. Be specific: &quot;We build
             booking websites for dental clinics&quot; beats &quot;we do software.&quot;
+            Add your valid business postal address here as well; it is included in the
+            compliance footer of every real campaign email.
           </p>
           <p>
             <b>Email delivery (SMTP)</b> — works with any mailbox: Google Workspace,
@@ -295,6 +297,10 @@ export default function DocsPage() {
                 DNS checker
               </Link>{" "}
               — the Settings page has the same check with fix-it advice.
+            </li>
+            <li>
+              <b>Identify the sender</b>: keep a valid business postal address in Settings.
+              It is added to every real campaign email alongside the one-click unsubscribe.
             </li>
             <li>
               <b>Warm up new domains</b>: turn on warm-up mode — it ramps 10/day →

@@ -1,50 +1,26 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PublicShell from "../components/PublicShell";
-import DemoEmbed from "./DemoEmbed";
 
 export const metadata: Metadata = {
-  title: "Interactive demo — Outreach Studio",
+  title: "Product demo — Outreach Studio",
   description:
-    "Click through Outreach Studio yourself: find leads with emails included, watch the AI write a personal cold email, and see replies triaged — no signup needed.",
+    "Watch Outreach Studio find leads with emails included, write a personal cold email, send at a human pace, and sort replies — no signup needed.",
 };
-
-const DEMO_SRC = "https://usemirage.io/demo/q4u68ibw5yck0000?embed=1&accent=%232563eb";
 
 export default function DemoPage() {
   return (
     <PublicShell
       title="See it in action"
-      subtitle="A real click-through of the product — you drive. No signup, takes about two minutes."
+      subtitle="See the complete outreach pipeline in 22 seconds. No signup required."
       wide
     >
-      {/* Start the connection to the demo host as early as possible */}
-      <link rel="preconnect" href="https://usemirage.io" />
-      <DemoEmbed src={DEMO_SRC} />
-      <p className="mt-3 text-center text-xs text-zinc-400">
-        Demo not loading?{" "}
-        <a
-          href={DEMO_SRC}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline hover:text-zinc-600"
-        >
-          Open it in a new tab
-        </a>{" "}
-        — or read the{" "}
-        <Link href="/features" className="underline hover:text-zinc-600">
-          guided tour
-        </Link>
-        .
-      </p>
-
-      {/* The 22s film — with sound, for people who'd rather watch than click */}
-      <div className="mx-auto mt-14 max-w-3xl">
+      <div className="mx-auto max-w-3xl">
         <h2 className="text-center text-lg font-semibold tracking-tight">
-          Or just watch it — 22 seconds
+          Outreach Studio in 22 seconds
         </h2>
         <p className="mt-2 text-center text-sm text-zinc-500">
-          The same pipeline as a short film. Sound on if you like.
+          From finding the right lead to a sorted reply. Sound on if you like.
         </p>
         <video
           className="mt-5 block aspect-video w-full rounded-2xl border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10"
@@ -56,11 +32,21 @@ export default function DemoPage() {
         >
           <source src="/launch-film.mp4" type="video/mp4" />
         </video>
+        <p className="mt-5 text-center text-sm text-zinc-500">
+          Prefer a step-by-step explanation? Explore the{" "}
+          <Link
+            href="/features"
+            className="font-medium text-zinc-700 underline underline-offset-4 hover:text-zinc-950"
+          >
+            guided product tour
+          </Link>
+          .
+        </p>
       </div>
 
       <div className="mx-auto mt-12 flex max-w-2xl flex-wrap items-center justify-between gap-4 rounded-2xl bg-zinc-950 px-6 py-5">
         <div>
-          <div className="font-semibold text-white">Liked what you clicked?</div>
+          <div className="font-semibold text-white">Liked what you saw?</div>
           <p className="mt-1 text-sm text-zinc-400">
             The real thing is free to start — simulation mode until you connect a mailbox.
           </p>

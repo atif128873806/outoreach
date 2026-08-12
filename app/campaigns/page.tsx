@@ -71,9 +71,12 @@ export default function CampaignsPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    const initial = setTimeout(() => void load(), 0);
     const t = setInterval(load, 10_000);
-    return () => clearInterval(t);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(t);
+    };
   }, [load]);
 
   return (
@@ -172,7 +175,7 @@ function NewCampaignForm({
   const [category, setCategory] = useState("");
   const [when, setWhen] = useState<"now" | "later">("later");
   const [scheduledAt, setScheduledAt] = useState("");
-  const [throttle, setThrottle] = useState(60);
+  const [throttle, setThrottle] = useState(15);
   const [followups, setFollowups] = useState(0);
   const [followupDays, setFollowupDays] = useState(3);
   const [abTest, setAbTest] = useState(false);
@@ -453,9 +456,9 @@ function NewCampaignForm({
           >
             <input
               type="range"
-              min={6}
-              max={300}
-              step={6}
+              min={5}
+              max={60}
+              step={5}
               value={throttle}
               onChange={(e) => setThrottle(Number(e.target.value))}
               className="w-full"
