@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PublicShell from "../components/PublicShell";
 import { SITE } from "@/lib/site";
-import { PLANS, UPGRADE_BONUS_LEADS } from "@/lib/plans";
+import { PLANS, UPGRADE_BONUS_LEADS, FILTER_ORDER, FILTER_LABELS } from "@/lib/plans";
 
 export const metadata: Metadata = {
   title: `Pricing — ${SITE.name}`,
-  description: `Simple pricing for ${SITE.name}: start free, upgrade as your outreach grows.`,
+  description: `Priced on audited leads per month. See which business filters each plan unlocks — start free, no card.`,
 };
 
 function Check() {
@@ -28,19 +28,23 @@ function Check() {
 
 const { free, starter, pro } = PLANS;
 
+/**
+ * The filter list is the pricing table: the same four filters on every card,
+ * ticked where the plan unlocks them. That way the ladder is legible at a
+ * glance instead of hidden inside feature bullets.
+ */
+const FILTER_ROWS = FILTER_ORDER.map((id) => ({ id, label: FILTER_LABELS[id] }));
+
 const CARDS = [
   {
     plan: free,
     cta: "Create your free account",
     highlight: false,
     features: [
-      `${free.leadsPerMonth} Lead Finder results / month`,
-      `${free.emailsPerDay} emails / day through your own SMTP`,
-      `${free.aiPerDay} included AI generations / day`,
-      "Unlimited contacts & campaigns",
-      "Follow-ups that stop on reply",
-      "Open, click, reply & bounce tracking",
-      "Simulation mode to test safely",
+      `${free.leadsPerMonth} audited leads / month`,
+      "Score, findings and the reason to reach out on every lead",
+      "Decision-maker lookup included in your lead allowance",
+      "Export to CSV, or save leads to work through",
     ],
     footnote: "No credit card required",
   },
@@ -49,11 +53,11 @@ const CARDS = [
     cta: "Get Starter",
     highlight: false,
     features: [
-      `${starter.leadsPerMonth} Lead Finder results / month (≈100 a week)`,
+      `${starter.leadsPerMonth} audited leads / month (≈100 a week)`,
       `+${UPGRADE_BONUS_LEADS} bonus leads in your first week`,
-      `${starter.emailsPerDay} emails / day`,
-      `${starter.aiPerDay} included AI generations / day`,
       "Everything in Free",
+      "New businesses: watch a niche and a place, and see what registered since you last looked",
+      "Practical for a full week of prospecting, not a taster",
       "Email support",
     ],
     footnote: `or $${starter.priceYearlyUsd}/year — two months free`,
@@ -63,11 +67,11 @@ const CARDS = [
     cta: "Get Pro",
     highlight: true,
     features: [
-      `${pro.leadsPerMonth!.toLocaleString("en-US")} Lead Finder results / month`,
+      `${pro.leadsPerMonth!.toLocaleString("en-US")} audited leads / month`,
       `+${UPGRADE_BONUS_LEADS} bonus leads in your first week`,
-      `${pro.emailsPerDay} emails / day`,
-      "Unlimited included AI writing",
       "Everything in Starter",
+      "The no-website hunt, which costs us a lookup per business",
+      "Newly incorporated businesses with their directors named — the ones with no incumbent yet",
       "Priority support (same business day)",
       "Early access to new features",
     ],
@@ -89,20 +93,32 @@ const BILLING_FAQS = [
     a: "A 14-day money-back guarantee on your first payment — email support and it's refunded in full. See the refund policy for details.",
   },
   {
-    q: "What happens when I hit a limit?",
-    a: "Nothing breaks. At the daily email cap, remaining messages send tomorrow. At the AI limit, the built-in template engine takes over until the next day (or add your own Groq/Anthropic API key for unlimited AI on any plan). Lead Finder pauses until next month or an upgrade.",
+    q: "What happens when I hit my lead limit?",
+    a: "Search stops and tells you plainly — nothing is deleted, and no lead you already saved is affected. The counter resets on the 1st, or upgrade for more right away.",
+  },
+  {
+    q: "What counts as a lead?",
+    a: "Every audited business the search hands you, plus each decision-maker lookup you run. Leads already in your list are hidden from later searches and don't count twice.",
+  },
+  {
+    q: "What are \"new businesses\", and how new are they?",
+    a: "Companies registered in the last few days. Save up to 10 searches and we ask the official UK company register what has been incorporated since your last check, so you see businesses before they have a website, a Google listing or anyone working with them. It is a list you open rather than a stream: nothing is emailed on a deployment without a mailer configured, and the register only covers the UK.",
+  },
+  {
+    q: "Why are the filters split across plans?",
+    a: "The two you get free are cheap to run. “Outdated or broken site” re-crawls each site's links to prove what's broken, and “No website” spends a separate web lookup on every business to find a phone, Instagram or email. That work is what the paid tiers pay for.",
   },
   {
     q: "How do I upgrade?",
-    a: "Create a free account, then upgrade from the app. Your contacts, campaigns, and settings carry over untouched — a plan only changes your limits.",
+    a: "Create a free account, then upgrade from inside the app. Your saved leads and settings carry over untouched — a plan only changes your allowance and which filters unlock.",
   },
 ];
 
 export default function PricingPage() {
   return (
     <PublicShell
-      title="Simple, honest pricing"
-      subtitle="Start free with your own mailbox and included AI writing. Upgrade when your outreach scales."
+      title="Priced on leads you can actually work"
+      subtitle="Every plan includes the audit: a score, what's wrong with the site, and the words to open with. The paid tiers buy volume and sharper filters."
       wide
     >
       <div className="grid gap-6 md:grid-cols-3">
@@ -126,7 +142,33 @@ export default function PricingPage() {
               </span>
             </div>
             <p className="mt-3 text-sm text-zinc-500">{plan.tagline}</p>
-            <ul className="mt-6 space-y-2.5 text-sm text-zinc-600">
+
+            {/* What you can search for — the part people actually choose on. */}
+            <div className="mt-5 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              Who you can search for
+            </div>
+            <ul className="mt-2.5 space-y-2 border-b border-zinc-100 pb-4 text-sm">
+              {FILTER_ROWS.map((f) => {
+                const on = plan.filters.includes(f.id);
+                return (
+                  <li
+                    key={f.id}
+                    className={`flex gap-2.5 ${on ? "text-zinc-700" : "text-zinc-400"}`}
+                  >
+                    {on ? (
+                      <Check />
+                    ) : (
+                      <span className="mt-0.5 h-4 w-4 shrink-0 text-center text-zinc-300" aria-hidden>
+                        —
+                      </span>
+                    )}
+                    {f.label}
+                  </li>
+                );
+              })}
+            </ul>
+
+            <ul className="mt-4 space-y-2.5 text-sm text-zinc-600">
               {features.map((f) => (
                 <li key={f} className="flex gap-2.5">
                   <Check />

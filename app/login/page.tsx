@@ -25,7 +25,7 @@ function LoginForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
       const next = params.get("next");
-      router.replace(next && next.startsWith("/") ? next : "/dashboard");
+      router.replace(next && next.startsWith("/") ? next : "/leads");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");

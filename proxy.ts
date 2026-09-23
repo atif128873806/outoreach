@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifySessionToken, SESSION_COOKIE } from "./lib/crypto";
+import { getAppLandingPath, isOutreachBlocked } from "./lib/product";
 
 /**
  * Session gate. Every page and API requires a signed-in user, except:
@@ -38,11 +39,20 @@ export function proxy(request: NextRequest) {
   const authed =
     verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value) != null;
 
-  // Marketing landing: public for visitors; signed-in users go to their dashboard.
+  // Marketing landing: public for visitors; signed-in users go straight to the
+  // product — which, with the outreach half hidden, is the search screen.
   if (pathname === "/") {
     return authed
-      ? NextResponse.redirect(new URL("/dashboard", request.url))
+      ? NextResponse.redirect(new URL(getAppLandingPath(), request.url))
       : NextResponse.next();
+  }
+
+  // Single-feature product: the outreach routes still exist and still work,
+  // but nothing links to them and a typed URL lands back on the product. The
+  // flag and the path list are combined in one place (see isOutreachBlocked), so
+  // a route cannot be hidden in the router and left advertised in the footer.
+  if (isOutreachBlocked(pathname)) {
+    return NextResponse.redirect(new URL("/leads", request.url));
   }
 
   if (PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p))) {

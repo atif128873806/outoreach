@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyEmailToken, getUser } from "@/lib/auth";
 import { appUrl, sendWelcomeEmail } from "@/lib/system-mailer";
+import { getAppLandingPath } from "@/lib/product";
 import { rateLimitDb, clientIp } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     if (user) void sendWelcomeEmail(user.email, user.name);
   }
 
-  const dest = new URL(userId ? "/dashboard" : "/login", appUrl() || req.url);
+  const dest = new URL(userId ? getAppLandingPath() : "/login", appUrl() || req.url);
   dest.searchParams.set("verified", userId ? "1" : "0");
   return NextResponse.redirect(dest);
 }

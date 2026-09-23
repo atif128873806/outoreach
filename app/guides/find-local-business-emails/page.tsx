@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { isOutreachEnabled } from "@/lib/product";
 import PublicShell, { Section } from "../../components/PublicShell";
 
 export const metadata: Metadata = {
@@ -86,7 +87,7 @@ export default function LocalEmailsGuide() {
         <p>
           Outreach Studio&apos;s Lead Finder runs the whole loop from Method 1–2 automatically:
           type a niche + city, and it searches business sources (AI web search, OpenStreetMap,
-          Google Places), <b>visits every website</b>, and extracts emails — including the{" "}
+          and the official UK register for companies with no site yet), <b>visits every website</b>, and extracts emails — including the{" "}
           <Ex>[at]/[dot]</Ex>-obfuscated ones — plus Instagram, LinkedIn, phone, and company
           intel for personalization. Examples that work well:
         </p>
@@ -138,10 +139,18 @@ export default function LocalEmailsGuide() {
           </li>
           <li>
             Volume discipline (25–50/day, warmed-up domain) isn&apos;t just deliverability —
-            it keeps you unmistakably on the legitimate side. Full setup:{" "}
-            <Link href="/guides/cold-email-deliverability" className="text-blue-600 underline">
-              the deliverability guide
-            </Link>.
+            it keeps you unmistakably on the legitimate side.
+            {/* With outreach hidden, that guide is not on this deployment, so the
+                link would be a 404 for a reader who followed it. */}
+            {isOutreachEnabled() && (
+              <>
+                {" "}Full setup:{" "}
+                <Link href="/guides/cold-email-deliverability" className="text-blue-600 underline">
+                  the deliverability guide
+                </Link>
+                .
+              </>
+            )}
           </li>
         </ul>
       </Section>

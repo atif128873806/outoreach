@@ -1,6 +1,18 @@
 import Link from "next/link";
 import { SITE } from "@/lib/site";
+import { isOutreachEnabled } from "@/lib/product";
 import { LogoTile } from "./Logo";
+
+/**
+ * Links that only make sense while the outreach half is on. The guide and the
+ * two email tools are marketing for campaigns and sending, so with those hidden
+ * they would be the footer of a different product — see OUTREACH_PREFIXES.
+ */
+const OUTREACH_LINKS = new Set([
+  "/guides/cold-email-deliverability",
+  "/tools/spam-checker",
+  "/tools/dns-checker",
+]);
 
 const FOOTER_GROUPS = [
   {
@@ -38,6 +50,14 @@ const FOOTER_GROUPS = [
 ] as const;
 
 export default function PublicFooter() {
+  const outreach = isOutreachEnabled();
+  // Groups are dropped only when every link in them is gone, so "Free tools"
+  // disappears rather than rendering as an empty heading.
+  const groups = FOOTER_GROUPS.map((g) => ({
+    label: g.label,
+    links: g.links.filter(([label, href]) => outreach || !OUTREACH_LINKS.has(href)),
+  })).filter((g) => g.links.length > 0);
+
   return (
     <footer
       id="site-footer"
@@ -55,29 +75,30 @@ export default function PublicFooter() {
               <span className="text-base">{SITE.name}</span>
             </Link>
             <p className="mt-5 text-sm leading-6 text-zinc-400">
-              Find qualified businesses, write genuinely personal outreach, and
-              follow up at a human pace — from one focused pipeline.
+              Find real local businesses pulled live from the web, see exactly
+              what is wrong with each one&apos;s website, and approach them with
+              the reason already in hand.
             </p>
             <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
               <div className="flex items-center gap-2 text-sm font-medium text-zinc-200">
                 <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
-                Responsible outreach by design
+                Evidence, not guesses
               </div>
               <p className="mt-2 text-xs leading-5 text-zinc-500">
-                Simulation-first setup, permanent opt-outs, controlled sending,
-                and follow-ups that stop when a prospect replies.
+                Every finding is measured rather than inferred, and a perfectly
+                healthy website is never sold to its owner as broken.
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4 lg:gap-8">
-            {FOOTER_GROUPS.map((group) => (
+            {groups.map((group) => (
               <nav key={group.label} aria-label={`${group.label} footer links`}>
                 <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-200">
                   {group.label}
                 </h2>
                 <ul className="mt-5 space-y-3.5 text-sm">
-                  {group.links.map(([label, href]) => (
+                  {group.links.map(([label, href]: readonly [string, string]) => (
                     <li key={href}>
                       <Link
                         href={href}

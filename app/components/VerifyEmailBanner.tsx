@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 
 /**
  * Shows until the signed-in user verifies their email. Verification gates
- * real SMTP sending and the free global AI, so surface it prominently.
+ * real SMTP sending and the free global AI in the outreach half, and keeps a
+ * lead-generation account from being created on a throwaway address.
  */
 export default function VerifyEmailBanner() {
   const [unverified, setUnverified] = useState(false);
+  const [outreachEnabled, setOutreachEnabled] = useState(false);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
 
@@ -16,7 +18,9 @@ export default function VerifyEmailBanner() {
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!cancelled && data?.user && data.user.emailVerified === false) {
+        if (cancelled) return;
+        setOutreachEnabled(Boolean(data?.outreachEnabled));
+        if (data?.user && data.user.emailVerified === false) {
           setUnverified(true);
         }
       })
@@ -56,8 +60,17 @@ export default function VerifyEmailBanner() {
         <path d="M4 4h16v16H4zM4 7l8 6 8-6" />
       </svg>
       <span className="flex-1">
-        <b>Verify your email</b> to unlock real sending and free AI writing — we sent
-        you a confirmation link when you signed up.
+        {outreachEnabled ? (
+          <>
+            <b>Verify your email</b> to unlock real sending and free AI writing — we
+            sent you a confirmation link when you signed up.
+          </>
+        ) : (
+          <>
+            <b>Verify your email</b> to secure your account — we sent you a
+            confirmation link when you signed up.
+          </>
+        )}
       </span>
       {status === "sent" ? (
         <span className="font-medium text-emerald-700">Sent — check your inbox ✓</span>

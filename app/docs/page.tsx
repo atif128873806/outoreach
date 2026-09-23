@@ -5,17 +5,16 @@ import PublicShell, { Section } from "../components/PublicShell";
 export const metadata: Metadata = {
   title: "Documentation — how to use Outreach Studio",
   description:
-    "The complete guide: connect your mailbox, find leads with emails included, launch an AI-written campaign, and handle replies — from zero to first campaign in about 10 minutes.",
+    "The complete guide: type a niche and a city, get live businesses (never a stale database) each with a website score and a plain-English list of what is wrong with their site — then export the ones worth contacting.",
 };
 
 const TOC = [
-  ["quick-start", "Quick start (10 minutes)"],
-  ["settings", "Settings: identity, SMTP & IMAP"],
+  ["quick-start", "Quick start (2 minutes)"],
+  ["filters", "The four filters"],
   ["leads", "Finding leads"],
-  ["contacts", "Contacts & targeting"],
-  ["campaigns", "Creating a campaign"],
-  ["replies", "Replies & the Message Center"],
-  ["deliverability", "Deliverability rules"],
+  ["accuracy", "What we refuse to claim"],
+  ["working", "Working the list"],
+  ["new-businesses", "New businesses (the weekly list)"],
   ["limits", "Plans & limits"],
   ["troubleshooting", "Troubleshooting"],
 ] as const;
@@ -42,7 +41,7 @@ export default function DocsPage() {
   return (
     <PublicShell
       title="Documentation"
-      subtitle="Everything from first signup to your first booked reply — honestly written, no fluff."
+      subtitle="What this tool does, how it decides, and what it deliberately won't claim — honestly written, no fluff."
     >
       {/* TOC */}
       <nav className="mb-12 rounded-2xl border border-zinc-200 bg-zinc-50/60 p-5">
@@ -59,284 +58,252 @@ export default function DocsPage() {
       </nav>
 
       <div id="quick-start" className="scroll-mt-20">
-        <Section heading="Quick start — zero to first campaign in ~10 minutes">
+        <Section heading="Quick start — zero to a shortlist in ~2 minutes">
           <div className="space-y-5">
             <Step n={1} title="Create your account & verify your email">
               Sign up at <Link href="/signup" className="text-blue-600 underline">/signup</Link>,
-              then click the link in the confirmation email. Verification unlocks real
-              sending and the included AI writing. (Check spam if it doesn&apos;t arrive
-              in a minute — then hit &quot;Resend&quot; from the banner in the app.)
+              then click the link in the confirmation email. (Check spam if it doesn&apos;t
+              arrive in a minute — then hit &quot;Resend&quot; from the banner in the app.)
             </Step>
-            <Step n={2} title="Fill in your sender identity (Settings)">
-              Your name, role, company, and what your company does. The AI writes every
-              email in <i>your</i> voice from these — 2 minutes here massively improves
-              every message.
+            <Step n={2} title="Type a niche and a city">
+              In the Lead Finder, both fields are required: a niche
+              (&quot;dentists&quot;, &quot;roofers&quot;, &quot;yoga studios&quot;) and a
+              place (&quot;Austin, USA&quot;, &quot;Manchester, UK&quot;). The place is a
+              constraint, not a hint — see{" "}
+              <a href="#accuracy" className="text-blue-600 underline">what we refuse to claim</a>.
             </Step>
-            <Step n={3} title="Find your first leads">
-              Lead Finder → type a niche (&quot;dentists&quot;) and a city → Find leads.
-              Import the ones with emails straight into Contacts.
-            </Step>
-            <Step n={4} title="Create a campaign — in simulation first">
-              Describe your offer in a sentence or two (the ✨ AI assistant will sharpen
-              it), preview a sample email, and schedule. <b>Without SMTP configured,
-              everything runs in simulation</b> — messages are generated and logged but
-              nothing is actually sent. Perfect for testing.
-            </Step>
-            <Step n={5} title="Connect your mailbox and go live">
-              Add SMTP in Settings (below), turn on warm-up if the domain is new, and
-              your next campaign sends for real.
+            <Step n={3} title="Pick who you're looking for, then search">
+              Choose one of the{" "}
+              <a href="#filters" className="text-blue-600 underline">four filters</a> and how
+              many results you want. Every business comes back with a website score, the
+              concrete problems found, and everything needed to contact them — website, email,
+              phone, Instagram, LinkedIn. Export the list as CSV or save it to{" "}
+              <Link href="/leads" className="text-blue-600 underline">My leads</Link>.
             </Step>
           </div>
         </Section>
       </div>
 
-      <div id="settings" className="scroll-mt-20">
-        <Section heading="Settings: identity, SMTP & IMAP">
-          <p>
-            <b>Sender identity</b> — name, role, company, company description, and
-            sign-off. Used by the AI for every message. Be specific: &quot;We build
-            booking websites for dental clinics&quot; beats &quot;we do software.&quot;
-            Add your valid business postal address here as well; it is included in the
-            compliance footer of every real campaign email.
-          </p>
-          <p>
-            <b>Email delivery (SMTP)</b> — works with any mailbox: Google Workspace,
-            Zoho, Namecheap/cPanel, Outlook. Easiest path: use <b>⚡ Quick setup</b> —
-            type the email you&apos;ll send from and every field (host, port, SSL,
-            IMAP) is detected and filled automatically; you only paste the password.
-            For Gmail/Outlook/Zoho/Yahoo that password is an <b>App Password</b> —
-            the wizard links you straight to the right page to create one, and{" "}
-            <b>Verify &amp; save</b> checks the login live (no email sent) so only a
-            working configuration is stored. Then use <b>Send test email</b> for the
-            final proof.
-          </p>
-          <p>
-            <b>Reply detection (IMAP)</b> — lets the app watch your inbox for replies
-            and bounces. If your IMAP credentials are the same mailbox, leave the IMAP
-            fields empty — the SMTP values are reused. Typical IMAP port:{" "}
-            <Code>993</Code>.
-          </p>
-          <p>
-            <b>Public base URL</b> — set this to the address of this app so open/click
-            tracking and unsubscribe links in your emails point somewhere real.
-          </p>
-          <p>
-            <b>AI provider</b> — AI writing is included free (daily limit by plan). You
-            can optionally add your own Anthropic (Claude) API key for unlimited
-            generation with zero markup.
+      <div id="filters" className="scroll-mt-20">
+        <Section heading="The four filters — each one is a different customer">
+          <ul className="list-disc space-y-2 pl-5">
+            <li>
+              <b>Any business</b> — everything the sources can find in that niche and place,
+              ranked by how strong a prospect they are. The honest default.
+            </li>
+            <li>
+              <b>Has a website</b> — only businesses with a reachable site. Use it when you
+              need to see the business online before you decide anything.
+            </li>
+            <li>
+              <b>Outdated or broken site</b> — the site is fetched and audited, and only
+              businesses with a real, checkable defect survive: no HTTPS, a certificate a
+              browser refuses, not mobile-friendly, dead homepage links, a free-builder
+              page, 2000s-era markup. Worst sites first, because those are the easiest
+              conversations to start. This is the redesign seller&apos;s filter.
+            </li>
+            <li>
+              <b>No website</b> — businesses that exist on the map with no site at all. This
+              is the most expensive search to run, because each business gets its own web
+              lookup for an Instagram, phone or email — offline businesses usually have a
+              social page even with no site. This is the web designer&apos;s filter.
+            </li>
+          </ul>
+          <p className="mt-3">
+            The filters unlock by plan:{" "}
+            <b>Any business</b> and <b>Has a website</b> from Free,{" "}
+            <b>Outdated or broken site</b> from Starter, and <b>No website</b> on Pro.
           </p>
         </Section>
       </div>
 
       <div id="leads" className="scroll-mt-20">
         <Section heading="Finding leads">
-          <p>Three sources, each with different strengths:</p>
+          <p>
+            Results are fetched <b>live, per search</b> — there is no pre-built database sold
+            to you as if it were fresh. Three sources, each with different strengths:
+          </p>
           <ul className="list-disc space-y-1.5 pl-5">
             <li>
-              <b>Web search (AI)</b> — searches the open web; often returns emails and
-              company intel (what they do, size) directly. Best default.
+              <b>Web search (AI)</b> — reads the open web for the niche and place; often
+              returns contact details and company context directly. Best default.
             </li>
             <li>
-              <b>OpenStreetMap</b> — free open business database; great coverage of
-              local physical businesses, but many entries lack websites.
+              <b>OpenStreetMap</b> — open map data; strong on local physical businesses
+              (which is exactly who needs a website), though many entries carry no site.
             </li>
             <li>
-              <b>Google Places</b> — official Maps data; needs your own (free-tier)
-              Google API key in Settings.
+              <b>Companies House (UK)</b> — the official register, for companies that
+              incorporated recently and mostly have no site yet. It runs on the
+              deployment&apos;s own register key, so there is nothing for you to set up.
             </li>
           </ul>
           <p>
-            After the source returns businesses, each website is visited automatically
-            to extract emails, Instagram, and LinkedIn — including de-obfuscating
-            tricks like <Code>info [at] company [dot] com</Code>. Results you already
-            imported are hidden on repeat searches and never charged to your quota.
+            Each business is then enriched: its site is visited for an email, Instagram,
+            LinkedIn and phone, including de-obfuscation of tricks like{" "}
+            <Code>info [at] company [dot] com</Code>. Every site is audited, and the findings
+            are attached to that lead.
           </p>
           <p>
-            <b>If you get fewer than you asked for:</b> the source genuinely ran out of
-            matches for that niche + area. Try another source, a broader niche, or a
-            nearby bigger city.
-          </p>
-          <p>
-            <b>Find the owner</b> — on any lead, one click searches LinkedIn for the
-            decision-maker behind the business; picking one attaches their name and
-            role to the contact so the AI can personalize further. Owner lookups use 1
-            lead credit each.
-          </p>
-          <p>
-            <b>Offline-business mode</b> — set the Website filter to{" "}
-            <Code>No website</Code> to find businesses with no site at all: perfect
-            prospects if you sell websites or digital services. This mode picks its
-            own sources (map data — OpenStreetMap, plus Google Places if you added a
-            key) and then automatically hunts each business&apos;s Instagram, phone,
-            and email across the web, since offline businesses usually have an
-            Instagram page even without a site. Import them (a business name plus an
-            Instagram handle or phone is enough — no email needed) and reach them
-            with an Instagram DM campaign or a call.
-          </p>
-          <p>
-            <b>Redesign-prospect mode</b> — the <Code>Outdated website</Code> filter
-            audits every site found and keeps only the ones with concrete problems:
-            no HTTPS, not mobile-friendly, free-builder hosting, ancient copyright
-            dates, 2000s-era code. The specific issues are saved into each
-            lead&apos;s notes, so the AI opens your email with them — &quot;I noticed
-            your site isn&apos;t mobile-friendly…&quot; — automatically.
-          </p>
-          <p>
-            <b>Tech profile on every lead</b> — every website found is also read for
-            its platform (WordPress, Shopify, Wix…) and marketing tags (Facebook
-            Pixel, Google Analytics…). Badges appear on each lead, one-click chips
-            above the results filter by them (import &amp; CSV follow the filter),
-            and the facts flow into the lead&apos;s notes so the AI can pitch with
-            them — a business running ads to an outdated site is your hottest
-            prospect.
+            <b>The score is evidence, not opinion.</b> Every site is graded on real
+            measurements — does it answer at all, is the certificate valid, does it load on a
+            phone, do its links resolve, what platform is it built on. The score is 100 minus
+            the weight of what actually failed. One grade is named{" "}
+            <Code>unknown</Code> and it exists on purpose: it means we could not judge, and we
+            will not pretend otherwise.
           </p>
         </Section>
       </div>
 
-      <div id="contacts" className="scroll-mt-20">
-        <Section heading="Contacts & targeting">
+      <div id="accuracy" className="scroll-mt-20">
+        <Section heading="What we refuse to claim (read this once)">
           <p>
-            Import from the Lead Finder, upload a CSV (only <Code>email</Code> is
-            required — headers like company/industry/url are auto-detected), or add
-            manually. Duplicates are skipped by email automatically.
+            A tool like this fails in one specific way: it accuses a healthy business of
+            being broken, and the person using it loses the deal on the first line. Every
+            check below exists to stop that, at some cost in raw quantity:
           </p>
-          <p>
-            <b>Targeting specific people:</b> the <i>category</i> field is free text
-            and doubles as your list system. Give any group of contacts a custom
-            category like <Code>vip-list</Code> (when importing or by editing a
-            contact), then choose that category as the campaign&apos;s audience — only
-            those contacts get it.
-          </p>
-          <p>
-            Unsubscribed and bounced contacts are excluded from every future send
-            automatically and permanently.
+          <ul className="list-disc space-y-2 pl-5">
+            <li>
+              <b>Bot walls are not defects.</b> A site that answers <Code>403</Code>,{" "}
+              <Code>429</Code> or <Code>451</Code> to our check is graded{" "}
+              <Code>unknown</Code> — &quot;refused our automated check&quot;. Plenty of healthy
+              sites refuse datacenter traffic.
+            </li>
+            <li>
+              <b>Timeouts are never a finding.</b> A timeout may be our network, so it is
+              recorded and never used as a reason to contact anyone.
+            </li>
+            <li>
+              <b>Soft gaps stay soft.</b> A stale copyright year, a missing meta
+              description, no analytics — recorded as findings, but never a flag and never a
+              &quot;needs work&quot; verdict. A 2016 footer doesn&apos;t make a business
+              broken.
+            </li>
+            <li>
+              <b>JavaScript apps are not thin.</b> Sites built as app shells are recognised,
+              so a perfectly good modern site is never flagged for &quot;almost no
+              content&quot;.
+            </li>
+            <li>
+              <b>Only things a visitor can click.</b> Broken-link checks ignore{" "}
+              <Code>&lt;head&gt;</Code> metadata and vendor-injected links (feeds, API
+              endpoints, email-obfuscation helpers) — those 404 to a machine but no human
+              ever clicks them.
+            </li>
+            <li>
+              <b>Numbers have to be dialable.</b> Anything that looks like a phone number but
+              isn&apos;t — copyright ranges, IP addresses — is dropped rather than shown to
+              you.
+            </li>
+            <li>
+              <b>Location is enforced from the address.</b> Every business&apos;s own address
+              is compared with the place you typed, and anything that places itself elsewhere
+              is left out. You always see how many were left out and why. Records with no
+              usable address are kept, not quietly dropped.
+            </li>
+          </ul>
+          <p className="mt-3">
+            The direction of every one of those decisions is the same: we would rather show
+            you one fewer lead than point you at a business that is doing nothing wrong.
           </p>
         </Section>
       </div>
 
-      <div id="campaigns" className="scroll-mt-20">
-        <Section heading="Creating a campaign">
-          <ul className="list-disc space-y-1.5 pl-5">
+      <div id="working" className="scroll-mt-20">
+        <Section heading="Working the list">
+          <ul className="list-disc space-y-2 pl-5">
             <li>
-              <b>Brief</b> — one or two honest sentences: what you offer, the concrete
-              benefit, what you want them to do. The ✨ <b>Improve with AI</b> button
-              turns a rough idea into a crisp brief and names the campaign.
+              <b>Order</b> — <i>Best prospects</i> balances everything we know;{" "}
+              <i>Easiest to reach</i> puts businesses with an email, social handle or phone
+              first; <i>Worst site first</i> is pure audit score, the redesign seller&apos;s
+              order.
             </li>
             <li>
-              <b>Channel</b> — Email sends automatically. Instagram and LinkedIn
-              produce <i>drafts</i> you send manually from the Message Center
-              (automating DMs gets accounts banned — we don&apos;t).
+              <b>Expand any row</b> for the full audit: every check, what was measured, and
+              the verdict. The short list on the row is what to say out loud.
             </li>
             <li>
-              <b>Audience</b> — a category, or All contacts.
+              <b>Pitch column</b> copies that one lead&apos;s block — business, contact,
+              score, the concrete problems — so you can work the list one at a time.
             </li>
             <li>
-              <b>Pace</b> — messages per hour (keep it 10–20), an optional send window
-              (e.g. 9:00–17:00 in your Settings timezone), and a schedule time.
+              <b>Export</b> writes the whole list as CSV with every way to reach the
+              business, the score, the problems and the reason to make contact. Header names
+              are stable, so re-importing the file lands in the right columns.
             </li>
             <li>
-              <b>Follow-ups</b> — up to 3, N days apart, written with the earlier email
-              in context. A reply stops that contact&apos;s sequence instantly.
+              <b>My leads</b> holds what you saved. A business you already imported is hidden
+              on repeat searches and never counted twice.
             </li>
             <li>
-              <b>A/B subject test</b> — alternates two subject strategies and reports
-              open rates per arm on the campaign page.
+              <b>Find the owner</b> — one click searches for the decision-maker behind a
+              business and attaches their name and role to the lead.
+            </li>
+          </ul>
+        </Section>
+      </div>
+
+      <div id="new-businesses" className="scroll-mt-20">
+        <Section heading="New businesses — the list that fills itself">
+          <p>
+            Save a niche and a place on the <b>New businesses</b> page (Starter and up) and the
+            list stops depending on you remembering to search. Everything here comes from the
+            official UK company register, and a company is judged new by the one thing that
+            cannot go stale: its <b>incorporation date</b>.
+          </p>
+          <ul className="list-disc space-y-2 pl-5">
+            <li>
+              <b>What you get</b> — companies incorporated since your last check, newest first,
+              each with its registered office, business type and director names taken from the
+              register.
             </li>
             <li>
-              <b>Test batch</b> — check &quot;Start with a test batch&quot; and only the
-              first 5 or 10 messages go out; the campaign then pauses itself so you can
-              review results (and edit) before hitting Resume for the rest.
+              <b>Why it is worth opening</b> — a business registered this week has no website to
+              audit and nobody working with it yet. That is the one moment it is a lead and not a
+              competitor&apos;s customer.
             </li>
             <li>
-              <b>Editing</b> — the ✎ Edit button on any scheduled, paused, or running
-              campaign changes the name, brief, tone, speed, and follow-ups. Messages are
-              written at send time, so edits apply to everything not yet sent.
+              <b>When it runs</b> — every day, per search. A search is picked up once seven days
+              have passed since its last check, so a quiet week does not skip it and a failed run
+              never loses the companies it failed to see.
             </li>
             <li>
-              <b>Preview</b> — always generate a sample before scheduling: it shows the
-              real AI output for a real contact, runs the spam-filter check, and can
-              email the sample to your own inbox.
+              <b>The email</b> — one message per account covering every search that found
+              something, and nothing at all when there is nothing to say. If the deployment has no
+              system mailer set up (<Code>SYSTEM_SMTP_*</Code>), the list still builds; it simply
+              stays in the app, and the page says so rather than leaving you waiting.
+            </li>
+            <li>
+              <b>Clearing the list</b> — opening the page marks what you have seen, so the badge
+              in the sidebar is a count of things you have not looked at yet.
+            </li>
+            <li>
+              <b>Its one limit</b> — the register is UK-only. Searching a US city here is not a
+              smaller list, it is the wrong list, so keep the watch to UK places.
             </li>
           </ul>
           <p>
-            Campaigns can be paused, resumed, started immediately, or cancelled any
-            time; the per-message log shows every send, open, click, and reply.
+            A row here is a name, a place and a director — <b>not an audit</b>. These businesses
+            have not had their website checked, because a company this new usually has none. Open
+            one in the Lead Finder when you are ready to check and pitch.
           </p>
-        </Section>
-      </div>
-
-      <div id="replies" className="scroll-mt-20">
-        <Section heading="Replies & the Message Center">
-          <p>
-            With IMAP connected, your inbox is checked every 2 minutes. Each reply is
-            classified — <b>interested</b>, <b>question</b>, <b>not interested</b>,{" "}
-            <b>out of office</b> — and the AI drafts a suggested response in your
-            voice, ready to copy or open pre-filled in your mail app. Bounce notices
-            automatically mark the contact and stop all future sends to them.
-          </p>
-          <p>
-            Instagram and LinkedIn drafts live here too: copy → open profile → mark
-            sent, one click each. LinkedIn sequences start with a connection note
-            (kept under LinkedIn&apos;s 200-character cap) followed by direct
-            messages; marking a draft sent queues the next follow-up after your
-            campaign&apos;s interval, and <b>got a reply</b> stops that
-            contact&apos;s sequence instantly. We draft, you send — automating
-            LinkedIn sends violates their terms and risks your account, so we
-            never do it.
-          </p>
-        </Section>
-      </div>
-
-      <div id="deliverability" className="scroll-mt-20">
-        <Section heading="Deliverability rules (read this once — it matters)">
-          <ul className="list-disc space-y-1.5 pl-5">
-            <li>
-              <b>Authenticate your domain</b>: SPF, DKIM, and DMARC records. Check
-              yours in 5 seconds with the free{" "}
-              <Link href="/tools/dns-checker" className="text-blue-600 underline">
-                DNS checker
-              </Link>{" "}
-              — the Settings page has the same check with fix-it advice.
-            </li>
-            <li>
-              <b>Identify the sender</b>: keep a valid business postal address in Settings.
-              It is added to every real campaign email alongside the one-click unsubscribe.
-            </li>
-            <li>
-              <b>Warm up new domains</b>: turn on warm-up mode — it ramps 10/day →
-              25 → 40 → your full cap over 4 weeks. Skipping this is the #1 way new
-              senders end up in spam.
-            </li>
-            <li>
-              <b>Keep volume human</b>: daily cap 25–50 while your domain is young;
-              throttle 10–20/hour; send inside business hours.
-            </li>
-            <li>
-              <b>Never cold-email from your main business domain</b> — use a separate
-              look-alike domain so your transactional/personal mail is never at risk.
-            </li>
-            <li>
-              <b>Content matters</b>: the built-in spam check runs on every preview;
-              the same check is free for anyone at{" "}
-              <Link href="/tools/spam-checker" className="text-blue-600 underline">
-                /tools/spam-checker
-              </Link>
-              .
-            </li>
-          </ul>
         </Section>
       </div>
 
       <div id="limits" className="scroll-mt-20">
         <Section heading="Plans & limits">
           <p>
-            See <Link href="/pricing" className="text-blue-600 underline">pricing</Link>{" "}
-            for the current numbers. The important part is how limits behave:{" "}
-            <b>nothing breaks.</b> At the daily email cap, remaining messages send
-            tomorrow. At the AI limit, the built-in template engine takes over until
-            midnight. At the monthly lead limit, the Lead Finder pauses until the 1st
-            (or an upgrade). Your live usage is on the{" "}
-            <b>Plan &amp; Usage</b> page in the app.
+            See <Link href="/pricing" className="text-blue-600 underline">pricing</Link> for
+            the current numbers. Two things are metered: <b>audited results per calendar
+            month</b>, and <b>which filters</b> your plan unlocks. Owner lookups count as
+            results.
+          </p>
+          <p>
+            The important part is how a limit behaves: <b>nothing breaks and nothing is
+            lost.</b> At the monthly limit, the Lead Finder asks you to upgrade and stops
+            until the 1st. A result you never saw — one left out because it wasn&apos;t in
+            your location — never counts against the month. Your live usage is on the{" "}
+            <b>Plan &amp; usage</b> page in the app.
           </p>
         </Section>
       </div>
@@ -345,46 +312,37 @@ export default function DocsPage() {
         <Section heading="Troubleshooting">
           <ul className="list-disc space-y-2 pl-5">
             <li>
-              <b>Verification email didn&apos;t arrive</b> — check spam, then use
-              Resend from the in-app banner. Mark it &quot;Not spam&quot; so the next
-              ones land properly.
+              <b>Verification email didn&apos;t arrive</b> — check spam, then use Resend
+              from the in-app banner. Mark it &quot;Not spam&quot; so the next ones land
+              properly.
             </li>
             <li>
-              <b>&quot;Test email failed&quot; / SMTP errors</b> — wrong host/port
-              combo is the usual cause: <Code>465</Code> needs SSL on,{" "}
-              <Code>587</Code> needs SSL off. Gmail needs an App Password. Some hosts
-              use <Code>mail.yourdomain.com</Code>, others a server hostname from
-              your hosting panel.
+              <b>Fewer results than I asked for</b> — the note above the results tells you
+              which case it is. Either the source genuinely ran out for that niche and place
+              (try a broader niche, a nearby bigger city, or another source), or some
+              businesses were left out because their address placed them elsewhere — the
+              count is shown.
             </li>
             <li>
-              <b>My emails go to the recipient&apos;s spam</b> — run the{" "}
-              <Link href="/tools/dns-checker" className="text-blue-600 underline">
-                DNS check
-              </Link>{" "}
-              first; fix any ✗. Then: new domains need 2–4 weeks of low, steady,
-              warmed-up volume to build reputation. This is normal.
+              <b>A site reads &quot;unknown&quot;</b> — we could not judge it (refused our
+              check, or never answered). That&apos;s information, not a defect: nothing was
+              accused, and it is not counted as a business that needs work.
             </li>
             <li>
-              <b>Lead search returned fewer than requested</b> — that niche/city
-              genuinely ran out of findable businesses. Switch source or broaden.
+              <b>&quot;The site may be slow&quot;</b> — heavy pages get flagged because slow
+              sites lose customers; that one is a measurement, and worth mentioning only if
+              it is comfortably above the usual range.
             </li>
             <li>
-              <b>&quot;Provider is busy&quot; / temporary AI errors</b> — wait a
-              minute and retry; campaigns fall back to the template engine
-              automatically, so sending never stops. When that happens the campaign
-              page shows how many messages used templates — templates personalize
-              per business but don&apos;t follow custom brief instructions.
-            </li>
-            <li>
-              <b>&quot;My custom instructions weren&apos;t followed&quot;</b> — put them
-              in the campaign brief (they override the AI&apos;s style rules), and check
-              the campaign page for a template-fallback notice: template-written
-              messages are the usual cause.
+              <b>&quot;Out of its free daily allowance&quot;</b> — the shared web-search
+              quota for the whole day is used up, so it returns at 00:00 UTC. Every other
+              source keeps working meanwhile, and OpenStreetMap and the UK register need no
+              search at all.
             </li>
             <li>
               <b>Anything else</b> — email{" "}
-              <Link href="/contact" className="text-blue-600 underline">support</Link>;
-              we usually answer within a business day.
+              <Link href="/contact" className="text-blue-600 underline">support</Link>; we
+              usually answer within a business day.
             </li>
           </ul>
         </Section>
@@ -395,7 +353,7 @@ export default function DocsPage() {
         <div>
           <div className="font-semibold text-white">Ready to try it?</div>
           <p className="mt-1 text-sm text-zinc-400">
-            Free plan, simulation mode, nothing sends until you say so.
+            Free plan, audited leads every month, no card and no trial clock.
           </p>
         </div>
         <Link

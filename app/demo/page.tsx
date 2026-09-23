@@ -48,7 +48,7 @@ export default function DemoPage() {
         <div>
           <div className="font-semibold text-white">Liked what you saw?</div>
           <p className="mt-1 text-sm text-zinc-400">
-            The real thing is free to start — simulation mode until you connect a mailbox.
+            The real thing is free to start — 50 audited leads a month, no card and nothing to connect.
           </p>
         </div>
         <Link

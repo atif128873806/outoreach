@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { isOutreachEnabled } from "@/lib/product";
 import PublicShell from "../components/PublicShell";
 
 export const metadata: Metadata = {
-  title: "Guides — cold outreach, deliverability & lead finding",
+  title: "Guides — finding local businesses and the emails behind them",
   description:
-    "Practical, battle-tested guides: get cold email into the inbox (SPF, DKIM, DMARC, warm-up) and find local business email addresses for any niche and city.",
+    "Practical, battle-tested guides: find local business email addresses for any niche and city, check what is wrong with a business's website, and reach the right person.",
 };
+
+/** Outreach-only: the title and blurb are static, so the whole entry is gated. */
+const OUTREACH_GUIDE = "cold-email-deliverability";
 
 const GUIDES = [
   {
@@ -28,13 +32,16 @@ const GUIDES = [
 ];
 
 export default function GuidesIndex() {
+  const outreach = isOutreachEnabled();
+  const guides = GUIDES.filter((g) => outreach || !g.href.includes(OUTREACH_GUIDE));
+
   return (
     <PublicShell
       title="Guides"
-      subtitle="No fluff, no recycled listicles — practical playbooks from building and running an outreach platform."
+      subtitle="No fluff, no recycled listicles — practical playbooks for finding real businesses and reaching the people behind them."
     >
       <div className="space-y-5">
-        {GUIDES.map((g) => (
+        {guides.map((g) => (
           <Link
             key={g.href}
             href={g.href}
@@ -55,17 +62,21 @@ export default function GuidesIndex() {
         ))}
       </div>
 
-      <div className="mt-10 rounded-2xl border border-zinc-200 bg-zinc-50/60 p-6">
-        <div className="text-sm font-semibold text-zinc-700">Free tools that pair with these guides</div>
-        <div className="mt-3 flex flex-wrap gap-3 text-sm">
-          <Link href="/tools/dns-checker" className="text-blue-600 underline hover:text-blue-700">
-            SPF / DKIM / DMARC checker
-          </Link>
-          <Link href="/tools/spam-checker" className="text-blue-600 underline hover:text-blue-700">
-            Email spam checker
-          </Link>
+      {/* Both tools test the email you are about to send, so they belong to the
+          outreach half and go with it. */}
+      {outreach && (
+        <div className="mt-10 rounded-2xl border border-zinc-200 bg-zinc-50/60 p-6">
+          <div className="text-sm font-semibold text-zinc-700">Free tools that pair with these guides</div>
+          <div className="mt-3 flex flex-wrap gap-3 text-sm">
+            <Link href="/tools/dns-checker" className="text-blue-600 underline hover:text-blue-700">
+              SPF / DKIM / DMARC checker
+            </Link>
+            <Link href="/tools/spam-checker" className="text-blue-600 underline hover:text-blue-700">
+              Email spam checker
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
     </PublicShell>
   );
 }

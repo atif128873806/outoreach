@@ -9,6 +9,9 @@ import {
   type Settings,
 } from "@/lib/settings";
 import { getUserId } from "@/lib/auth";
+import { isOutreachEnabled } from "@/lib/product";
+import { offeredSources } from "@/lib/sources";
+import { hasExaKey } from "@/lib/exa";
 
 export const runtime = "nodejs";
 
@@ -27,6 +30,16 @@ function respond(settings: Settings) {
     smtpConfigured: isSmtpConfigured(settings),
     aiConfigured: Boolean(getAiConfig(settings)),
     aiProvider: getAiConfig(settings)?.provider ?? null,
+    // Which lead sources this deployment can run (server-owned). The Settings
+    // page shows the status of the one that runs on the deployment's key rather
+    // than the user's, because that is otherwise invisible from inside the app.
+    leadSources: offeredSources().map((s) => s.id),
+    // Whether web search runs on the deployment's own key rather than the shared
+    // free daily allowance — the one thing that decides whether search keeps
+    // working late in the day.
+    exaConfigured: hasExaKey(),
+    // The Settings page hides the outreach-only sections when this is false.
+    outreachEnabled: isOutreachEnabled(),
   });
 }
 

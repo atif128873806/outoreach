@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { digestEmail } from "./digest";
 
 /**
  * System (transactional) mailer — sends product emails like the welcome
@@ -66,11 +67,11 @@ async function sendSystemMail(opts: {
   subject: string;
   text: string;
   html: string;
-}): Promise<void> {
+}): Promise<boolean> {
   const cfg = getSystemSmtp();
   if (!cfg) {
     console.log(`[system-mailer] not configured — skipped "${opts.subject}" to ${opts.to}`);
-    return;
+    return false;
   }
   const transporter = nodemailer.createTransport(transportOptions(cfg));
   await transporter.sendMail({
@@ -80,6 +81,7 @@ async function sendSystemMail(opts: {
     text: opts.text,
     html: opts.html,
   });
+  return true;
 }
 
 /** Verifies the system SMTP connection/credentials without sending. */
@@ -223,5 +225,113 @@ The Outreach Studio team`;
     console.log(`[system-mailer] welcome email sent to ${to}`);
   } catch (err) {
     console.error(`[system-mailer] welcome email to ${to} failed:`, err);
+  }
+}
+
+/** Everything from the register is third-party text, so it gets escaped, not trusted. */
+function esc(s: string): string {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Company-incorporation dates arrive as YYYY-MM-DD; a reader wants "12 Sep 2026". */
+function readableDate(iso: string): string {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return iso;
+  return new Date(t).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/**
+ * The weekly "new businesses in your niches" digest.
+ *
+ * Deliberately one message per account covering every watch that produced
+ * something, and nothing at all when nothing did. A weekly "no news" email is
+ * the fastest way to teach someone to ignore the one that matters.
+ *
+ * Answers whether it actually went. A deployment with no system mailer logs and
+ * moves on, and a caller that counted that as "sent" would report a digest
+ * delivered to someone who is about to wonder why they got nothing.
+ */
+export async function sendDigestEmail(
+  to: string,
+  name: string,
+  watches: {
+    niche: string;
+    location: string;
+    companies: { business_name: string; company_number: string; incorporated_on: string }[];
+  }[],
+  total: number
+): Promise<boolean> {
+  const url = appUrl();
+  const first = (name || "").trim().split(/\s+/)[0] || "there";
+  // With no APP_URL there is no link to give: a button whose href is the words
+  // "your saved searches" is a broken link in every client. Say it in words
+  // instead, so the email sends a reader to the right place rather than nowhere.
+  const digestUrl = url ? `${url}/watches` : "";
+  const link = digestUrl || "your saved searches";
+
+  // The subject and the plain-text body come from lib/digest.ts, where the
+  // wording is unit-tested and the module has no dependencies. Only the HTML
+  // below is built here.
+  const { subject, text } = digestEmail({ name: first, watches, total, url: link });
+
+  const htmlSections = watches
+    .map((w) => {
+      const rows = w.companies
+        .map(
+          (c) => `<tr><td style="padding:7px 0;border-top:1px solid #f1f1f4;font-size:13px;color:#3f3f46;">
+            <b style="color:#18181b;">${esc(c.business_name)}</b>${
+              c.company_number
+                ? `<span style="color:#a1a1aa;"> · ${esc(c.company_number)}</span>`
+                : ""
+            }${
+              c.incorporated_on
+                ? `<div style="color:#71717a;font-size:12px;">incorporated ${esc(readableDate(c.incorporated_on))}</div>`
+                : ""
+            }
+          </td></tr>`
+        )
+        .join("");
+      return `<div style="font-size:13px;font-weight:600;color:#18181b;margin:20px 0 4px;">${esc(
+        w.niche
+      )} in ${esc(w.location)} <span style="color:#a1a1aa;font-weight:400;">— ${
+        w.companies.length
+      } new</span></div><table style="width:100%;border-collapse:collapse;">${rows}</table>`;
+    })
+    .join("");
+
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:540px;margin:0 auto;color:#18181b;">
+  <div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin-bottom:4px;">${total} new ${
+    total === 1 ? "business" : "businesses"
+  } in your niches</div>
+  <p style="color:#52525b;font-size:14px;line-height:1.6;margin:0;">Hi ${esc(
+    first
+  )}, these companies were incorporated in the areas you're watching.</p>
+  ${htmlSections}
+  ${
+    digestUrl
+      ? BUTTON_HTML(digestUrl, "Open your new leads")
+      : `<p style="color:#52525b;font-size:14px;line-height:1.6;">Open <b>New businesses</b> in the app to work these.</p>`
+  }
+  ${FOOT_HTML(
+    "Newly incorporated businesses have no incumbent working with them yet. You're receiving this because you set up saved searches — removing a search stops it being covered here."
+  )}
+</div>`;
+
+  try {
+    const sent = await sendSystemMail({ to, subject, text, html });
+    if (sent) console.log(`[system-mailer] digest email sent to ${to}`);
+    return sent;
+  } catch (err) {
+    console.error(`[system-mailer] digest email to ${to} failed:`, err);
+    return false;
   }
 }

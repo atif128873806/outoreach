@@ -1,3 +1,5 @@
+import { SearchAllowanceSpentError, utcClock } from "./search-budget";
+
 /**
  * Turns raw provider errors ("Groq API error 401: …", "Exa API error 429",
  * fetch timeouts) into messages a user can act on. The technical detail is
@@ -8,6 +10,21 @@ export function friendlyProviderError(err: unknown, context: "search" | "ai"): s
   const detail = raw.slice(0, 90);
   const who = context === "search" ? "The lead-search provider" : "The AI provider";
 
+  // A spent *allowance* is not a busy moment, and telling a user to wait a
+  // minute when the answer is "tomorrow" is the kind of message that loses
+  // trust. This one names the time it returns and what an operator can do.
+  if (err instanceof SearchAllowanceSpentError && context === "search") {
+    return (
+      `Web search is out of its free daily allowance — it comes back at ${utcClock(err.resumesAt)}. ` +
+      `A deployment with its own EXA_API_KEY has no such limit. (${detail})`
+    );
+  }
+
+  // A rejected *deployment* key is nobody's Settings problem, and calling it
+  // "usually temporary" sends the one person who can fix it looking elsewhere.
+  if (/EXA_API_KEY was rejected/i.test(raw)) {
+    return `Web search is not configured correctly on this deployment — an administrator needs to replace EXA_API_KEY. Other lead sources still work. (${detail})`;
+  }
   if (/\b401\b|\b403\b|unauthoriz|invalid[ _]?api[ _]?key|incorrect api key|authentication/i.test(raw)) {
     return context === "ai"
       ? `${who} rejected the API key. If you added your own key in Settings → AI provider, please re-check it — otherwise this is temporary on our side, try again in a few minutes. (${detail})`

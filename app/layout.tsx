@@ -15,23 +15,23 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Outreach Studio — AI outreach that finds, writes, and follows up",
+    default: "Outreach Studio — find businesses that need you, with the proof",
     template: "%s · Outreach Studio",
   },
   description:
-    "Find business leads with emails included, let AI write personalized email, Instagram, and LinkedIn outreach, and track opens, clicks, and replies — all in one tool.",
+    "Search a niche and a city and get real businesses pulled live from the web — each one with its website audited, a score, and the specific problems worth pitching against.",
   openGraph: {
-    title: "Outreach Studio — AI outreach that finds, writes, and follows up",
+    title: "Outreach Studio — find businesses that need you, with the proof",
     description:
-      "Find business leads with emails included, let AI write personalized outreach across email, Instagram, and LinkedIn, and track every open, click, and reply.",
+      "Real businesses pulled live from the web, each one audited: what's wrong with its site, what it scores, and the exact reason to reach out.",
     siteName: "Outreach Studio",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Outreach Studio — AI outreach that finds, writes, and follows up",
+    title: "Outreach Studio — find businesses that need you, with the proof",
     description:
-      "Lead discovery with emails included, AI-written messages, automatic follow-ups, and reply triage — one pipeline.",
+      "Find local businesses with no website, or one that's outdated and broken — with the evidence attached to every lead.",
   },
 };
 

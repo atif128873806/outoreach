@@ -20,8 +20,10 @@ export default function PrivacyPage() {
       <Section heading="1. Who we are">
         <p>
           {SITE.name} is operated by {SITE.operator}. For data you give us about yourself
-          (your account), we are the data controller. For contact data you upload to run
-          campaigns, you are the controller and we process it on your behalf. Contact:{" "}
+          (your account), we are the data controller. For personal data in the business
+          leads you collect — and in the contact lists you upload, where the optional
+          outreach features are enabled — you are the controller and we process it on your
+          behalf. Contact:{" "}
           <a href={`mailto:${SITE.supportEmail}`} className="text-blue-600 underline">
             {SITE.supportEmail}
           </a>
@@ -36,17 +38,19 @@ export default function PrivacyPage() {
             password (we can never read the password itself).
           </li>
           <li>
-            <b>Workspace data</b> — contacts you import or discover, campaigns, generated
-            messages, replies, and campaign statistics.
+            <b>Workspace data</b> — the leads and contacts you discover or save, the
+            searches you run, and any messages you generate (or, where outreach is enabled
+            on your deployment, send) and their replies and statistics.
           </li>
           <li>
-            <b>Connection credentials</b> — SMTP/IMAP passwords and API keys you choose to
-            store. These are encrypted at rest (AES-256-GCM) and never returned to the
-            browser once saved.
+            <b>Connection credentials</b> — API keys you choose to store, and SMTP/IMAP
+            passwords if outreach is enabled. These are encrypted at rest (AES-256-GCM) and
+            never returned to the browser once saved.
           </li>
           <li>
-            <b>Engagement signals</b> — opens, link clicks, replies, bounces, and
-            unsubscribes for emails you send, so you can see campaign results.
+            <b>Engagement signals</b> — where outreach is enabled, opens, link clicks,
+            replies, bounces and unsubscribes for emails you send, so you can see results.
+            This deployment sends no email, so it records none of this.
           </li>
           <li>
             <b>Technical basics</b> — IP addresses in server logs and rate-limit records,
@@ -58,10 +62,14 @@ export default function PrivacyPage() {
 
       <Section heading="3. How we use data">
         <ul className="list-disc space-y-1.5 pl-5">
-          <li>to operate the product: send your campaigns, poll your inbox for replies, show statistics;</li>
+          <li>
+            to operate the product: run your searches, fetch each business&apos;s public
+            details, audit its website, and — where outreach is enabled — send your
+            campaigns, poll your inbox for replies and show statistics;
+          </li>
           <li>to generate message drafts via the AI provider configured for your account;</li>
           <li>to send transactional email (welcome, email verification, password reset);</li>
-          <li>to protect the Service: rate limiting, abuse prevention, enforcing sending limits;</li>
+          <li>to protect the Service: rate limiting, abuse prevention, enforcing usage limits;</li>
           <li>to respond when you contact support.</li>
         </ul>
       </Section>
@@ -69,13 +77,20 @@ export default function PrivacyPage() {
       <Section heading="4. Third parties that process data">
         <ul className="list-disc space-y-1.5 pl-5">
           <li>
-            <b>AI providers</b> (Anthropic, Groq) — receive campaign briefs and contact
-            business details to draft messages. With your own API key, your provider
-            relationship applies; with the included AI, requests go through our key.
+            <b>Public data sources</b> — the businesses returned by a search come from open
+            map data (OpenStreetMap), the official UK company register, and a web-search
+            provider that reads publicly published business pages. Nothing about you is sent
+            to them beyond the niche and location you typed.
           </li>
           <li>
-            <b>Your email provider</b> — messages are sent through the SMTP server you
-            connect; replies are read from the IMAP inbox you connect.
+            <b>AI providers</b> (Anthropic, Groq) — receive the briefs and business details
+            needed to draft a message. With your own API key, your provider relationship
+            applies; with the included AI, requests go through our key.
+          </li>
+          <li>
+            <b>Your email provider</b> — where outreach is enabled, messages are sent
+            through the SMTP server you connect and replies are read from the IMAP inbox you
+            connect. This deployment does not connect to a mailbox.
           </li>
           <li>
             <b>Payment providers</b> — if you purchase a paid plan, the provider and its
@@ -88,12 +103,15 @@ export default function PrivacyPage() {
         </ul>
       </Section>
 
-      <Section heading="5. Recipients of your campaigns">
+      <Section heading="5. Business contacts in your leads">
         <p>
-          If you received an email sent with {SITE.name}: the sender chose and controls your
-          contact information — we process it for them. Every campaign email carries an
-          unsubscribe link; opting out is enforced permanently and automatically. To raise a
-          concern about a sender, contact us at{" "}
+          The leads this Service returns are businesses, and the contact details on them are
+          the ones those businesses publish publicly. We do not sell personal data and we do
+          not compile consumer lists. Where outreach is enabled and you send to those
+          contacts, you are the sender: every message carries a one-click unsubscribe link,
+          opting out is enforced permanently and automatically, and you may not remove or
+          work around it. If you received unwanted contact that references {SITE.name},
+          contact us at{" "}
           <a href={`mailto:${SITE.supportEmail}`} className="text-blue-600 underline">
             {SITE.supportEmail}
           </a>{" "}

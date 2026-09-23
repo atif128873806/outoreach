@@ -3,12 +3,34 @@
  *
  * Sources:
  *  - OpenStreetMap (Overpass API): free, no key, open data (ODbL).
- *  - Google Places API (official): higher quality, needs a key from the user.
+ *  - The official UK register (Companies House), for companies with no site.
+ *  - AI web search, via lib/exa.ts.
  *
- * Neither source includes email addresses, so leads with a website go through
- * an enrichment pass that fetches the site (and its contact page) and extracts
- * email addresses and Instagram handles.
+ * No source includes email addresses, so leads with a website go through an
+ * enrichment pass that reads the site — homepage first, then its contact and
+ * about pages through the shared crawler in lib/crawl.ts — extracting emails,
+ * phone numbers, socials, published business details and the owner's name. The
+ * same visit produces a scored website audit (lib/siteaudit.ts) — the evidence
+ * the user pitches with.
  */
+
+import {
+  analyzeSite,
+  checkBrokenLinks,
+  probeSite,
+  type SiteAudit,
+} from "./siteaudit";
+import { contactPageUrls, crawlPage, rankContactUrls, sitemapUrls } from "./crawl";
+import { nicheAlias } from "./niches";
+import {
+  detectTech,
+  extractEmails,
+  extractLocalBusiness,
+  extractOwnerName,
+  extractPhone,
+  pagePhone,
+  reconcilePhone,
+} from "./scrape";
 
 export interface Lead {
   business_name: string;
@@ -22,9 +44,39 @@ export interface Lead {
   address: string;
   /** Short company intel (what they do, size, founding) — feeds AI personalization. */
   notes: string;
+  /**
+   * Named directors from an official register, when the source publishes them.
+   *
+   * For a lead with no website, no phone and no email, this is the only human
+   * attached to the company — and it is a name from a public record rather than
+   * a guess, which is what makes it worth searching for the person behind it.
+   */
+  directors?: string[];
+  /**
+   * The human attached to this lead, once one has been confirmed.
+   *
+   * A business is not reachable; a person is. When the source published
+   * directors, the person finder looks for them by name and only accepts a
+   * profile matching a name on the record, so this is a checked identity rather
+   * than "whoever ranks for the company". `contact_profile` is their own
+   * LinkedIn or X page, whichever network they were found on.
+   */
+  contact_name?: string;
+  contact_profile?: string;
+  /**
+   * The register's own identity for this company, when it came from there:
+   * the number (unique for ever) and the incorporation date. The number is what
+   * lets a company be recognised as one already reported — the alternative is
+   * comparing names, and "A B C Roofing Ltd" and "ABC Roofing Limited" are two
+   * spellings of one business. It is also the id in a public register URL.
+   */
+  company_number?: string;
+  incorporated_on?: string;
   source: string;
-  /** Website-quality problems found by the outdated-site audit (redesign prospects). */
+  /** Pitch-worthy website problems (critical/high only) — safe to quote to the prospect. */
   site_flags?: string[];
+  /** Scored audit of the lead's homepage: grade, score, and every finding with its evidence. */
+  site_audit?: SiteAudit;
   /** Detected site platform (WordPress, Shopify, …) — pitch-targeting data. */
   tech?: string;
   /** Marketing tags found on the site (Facebook Pixel, Google Analytics, …). */
@@ -74,62 +126,6 @@ export function extractLinkedin(html: string): string {
   return m ? `${m[1].toLowerCase()}/${m[2]}` : "";
 }
 
-const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
-
-/** Undo the common ways sites hide emails from scrapers: entities and [at]/[dot]. */
-function deobfuscate(text: string): string {
-  return text
-    .replace(/&#0?64;|&commat;/gi, "@")
-    .replace(/&#0?46;|&period;/gi, ".")
-    .replace(/\s*[[(]\s*(?:at|@)\s*[\])]\s*/gi, "@")
-    .replace(/\s*[[(]\s*(?:dot|\.)\s*[\])]\s*/gi, ".");
-}
-
-const JUNK_EMAIL =
-  /example\.|sentry|wixpress|your-email|email@|no-?reply|donotreply|godaddy|\.(png|jpe?g|gif|webp|svg|css|js|woff2?)$/;
-
-/**
- * All plausible emails in a page, best first. When `siteHost` is given,
- * addresses on the business's own domain outrank gmail/hotmail catch-alls.
- */
-export function extractEmails(html: string, siteHost?: string): string[] {
-  const found = deobfuscate(html).match(EMAIL_RE) ?? [];
-  const clean = new Set<string>();
-  for (const raw of found) {
-    const e = raw.toLowerCase();
-    if (JUNK_EMAIL.test(e)) continue;
-    clean.add(e);
-  }
-  const list = [...clean];
-  if (siteHost) {
-    const root = siteHost.replace(/^www\./, "");
-    list.sort((a, b) => Number(b.endsWith(root)) - Number(a.endsWith(root)));
-  }
-  return list;
-}
-
-const PHONE_RE = /\+?\d[\d\s().\-]{7,}\d/g;
-
-/**
- * Best plausible phone number in a blob of text. Prefers international
- * (+…) formats; 9–13 digits keeps real numbers and drops the long numeric
- * IDs (Facebook, tracking) that lurk in search results.
- */
-export function extractPhone(text: string): string {
-  const candidates = (text.match(PHONE_RE) ?? [])
-    .map((raw) => ({ raw: raw.trim().replace(/\s+/g, " "), digits: raw.replace(/\D/g, "") }))
-    .filter(
-      ({ raw, digits }) =>
-        digits.length >= 9 && digits.length <= 13 && !/^(19|20)\d{2}/.test(raw)
-    );
-  candidates.sort(
-    (a, b) =>
-      Number(b.raw.startsWith("+")) - Number(a.raw.startsWith("+")) ||
-      Number(/[ ().-]/.test(b.raw)) - Number(/[ ().-]/.test(a.raw))
-  );
-  return candidates[0]?.raw ?? "";
-}
-
 export function extractInstagram(html: string): string {
   const matches = html.matchAll(/instagram\.com\/([a-zA-Z0-9._]{2,30})/g);
   for (const m of matches) {
@@ -140,6 +136,48 @@ export function extractInstagram(html: string): string {
 }
 
 // ---------- geocoding (Nominatim) ----------
+
+/**
+ * The coordinates of a place, for comparing how far a lead is from the city the
+ * user asked about. Cached, and spaced to Nominatim's 1 request/second policy
+ * so a search with several unplaceable leads can't be rate-limited into
+ * silence. Returns null rather than throwing: a lookup that fails leaves the
+ * stricter locality verdict in place.
+ */
+let lastPointLookup = 0;
+const pointCache = new Map<string, { lat: number; lon: number } | null>();
+
+export async function geocodePoint(
+  query: string
+): Promise<{ lat: number; lon: number } | null> {
+  const key = (query ?? "").trim().toLowerCase();
+  if (!key) return null;
+  const cached = pointCache.get(key);
+  if (cached !== undefined) return cached;
+
+  const wait = 1_100 - (Date.now() - lastPointLookup);
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastPointLookup = Date.now();
+
+  let point: { lat: number; lon: number } | null = null;
+  try {
+    const res = await fetchWithTimeout(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(key)}`,
+      10_000
+    );
+    if (res.ok) {
+      const data = (await res.json()) as { lat?: string; lon?: string }[];
+      const hit = data[0];
+      const lat = parseFloat(hit?.lat ?? "");
+      const lon = parseFloat(hit?.lon ?? "");
+      if (Number.isFinite(lat) && Number.isFinite(lon)) point = { lat, lon };
+    }
+  } catch {
+    point = null;
+  }
+  pointCache.set(key, point);
+  return point;
+}
 
 async function geocode(
   location: string
@@ -189,37 +227,6 @@ function escapeRegex(s: string): string {
 // Common niche words → the OSM tag values used for them. When `keys` is set,
 // the query targets only those tag keys — dramatically faster on Overpass
 // than scanning every key with a case-insensitive regex.
-const NICHE_ALIASES: Record<string, { re: string; keys?: string[] }> = {
-  gym: { re: "fitness_centre|fitness|gym", keys: ["leisure", "amenity"] },
-  fitness: { re: "fitness_centre|fitness|gym", keys: ["leisure", "amenity"] },
-  dentist: { re: "dentist|dental", keys: ["amenity", "healthcare"] },
-  dental: { re: "dentist|dental", keys: ["amenity", "healthcare"] },
-  "dental clinic": { re: "dentist|dental", keys: ["amenity", "healthcare"] },
-  doctor: { re: "doctors|clinic", keys: ["amenity", "healthcare"] },
-  clinic: { re: "clinic|doctors", keys: ["amenity", "healthcare"] },
-  "hair salon": { re: "hairdresser|beauty", keys: ["shop"] },
-  barber: { re: "hairdresser|barber", keys: ["shop"] },
-  salon: { re: "hairdresser|beauty", keys: ["shop"] },
-  "beauty salon": { re: "beauty|hairdresser|cosmetics", keys: ["shop"] },
-  lawyer: { re: "lawyer|notary", keys: ["office"] },
-  "real estate": { re: "estate_agent", keys: ["office", "shop"] },
-  "real estate agency": { re: "estate_agent", keys: ["office", "shop"] },
-  "estate agent": { re: "estate_agent", keys: ["office", "shop"] },
-  realtor: { re: "estate_agent", keys: ["office", "shop"] },
-  mechanic: { re: "car_repair", keys: ["shop"] },
-  "car repair": { re: "car_repair", keys: ["shop"] },
-  "auto repair": { re: "car_repair", keys: ["shop"] },
-  coffee: { re: "cafe|coffee", keys: ["amenity", "shop", "cuisine"] },
-  "coffee shop": { re: "cafe|coffee", keys: ["amenity", "shop", "cuisine"] },
-  restaurant: { re: "restaurant|fast_food", keys: ["amenity"] },
-  cafe: { re: "cafe", keys: ["amenity"] },
-  hotel: { re: "hotel|guest_house|hostel", keys: ["tourism"] },
-  florist: { re: "florist", keys: ["shop"] },
-  vet: { re: "veterinary", keys: ["amenity"] },
-  veterinarian: { re: "veterinary", keys: ["amenity"] },
-  pharmacy: { re: "pharmacy|chemist", keys: ["amenity", "shop", "healthcare"] },
-};
-
 const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
@@ -258,15 +265,19 @@ export async function searchOsm(
   const bbox = await geocode(location);
   if (!bbox) throw new Error(`Couldn't find the location "${location}" — try "City, Country"`);
 
-  // "Dental Clinics" → matches tag values like "dentist"/"dental_clinic"
+  // "Dental Clinics" → matches tag values like "dentist"/"dental_clinic". The
+  // vocabulary itself lives in lib/niches.ts, where it is unit-tested — a niche
+  // that silently maps to no tag looks like an empty city, not a bug.
   const lower = niche.trim().toLowerCase();
-  const alias = NICHE_ALIASES[lower] ?? NICHE_ALIASES[lower.replace(/s$/, "")];
+  const alias = nicheAlias(niche);
   const base = escapeRegex(lower.replace(/s$/, ""));
   const tagRegex = alias?.re ?? base.replace(/\s+/g, "[_ ]?");
   const bb = `(${bbox.south},${bbox.west},${bbox.north},${bbox.east})`;
 
   // Known niches hit only their real tag keys with exact-case values (OSM tag
   // values are lowercase) — far cheaper than 8 case-insensitive regex scans.
+  // A trade alias goes further and matches the tag value whole, so
+  // craft=car_painter is not returned for "painters" (see lib/niches.ts).
   const keys = alias?.keys ?? [
     "amenity", "shop", "cuisine", "craft", "office", "leisure", "healthcare", "tourism",
   ];
@@ -321,155 +332,15 @@ out center tags ${Math.min(count * 6, 200)};`;
   return leads;
 }
 
-// ---------- Google Places (official API) ----------
+// Google Places used to live here (searchGooglePlaces, the Places API "New"
+// text search, keyed per customer). It was removed with the rest of the
+// user-keyed path; lib/sources/meta.ts records why and what re-adding it takes.
 
-interface GPlace {
-  displayName?: { text?: string };
-  websiteUri?: string;
-  nationalPhoneNumber?: string;
-  formattedAddress?: string;
-}
-
-export async function searchGooglePlaces(
-  niche: string,
-  location: string,
-  count: number,
-  apiKey: string
-): Promise<Lead[]> {
-  const res = await fetchWithTimeout("https://places.googleapis.com/v1/places:searchText", 15_000, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask":
-        "places.displayName,places.websiteUri,places.nationalPhoneNumber,places.formattedAddress",
-    },
-    body: JSON.stringify({
-      textQuery: `${niche} in ${location}`,
-      pageSize: Math.min(count, 20),
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Google Places error ${res.status}: ${err.slice(0, 200)}`);
-  }
-  const data = (await res.json()) as { places?: GPlace[] };
-
-  return (data.places ?? []).map((p) => ({
-    business_name: p.displayName?.text?.trim() ?? "",
-    category: niche.trim(),
-    website: p.websiteUri ?? "",
-    phone: p.nationalPhoneNumber ?? "",
-    email: "",
-    instagram: "",
-    linkedin: "",
-    address: p.formattedAddress ?? "",
-    notes: "",
-    source: "google_places",
-  }));
-}
-
-// ---------- website quality audit (redesign prospects) ----------
-
-/** Hosts that mean "no real website" — free builders and social pages used as a site. */
-const BUILDER_HOSTS =
-  /(\.|^)(wixsite\.com|weebly\.com|blogspot\.\w+|wordpress\.com|sites\.google\.com|business\.site|webnode\.\w+|jimdofree\.com|000webhostapp\.com|neocities\.org|facebook\.com|instagram\.com|linktr\.ee)$/i;
-
-/**
- * Scores a homepage for "this business needs a new website" signals.
- * Pure and heuristic by design: every flag is a concrete, checkable fact the
- * user can mention in their outreach email.
- */
-export function auditWebsiteHtml(html: string, url: string): string[] {
-  const flags: string[] = [];
-
-  if (/^http:\/\//i.test(url.trim())) flags.push("no HTTPS (browser shows 'Not secure')");
-
-  try {
-    const host = new URL(url.startsWith("http") ? url : `https://${url}`).hostname;
-    if (BUILDER_HOSTS.test(host)) flags.push(`hosted on a free builder / social page (${host.replace(/^www\./, "")})`);
-  } catch {
-    /* unparseable url — no host flag */
-  }
-
-  if (html && !/name=["']?viewport/i.test(html)) {
-    flags.push("not mobile-friendly (no responsive viewport)");
-  }
-
-  if (/<frameset|<marquee|<blink|\.swf\b/i.test(html)) {
-    flags.push("built with 2000s-era web technology");
-  }
-
-  const years = [...html.matchAll(/(?:©|&copy;|&#169;|copyright)[^\d]{0,20}(\d{4})/gi)]
-    .map((m) => parseInt(m[1], 10))
-    .filter((y) => y >= 1995 && y <= new Date().getFullYear());
-  if (years.length) {
-    const latest = Math.max(...years);
-    if (latest <= new Date().getFullYear() - 3) {
-      flags.push(`site last touched around ${latest} (copyright notice)`);
-    }
-  }
-
-  if (html && html.length < 1800) flags.push("barely any content on the homepage");
-
-  return flags;
-}
-
-// ---------- tech-stack & marketing-tag detection ----------
-
-/** Platform fingerprints, checked in order — first match wins. */
-const STACK_SIGNATURES: [string, RegExp][] = [
-  ["WordPress", /wp-content\/|wp-includes\/|content=["']WordPress/i],
-  ["Shopify", /cdn\.shopify\.com|\.myshopify\.com|Shopify\.theme/i],
-  ["Wix", /wixstatic\.com|parastorage\.com|X-Wix-/i],
-  ["Squarespace", /squarespace\.com|squarespace-cdn\.com/i],
-  ["Webflow", /website-files\.com|data-wf-page/i],
-  ["GoDaddy Builder", /wsimg\.com|websitebuilder\.godaddy/i],
-  ["Weebly", /weebly\.com\/uploads|_weebly/i],
-  ["Joomla", /content=["']Joomla/i],
-  ["Drupal", /Drupal\.settings|content=["']Drupal/i],
-  ["Blogger", /content=["']blogger["']/i],
-];
-
-const PIXEL_SIGNATURES: [string, RegExp][] = [
-  ["Facebook Pixel", /connect\.facebook\.net|fbq\s*\(/i],
-  ["Google Analytics", /googletagmanager\.com|google-analytics\.com|gtag\s*\(/i],
-  ["Google Ads tag", /googleadservices\.com|googleads\.g\.doubleclick/i],
-  ["TikTok Pixel", /analytics\.tiktok\.com/i],
-];
-
-export interface TechProfile {
-  /** Detected platform, or undefined when unrecognized/custom. */
-  stack?: string;
-  /** Marketing/tracking tags present — a "this business invests in marketing" signal. */
-  pixels: string[];
-}
-
-/** Reads what a site is built with and which marketing tags it runs — pure. */
-export function detectTech(html: string): TechProfile {
-  if (!html) return { pixels: [] };
-  const stack = STACK_SIGNATURES.find(([, re]) => re.test(html))?.[0];
-  const pixels = PIXEL_SIGNATURES.filter(([, re]) => re.test(html)).map(([name]) => name);
-  return { stack, pixels };
-}
+// Website auditing lives in lib/siteaudit.ts: probeSite records the network
+// facts (status, timing, size, TLS) and analyzeSite turns them into scored,
+// quotable findings the UI and the outreach notes are built on.
 
 // ---------- website enrichment ----------
-
-async function fetchPageText(url: string): Promise<string> {
-  const res = await fetchWithTimeout(url, 12_000, {
-    headers: {
-      Accept: "text/html",
-      // Some sites (WAFs, WordPress security plugins) refuse UA-less requests
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
-    },
-    redirect: "follow",
-  });
-  if (!res.ok) return "";
-  const type = res.headers.get("content-type") ?? "";
-  if (!type.includes("text/html")) return "";
-  return (await res.text()).slice(0, 500_000);
-}
 
 /**
  * Jina Reader (r.jina.ai) renders a page — including JS-heavy sites the plain
@@ -490,11 +361,13 @@ async function fetchPageViaJina(url: string): Promise<string> {
 }
 
 /**
- * Visits a lead's website to find email + socials, read its tech stack and
- * marketing tags, and (optionally) audit its quality. The homepage is always
- * fetched when a website exists — the tech profile applies to every lead.
+ * Visits a lead's website: audits the homepage, reads its tech stack and
+ * marketing tags, and hunts for contact details across the site's own pages. The audit runs for every lead
+ * with a website — in this product the audit is the deliverable, not a side
+ * effect — while `deep` adds the homepage broken-link check (a few extra
+ * requests, so it's reserved for the deliberate "outdated website" search).
  */
-async function enrichLead(lead: Lead, audit = false): Promise<Lead> {
+async function enrichLead(lead: Lead, deep = false, uk = false): Promise<Lead> {
   if (!lead.website) return lead;
   const url = lead.website.startsWith("http") ? lead.website : `https://${lead.website}`;
   const siteHost = (() => {
@@ -505,38 +378,86 @@ async function enrichLead(lead: Lead, audit = false): Promise<Lead> {
     }
   })();
 
-  const scan = (text: string) => {
+  const addNote = (bit: string) => {
+    if (!bit || (lead.notes ?? "").includes(bit)) return;
+    lead.notes = [lead.notes, bit].filter(Boolean).join(" | ");
+  };
+
+  /**
+   * Reads one page for everything it can contribute to the lead. Phone numbers
+   * come through the page's `tel:` links and its visible words, never its raw
+   * markup: an inline SVG's coordinates are not a phone number (see
+   * lib/scrape.ts, pagePhone).
+   */
+  const scan = (text: string, opts: { html?: boolean } = {}) => {
     if (!lead.email) lead.email = extractEmails(text, siteHost)[0] ?? "";
     if (!lead.instagram) lead.instagram = extractInstagram(text);
     if (!lead.linkedin) lead.linkedin = extractLinkedin(text);
+    const phone = opts.html ? pagePhone(text, { uk }) : extractPhone(text, { uk });
+    lead.phone = reconcilePhone(lead.phone, phone, { uk });
+  };
+
+  /**
+   * What the page publishes about itself in structured data, which outranks
+   * anything scraped from footer markup: the owner typed it for Google.
+   */
+  const applyStructured = (html: string) => {
+    const business = extractLocalBusiness(html);
+    if (business.phone) {
+      const phone = extractPhone(business.phone, { uk });
+      if (phone) lead.phone = reconcilePhone(lead.phone, phone, { uk });
+    }
+    if (!lead.email && business.email) lead.email = business.email;
+    if (!lead.address && business.address) lead.address = business.address;
+    if (!lead.instagram) {
+      const insta = business.socials.find((s) => /instagram\.com/i.test(s));
+      if (insta) lead.instagram = extractInstagram(insta);
+    }
+    if (!lead.linkedin) {
+      const li = business.socials.find((s) => /linkedin\.com/i.test(s));
+      if (li) lead.linkedin = extractLinkedin(li);
+    }
   };
 
   try {
-    const html = await fetchPageText(url);
-    if (audit) {
-      lead.site_flags = auditWebsiteHtml(html, lead.website);
-      // A listed website that doesn't load is the hottest redesign signal there is.
-      if (!html) lead.site_flags.push("website doesn't load at all");
-    }
-    if (html) {
-      const t = detectTech(html);
-      lead.tech = t.stack;
-      lead.pixels = t.pixels;
-      scan(html);
+    const probe = await probeSite(url);
+    const html = probe.html;
 
-      // No email on the homepage? Follow its contact link, or probe the
-      // usual paths when the homepage doesn't link one.
-      if (!lead.email) {
-        const linkMatch = html.match(/href=["']([^"']*(?:contact|about)[^"']*)["']/i);
-        const candidates = linkMatch
-          ? [new URL(linkMatch[1], url).toString()]
-          : [new URL("/contact", url).toString(), new URL("/contact-us", url).toString()];
-        for (const candidate of candidates) {
-          const pageHtml = await fetchPageText(candidate);
-          if (pageHtml) scan(pageHtml);
-          if (lead.email) break;
-        }
-      }
+    const tech = detectTech(html);
+    lead.tech = tech.stack;
+    lead.pixels = tech.pixels;
+
+    // Link checking costs extra requests, so it stays opt-in per search.
+    const linkCheck = deep && html ? await checkBrokenLinks(probe.finalUrl, html) : null;
+    const audit = analyzeSite(probe, {
+      stack: tech.stack,
+      pixels: tech.pixels,
+      brokenLinks: linkCheck?.links ?? [],
+      brokenLinksTruncated: linkCheck?.truncated,
+    });
+    lead.site_audit = audit;
+    lead.site_flags = audit.flags;
+
+    if (html) {
+      scan(html, { html: true });
+      applyStructured(html);
+
+      // A business keeps its phone number, its email and the owner's name on
+      // its contact, about or team page, almost never on the homepage. Read
+      // those pages through the shared crawler: robots.txt is respected, one
+      // request a second per host, and the site's own sitemap decides which
+      // pages are worth reading instead of guessing at /contact-us.
+      await crawlForContact(url, html, {
+        take: (pageHtml) => {
+          scan(pageHtml, { html: true });
+          applyStructured(pageHtml);
+          const owner = extractOwnerName(pageHtml);
+          if (owner) addNote(`Site names ${owner.name} as ${owner.role}`);
+        },
+        // An email is the reason to read more pages; a phone found along the
+        // way is a bonus, not a reason to keep costing the host requests.
+        satisfied: () => Boolean(lead.email),
+      });
     }
 
     // Still no email — the site is likely JS-rendered or blocking plain
@@ -546,10 +467,8 @@ async function enrichLead(lead: Lead, audit = false): Promise<Lead> {
       if (text) scan(text);
     }
   } catch {
-    // site unreachable/slow — keep whatever we already have
-    if (audit) {
-      lead.site_flags = [...(lead.site_flags ?? []), "website doesn't load at all"];
-    }
+    // probeSite never throws, so this only guards odd markup/URL edge cases —
+    // keep whatever we already have rather than failing the whole lead.
   }
   return lead;
 }
@@ -557,13 +476,57 @@ async function enrichLead(lead: Lead, audit = false): Promise<Lead> {
 export async function enrichLeads(
   leads: Lead[],
   concurrency = 5,
-  audit = false
+  deep = false,
+  opts: { uk?: boolean } = {}
 ): Promise<Lead[]> {
   const out: Lead[] = [...leads];
   for (let i = 0; i < out.length; i += concurrency) {
     const batch = out.slice(i, i + concurrency);
-    const enriched = await Promise.all(batch.map((l) => enrichLead(l, audit)));
+    const enriched = await Promise.all(batch.map((l) => enrichLead(l, deep, opts.uk ?? false)));
     for (let j = 0; j < enriched.length; j++) out[i + j] = enriched[j];
   }
   return out;
+}
+
+/** How many extra pages one lead's contact hunt may cost a host. */
+const CONTACT_PAGES = 3;
+
+/**
+ * Reads the pages a site keeps its contact details on, cheapest first.
+ *
+ * Order matters because every page costs the host a request and the search a
+ * second: the page the site itself links as its contact page is tried first and
+ * usually ends the hunt. Only when that fails is the sitemap fetched, and only
+ * for the pages worth adding on top. `satisfied` is checked between pages, so a
+ * lead that already yielded an email stops costing anyone anything.
+ */
+async function crawlForContact(
+  url: string,
+  homeHtml: string,
+  opts: { take: (html: string) => void; satisfied: () => boolean }
+): Promise<void> {
+  let origin: string;
+  try {
+    origin = new URL(url).origin;
+  } catch {
+    return;
+  }
+  const tried = new Set<string>();
+  let fetched = 0;
+
+  const visit = async (target: string): Promise<void> => {
+    if (fetched >= CONTACT_PAGES || opts.satisfied() || tried.has(target)) return;
+    tried.add(target);
+    fetched++;
+    const page = await crawlPage(target);
+    // crawlPage returns null when robots.txt refuses the path or nothing came
+    // back; a 4xx/5xx body is not page content either.
+    if (page && page.status < 400 && page.html) opts.take(page.html);
+  };
+
+  for (const target of contactPageUrls(homeHtml, url, 2)) await visit(target);
+  if (opts.satisfied()) return;
+
+  const published = await sitemapUrls(origin, 60).catch(() => [] as string[]);
+  for (const target of rankContactUrls(published, url, CONTACT_PAGES)) await visit(target);
 }

@@ -119,6 +119,55 @@ CREATE TABLE IF NOT EXISTS settings (
   PRIMARY KEY (user_id, key)
 );
 
+-- Saved searches that report what is NEW in them.
+--
+-- A lead list is worked once and then it is done, which is why a lead tool gets
+-- opened in bursts and then forgotten. The register publishes companies by
+-- incorporation date, so "new roofers in Leeds since last week" is a real,
+-- authoritative answer that changes every week — this table is what remembers
+-- what a user is watching.
+CREATE TABLE IF NOT EXISTS lead_watches (
+  id              SERIAL PRIMARY KEY,
+  user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  niche           TEXT NOT NULL,
+  location        TEXT NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- Start of the window the next check asks for. Defaults to creation time to
+  -- satisfy the not-null constraint, but it is only *read* once a check has
+  -- succeeded (see lib/digest.ts watchWindow): until then a watch looks back a
+  -- week, because treating creation time as the boundary would ask the register
+  -- only for companies registered from now on and leave every new watch empty
+  -- until its second week. After that it moves forward on each check, so no
+  -- company is ever asked for twice.
+  checked_through TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_checked_at TIMESTAMPTZ,
+  -- Written by a check, cleared when the user looks, so the sidebar can show a
+  -- count without querying the register on every page load.
+  unseen_count    INTEGER NOT NULL DEFAULT 0,
+  last_error      TEXT NOT NULL DEFAULT '',
+  UNIQUE (user_id, niche, location)
+);
+
+-- The companies a watch has already reported.
+--
+-- Deduplication is by company number, not by name: the register numbers companies
+-- for life, while "ABC Roofing Ltd" and "ABC Roofing Limited" are one business
+-- spelled two ways. Rows are pruned once they fall outside the window a check
+-- can ask about, so this stays proportional to a few weeks of incorporations
+-- rather than growing for ever.
+CREATE TABLE IF NOT EXISTS lead_watch_companies (
+  watch_id       INTEGER NOT NULL REFERENCES lead_watches(id) ON DELETE CASCADE,
+  company_number TEXT NOT NULL,
+  business_name  TEXT NOT NULL DEFAULT '',
+  address        TEXT NOT NULL DEFAULT '',
+  notes          TEXT NOT NULL DEFAULT '',
+  directors      TEXT NOT NULL DEFAULT '',
+  incorporated_on TEXT NOT NULL DEFAULT '',
+  seen           INTEGER NOT NULL DEFAULT 0,
+  found_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (watch_id, company_number)
+);
+
 CREATE TABLE IF NOT EXISTS contacts (
   id            SERIAL PRIMARY KEY,
   user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

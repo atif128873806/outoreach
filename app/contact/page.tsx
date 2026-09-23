@@ -34,9 +34,11 @@ export default function ContactPage() {
         <div className="rounded-2xl border border-zinc-200 p-6">
           <h2 className="font-semibold">Abuse reports</h2>
           <p className="mt-2 text-sm leading-relaxed text-zinc-500">
-            Received unwanted email sent through {SITE.name}? Forward it to us — every
-            campaign email also carries a one-click unsubscribe link that is enforced
-            permanently.
+            Received unwanted contact that references {SITE.name}? Forward it to us. This
+            service finds publicly listed business details — it does not send email on
+            anyone&apos;s behalf — so whatever reached you came from a user&apos;s own mailbox.
+            We investigate every report, and using the data to harass businesses is a
+            terms violation we enforce.
           </p>
           <a
             href={`mailto:${SITE.supportEmail}?subject=Abuse%20report`}

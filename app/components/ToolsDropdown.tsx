@@ -1,10 +1,18 @@
 import Link from "next/link";
+import { isOutreachEnabled } from "@/lib/product";
 
 /**
  * "Free tools" nav item with a pure-CSS hover/focus dropdown (no JS, works in
  * server components). Used in the landing, features, and PublicShell headers.
+ *
+ * Both tools exist to serve the outreach half — one checks the email you are
+ * about to send, the other the DNS records that decide whether it arrives — so
+ * with outreach hidden the whole nav item goes, rather than advertising a
+ * product this deployment does not sell.
  */
 export default function ToolsDropdown() {
+  if (!isOutreachEnabled()) return null;
+
   return (
     <div className="group relative">
       <button

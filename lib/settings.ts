@@ -35,8 +35,11 @@ export const SETTING_KEYS = [
   "anthropic_api_key",
   "groq_api_key",
   "groq_model",
-  // Lead Finder
-  "google_places_api_key",
+  // Lead Finder deliberately has NO key field. Every source either needs no key
+  // (web search, OpenStreetMap) or is keyed by the deployment in the
+  // environment (COMPANIES_HOUSE_API_KEY), so a new user can type a niche and a
+  // city without creating anything first. The Google Places field that used to
+  // live here was removed for exactly that reason — see lib/sources/meta.ts.
   // Used to build unsubscribe links in outgoing mail
   "base_url",
 ] as const;
@@ -50,7 +53,6 @@ export const SECRET_SETTING_KEYS: readonly SettingKey[] = [
   "imap_pass",
   "anthropic_api_key",
   "groq_api_key",
-  "google_places_api_key",
 ] as const;
 
 /** Placeholder the API returns instead of a stored secret. Posting it back means "keep the current value". */

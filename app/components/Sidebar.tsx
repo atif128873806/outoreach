@@ -5,10 +5,24 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LogoMark } from "./Logo";
 
-const NAV = [
+/**
+ * The product is one feature: find businesses that need you, with the proof.
+ * Everything else lives behind `outreachEnabled` and is unlinked by default.
+ */
+const PRODUCT_NAV = [
+  { href: "/leads", label: "Find leads", icon: "⌕" },
+  { href: "/watches", label: "New businesses", icon: "＋" },
+  { href: "/contacts", label: "My leads", icon: "☰" },
+  { href: "/billing", label: "Plan & usage", icon: "◇" },
+  { href: "/settings", label: "Settings", icon: "⚙" },
+  { href: "/docs", label: "Help & docs", icon: "?" },
+];
+
+/** The full app, shown only when a deployment opts back into outreach. */
+const OUTREACH_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "▦" },
-  { href: "/leads", label: "Lead Finder", icon: "⌕" },
-  { href: "/contacts", label: "Contacts", icon: "☰" },
+  { href: "/leads", label: "Find leads", icon: "⌕" },
+  { href: "/contacts", label: "My leads", icon: "☰" },
   { href: "/campaigns", label: "Campaigns", icon: "✉" },
   { href: "/messages", label: "Message Center", icon: "◎" },
   { href: "/billing", label: "Plan & Usage", icon: "◇" },
@@ -20,6 +34,14 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [email, setEmail] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  // Defaults to the single-feature product until the server says otherwise.
+  const [outreachEnabled, setOutreachEnabled] = useState(false);
+  /**
+   * How many new businesses are waiting, read from the stored counter rather
+   * than the register — a badge is not worth a request to a shared quota on
+   * every page load, and /api/watches answers from rows a check already wrote.
+   */
+  const [unseen, setUnseen] = useState(0);
 
   const onAuthPage = pathname === "/login" || pathname === "/signup";
 
@@ -30,9 +52,30 @@ export default function Sidebar() {
       .then((d) => {
         setEmail(d?.user?.email ?? null);
         setIsAdmin(Boolean(d?.user?.isAdmin));
+        setOutreachEnabled(Boolean(d?.outreachEnabled));
       })
       .catch(() => {});
   }, [onAuthPage, pathname]);
+
+  // The count refreshes on navigation, so the badge drops the moment the user
+  // has actually looked at the digest rather than on the next reload.
+  useEffect(() => {
+    if (onAuthPage) return;
+    fetch("/api/watches")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setUnseen(Number(d?.unseen ?? 0)))
+      .catch(() => {});
+  }, [onAuthPage, pathname]);
+
+  // ...and immediately when the digest page itself clears the count, since a
+  // badge that keeps its number on the page that just emptied it reads as a bug.
+  useEffect(() => {
+    const cleared = () => setUnseen(0);
+    window.addEventListener("watches:seen", cleared);
+    return () => window.removeEventListener("watches:seen", cleared);
+  }, []);
+
+  const nav = outreachEnabled ? OUTREACH_NAV : PRODUCT_NAV;
 
   if (onAuthPage) return null; // auth screens are full-width
 
@@ -50,12 +93,14 @@ export default function Sidebar() {
             <div className="text-white font-semibold text-lg tracking-tight leading-tight">
               Outreach Studio
             </div>
-            <div className="text-xs text-zinc-500">AI outreach automation</div>
+            <div className="text-xs text-zinc-500">
+              {outreachEnabled ? "AI outreach automation" : "Lead intelligence"}
+            </div>
           </div>
         </div>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV.map((item) => {
+        {nav.map((item) => {
           const active = pathname.startsWith(item.href);
           return (
             <Link
@@ -68,7 +113,15 @@ export default function Sidebar() {
               }`}
             >
               <span className="w-5 text-center">{item.icon}</span>
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.href === "/watches" && unseen > 0 && (
+                <span
+                  className="rounded-full bg-sky-500 px-1.5 py-0.5 text-[10px] font-semibold text-white"
+                  title={`${unseen} new ${unseen === 1 ? "business" : "businesses"}`}
+                >
+                  {unseen > 99 ? "99+" : unseen}
+                </span>
+              )}
             </Link>
           );
         })}

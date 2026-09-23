@@ -19,15 +19,19 @@ export default function TermsPage() {
     >
       <Section heading="1. The service">
         <p>
-          {SITE.name} (&quot;the Service&quot;, &quot;we&quot;, &quot;us&quot;) is an outreach
-          automation platform operated by {SITE.operator}. It helps you find business leads,
-          write personalized outreach messages with AI assistance, send email campaigns
-          through your own mail server, and track the results.
+          {SITE.name} (&quot;the Service&quot;, &quot;we&quot;, &quot;us&quot;) is operated by
+          {" "}
+          {SITE.operator}. It finds real businesses from live public sources, audits each
+          one&apos;s website, and tells you what is wrong with that site and who to contact
+          about it.
         </p>
         <p>
-          The Service connects to accounts and infrastructure that you own — your SMTP
-          mailbox, your IMAP inbox, and optionally your own AI provider API keys. You remain
-          the sender of every message dispatched through the Service.
+          The Service does not send email on your behalf. Where an operator enables the
+          optional outreach features, the Service can additionally connect to accounts and
+          infrastructure you own — your SMTP mailbox, your IMAP inbox, and your own AI
+          provider API keys — to dispatch messages you write, and you remain the sender of
+          every message sent that way. On a deployment where those features are not enabled,
+          they are neither offered nor available, and nothing on this page depends on them.
         </p>
       </Section>
 

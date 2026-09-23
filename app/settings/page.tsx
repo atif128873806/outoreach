@@ -21,6 +21,10 @@ export default function SettingsPage() {
   const [smtpConfigured, setSmtpConfigured] = useState(false);
   const [aiConfigured, setAiConfigured] = useState(false);
   const [aiProvider, setAiProvider] = useState<string | null>(null);
+  /** Lead sources this deployment can run (server-owned), for the status line. */
+  const [leadSources, setLeadSources] = useState<string[]>([]);
+  /** Whether the deployment holds its own web-search key (server-owned). */
+  const [exaConfigured, setExaConfigured] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [pwCurrent, setPwCurrent] = useState("");
@@ -45,6 +49,8 @@ export default function SettingsPage() {
   } | null>(null);
   const [dnsError, setDnsError] = useState<string | null>(null);
   const [dnsChecking, setDnsChecking] = useState(false);
+  /** When false, everything below the Lead Finder card is outreach-only. */
+  const [outreachEnabled, setOutreachEnabled] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings")
@@ -54,6 +60,9 @@ export default function SettingsPage() {
         setSmtpConfigured(d.smtpConfigured);
         setAiConfigured(d.aiConfigured);
         setAiProvider(d.aiProvider);
+        if (Array.isArray(d.leadSources)) setLeadSources(d.leadSources);
+        setExaConfigured(Boolean(d.exaConfigured));
+        setOutreachEnabled(Boolean(d.outreachEnabled));
       });
   }, []);
 
@@ -249,7 +258,11 @@ export default function SettingsPage() {
     <div>
       <PageHeader
         title="Settings"
-        subtitle="Sender identity, AI, delivery, and deliverability"
+        subtitle={
+          outreachEnabled
+            ? "Sender identity, AI, delivery, and deliverability"
+            : "Lead sources and account security"
+        }
         action={
           <button className={btnPrimary} onClick={save} disabled={saving}>
             {saving ? "Saving…" : "Save all settings"}
@@ -262,6 +275,8 @@ export default function SettingsPage() {
       )}
 
       <div className="space-y-6">
+        {/* Sender identity + AI writer: only meaningful when messages are written. */}
+        <OutreachOnly on={outreachEnabled}>
         <Card id="sender-identity" className="scroll-mt-6 p-6">
           <SectionTitle
             title="Sender identity"
@@ -321,21 +336,67 @@ export default function SettingsPage() {
             </Field>
           </div>
         </Card>
+        </OutreachOnly>
 
         <Card className="p-6">
           <SectionTitle
             title="Lead Finder"
-            subtitle="OpenStreetMap works free with no key. Add a Google Places API key to also search official Google Maps data."
-            badge={settings.google_places_api_key ? "google enabled" : "osm only"}
-            badgeOk={Boolean(settings.google_places_api_key)}
+            subtitle="Every source works out of the box — there is no key to add. Anything this deployment has to key itself is shown below."
+            badge="no keys needed"
+            badgeOk
           />
+          {/*
+            * Web search is the engine behind every source and the person
+            * behind each lead, and its free allowance is a DAILY budget shared
+            * by the whole deployment — worth stating plainly, because the
+            * symptom otherwise shows up to a user as "provider is busy".
+            */}
+          <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3">
+            <div className="text-sm font-medium text-zinc-800">Web search &amp; person finder</div>
+            <p className="mt-1 text-xs text-zinc-500">
+              {exaConfigured
+                ? "Runs on this deployment's own search key (EXA_API_KEY) — users never need one."
+                : "Running on a shared free daily allowance (EXA_API_KEY unset). Searches stop until midnight UTC once it is used up."}{" "}
+              <span
+                className={exaConfigured ? "font-medium text-emerald-700" : "font-medium text-amber-700"}
+              >
+                {exaConfigured ? "Configured on this deployment." : "Not configured on this deployment."}
+              </span>
+            </p>
+          </div>
           <div className="mt-4">
-            <Field label="Google Places API key (optional)" hint="Create one at console.cloud.google.com — enable the 'Places API (New)'. Free monthly quota covers small lead searches.">
-              <input type="password" className={inputCls} value={settings.google_places_api_key ?? ""} onChange={set("google_places_api_key")} placeholder="AIza…" />
-            </Field>
+            {/*
+              * The UK register is not a customer's key to paste. It is free and
+              * read-only, the operator creates one key for the whole deployment,
+              * and every account gets the source with nothing to configure — so
+              * this is a status line, not a field. It is shown at all so an
+              * operator can see whether the deployment is configured, which is
+              * otherwise invisible from inside the product.
+              */}
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3">
+              <div className="text-sm font-medium text-zinc-800">Companies House (UK)</div>
+              <p className="mt-1 text-xs text-zinc-500">
+                Newly registered UK companies with the people behind them. Runs on this
+                deployment's own key (<code>COMPANIES_HOUSE_API_KEY</code>) — users never need
+                one.{" "}
+                <span
+                  className={
+                    leadSources.includes("companies_house")
+                      ? "font-medium text-emerald-700"
+                      : "font-medium text-amber-700"
+                  }
+                >
+                  {leadSources.includes("companies_house")
+                    ? "Configured on this deployment."
+                    : "Not configured on this deployment."}
+                </span>
+              </p>
+            </div>
           </div>
         </Card>
 
+        {/* Mailbox plumbing: sending, reply detection — outreach only. */}
+        <OutreachOnly on={outreachEnabled}>
         <Card id="email-delivery" className="scroll-mt-6 p-6">
           <SectionTitle
             title="Email delivery (SMTP)"
@@ -521,11 +582,16 @@ export default function SettingsPage() {
             <div className="text-xs text-zinc-400 mt-2">Save first — the test uses the saved values.</div>
           </div>
         </Card>
+        </OutreachOnly>
 
         <Card className="p-6">
           <SectionTitle
             title="Account security"
-            subtitle="Stored credentials — SMTP/IMAP passwords and API keys — are encrypted at rest and shown as •••••••• once saved; type a new value to replace one. Recipient-facing pages (unsubscribe, tracking) stay public by design."
+            subtitle={
+              outreachEnabled
+                ? "Stored credentials — SMTP/IMAP passwords and API keys — are encrypted at rest and shown as •••••••• once saved; type a new value to replace one. Recipient-facing pages (unsubscribe, tracking) stay public by design."
+                : "Your password is hashed, never stored in plain text. Any API key you add is encrypted at rest and shown as •••••••• once saved; type a new value to replace one."
+            }
           />
           <div className="grid md:grid-cols-3 gap-4 mt-4 items-end">
             <Field label="Current password">
@@ -557,6 +623,8 @@ export default function SettingsPage() {
           {pwMsg && <div className="text-sm text-zinc-500 mt-2">{pwMsg}</div>}
         </Card>
 
+        {/* Warm-up, send caps and DNS checks protect a sending domain. */}
+        <OutreachOnly on={outreachEnabled}>
         <Card className="p-6">
           <SectionTitle
             title="Deliverability"
@@ -630,9 +698,19 @@ export default function SettingsPage() {
             )}
           </div>
         </Card>
+        </OutreachOnly>
       </div>
     </div>
   );
+}
+
+/**
+ * Renders its children only when the outreach half is enabled. Used to keep the
+ * single-feature product's Settings page free of mailbox configuration that a
+ * lead-generation user would only find confusing.
+ */
+function OutreachOnly({ on, children }: { on: boolean; children: React.ReactNode }) {
+  return on ? <>{children}</> : null;
 }
 
 function SectionTitle({

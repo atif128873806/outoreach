@@ -4,89 +4,108 @@ import { LogoTile } from "./components/Logo";
 import ToolsDropdown from "./components/ToolsDropdown";
 import HeroFilm from "./components/HeroFilm";
 import PublicFooter from "./components/PublicFooter";
+import { isOutreachEnabled } from "@/lib/product";
 
 /**
  * Public marketing landing page. Signed-in visitors never see this —
- * the proxy sends them straight to /dashboard.
+ * the proxy sends them straight into the app.
+ *
+ * The product on sale here is lead intelligence: search, audit, filter. The
+ * outreach half exists behind a flag, so the one place this page acknowledges
+ * it is the hero film, which is shown only when that half is switched on.
  */
 
-const PRODUCT_STORIES = [
+interface ProductStory {
+  kicker: string;
+  title: string;
+  body: string;
+  points: string[];
+  /** Real product screenshot, when we have one that matches the story. */
+  image?: string;
+  alt?: string;
+  /** Otherwise an in-page mock, so no story is illustrated with the wrong UI. */
+  panel?: "audit" | "filters";
+}
+
+const PRODUCT_STORIES: ProductStory[] = [
   {
-    kicker: "Find qualified leads",
-    title: "Start with a niche — not a spreadsheet.",
-    body: "Tell Outreach Studio who you want to reach and where. It returns real businesses with contact details already attached, so you can move from an idea to a usable lead list without hours of research.",
+    kicker: "Search",
+    title: "Type a niche and a city. That is the whole brief.",
+    body: "Outreach Studio searches the live web and open map data for real businesses matching what you typed. Nothing is resold from a stale list, so a business that opened last month can still show up this afternoon.",
     points: [
-      "Business emails, websites, Instagram, and LinkedIn in one result",
-      "Owner and decision-maker enrichment when available",
-      "Import the leads you want directly into your contact pipeline",
+      "Real businesses pulled live, not bought from a data vendor",
+      "Website, email, phone and socials where they actually exist",
+      "Decision-maker lookup when you want a name to write to",
     ],
     image: "/product-lead-finder.jpg",
-    alt: "Outreach Studio Lead Finder showing dental businesses in Austin with verified contact emails and owner information",
+    alt: "Outreach Studio Lead Finder showing dental practices in Austin, each with an audit score and the specific problem found on its website",
   },
   {
-    kicker: "Personalize at scale",
-    title: "Every prospect gets a message written for them.",
-    body: "The AI uses the business, industry, location, and company notes to write a short message in your voice. It is real context, not a mail-merge template with a first name dropped in.",
+    kicker: "Audit",
+    title: "Every site it finds gets checked, scored and explained.",
+    body: "This is the part that makes a lead worth contacting. Each website is loaded and examined — does it load at all, is the certificate valid, does it work on a phone, are its links alive — and the results are written out as plain findings you could say to the owner.",
     points: [
-      "A different subject and message for every contact",
-      "Your offer, tone, sender identity, and sign-off stay consistent",
-      "Spam-filter checks run before the campaign is scheduled",
+      "Facts, not opinions: status codes, certificate state, timings",
+      "Broken links, mixed content, dead pages — each with evidence",
+      "A healthy site is never reported as broken, on purpose",
     ],
-    image: "/product-ai-writing.jpg",
-    alt: "A personalized outreach email written by Outreach Studio for a dental business with contextual details highlighted",
+    panel: "audit",
   },
   {
-    kicker: "Send and respond",
-    title: "Follow up automatically. Stop the moment they reply.",
-    body: "Campaigns send inside your chosen business hours at a controlled pace. Outreach Studio watches for replies, stops that contact's sequence, classifies the response, and prepares a useful next message.",
+    kicker: "Filter",
+    title: "Then narrow to the businesses that need you.",
+    body: "Four filters, each one a different problem you can solve. Show businesses with no website at all, only the sites with a real defect ranked worst first, everyone, or just the ones with a site to improve.",
     points: [
-      "Daily caps, send windows, and human-paced throttling built in",
-      "Follow-ups and bounces stop automatically when they should",
-      "Interested replies are surfaced with an AI-suggested response",
+      "No website — the strongest pitch there is",
+      "Outdated or broken — redesign prospects, evidence attached",
+      "Export the shortlist, or save it and work through it",
     ],
-    image: "/product-reply-triage.jpg",
-    alt: "An Outreach Studio campaign sending at a controlled pace with a stopped follow-up, interested reply, and suggested response",
+    panel: "filters",
   },
 ];
 
 const STEPS = [
   {
     n: "1",
-    title: "Find your leads",
-    body: "Type a niche and a city — \"dentists in Austin\". Get a list with emails, socials, and company intel, or import your own CSV. One click finds the owner behind each business.",
+    title: "Search a niche and a place",
+    body: "\"Dentists in Austin.\" Choose who you want — any business, only those with a site, only the broken ones, or the ones with none at all.",
   },
   {
     n: "2",
-    title: "Describe your offer",
-    body: "One paragraph about what you sell and what you want. The AI assistant sharpens it, writes a sample message, and checks it against spam filters before anything sends.",
+    title: "Read the audit",
+    body: "Every result arrives with a score out of 100 and the specific things wrong with its website, so you already know your opening line before you decide to contact anyone.",
   },
   {
     n: "3",
-    title: "Send, track, reply",
-    body: "Emails go out on schedule at a human pace. Instagram and LinkedIn drafts wait for one-click manual sending. Opens, clicks, and replies flow back to your dashboard.",
+    title: "Take the shortlist",
+    body: "Sort by worst site or easiest to reach, export to CSV with the audit attached, or save the leads and look up the owner behind each one.",
   },
 ];
 
 const FAQS = [
   {
-    q: "Do I need my own email server?",
-    a: "You connect any mailbox over SMTP — Google Workspace, Zoho, cPanel mail, anything. Until you do, sends are simulated so you can test the whole pipeline safely. Reply detection works over IMAP with the same credentials.",
+    q: "Where do the leads actually come from?",
+    a: "Live sources, not a database we bought. Depending on the filter, a search reads open map data (OpenStreetMap), the official UK company register, and the open web. That is why a brand-new business can appear, and why the count for a given area varies a little from day to day.",
   },
   {
-    q: "Which AI does the writing?",
-    a: "AI writing is included free — no API key needed (up to 50 generations a day on the free plan, more on paid plans). Prefer your own model? Add a Groq or Anthropic Claude key in Settings for unlimited use with no per-message markup.",
+    q: "What does the audit check, exactly?",
+    a: "Two layers. Transport facts measured over the network — does the page load, is the TLS certificate valid, how slow, how heavy. And content read from the real markup — no mobile layout, mixed insecure content, free-builder hosting, broken homepage links, stale copyright, placeholder text, a missing contact route. Each finding is a measured fact, not a guess.",
   },
   {
-    q: "Is the Instagram and LinkedIn outreach safe for my accounts?",
-    a: "Yes, by design. Those platforms ban automated cold DMs, so Outreach Studio never sends them for you. It drafts a personalized message per contact and gives you copy → open profile → mark sent. Your account behaves like a human, because it is one.",
+    q: "What if your audit is wrong about a healthy site?",
+    a: "That failure mode is designed against, because accusing a working business of being broken costs you the deal. Sites that refuse automated checks, time out, or render client-side are marked unverified rather than broken, and soft gaps like a missing meta description are recorded but never used to call a site a prospect.",
   },
   {
-    q: "Who's accountable for what the AI writes?",
-    a: "You are — and the product is built so you actually can be. Preview any message before a campaign exists, send a 5–10 email test batch that auto-pauses for your review, edit the brief mid-campaign, and see a full log of every message. Instagram/LinkedIn messages are never auto-sent. The AI drafts; the human decides.",
+    q: "Why are two of the filters paid?",
+    a: "Because they cost real work per lead. \"Outdated or broken site\" re-checks each site's links to prove a defect, and \"No website\" spends a separate web lookup on every business to find a phone, Instagram or an email. The free tier runs the cheap searches; the paid tiers pay for the expensive ones.",
   },
   {
-    q: "Is this compliant with anti-spam laws?",
-    a: "The product provides compliance safeguards: every real campaign email includes the sender's postal address, a visible opt-out, and RFC 8058 one-click unsubscribe headers; opt-outs are permanent and bounced or clearly invalid addresses are excluded. You remain responsible for having a lawful basis and following the laws that apply to your recipients (CAN-SPAM, GDPR, PECR…).",
+    q: "How do I keep finding new businesses without searching every week?",
+    a: "Save the search. \"New businesses\" watches a niche and a place and asks the official UK company register what has been incorporated since you last looked — so the list fills itself with businesses that registered days ago, with their directors named. It shows up in the app, and one weekly email per account when this deployment has email turned on. Starter and up, UK-only, because the register is the only source that publishes a date you can rely on.",
+  },
+  {
+    q: "Do I need any technical setup?",
+    a: "None. Create an account, type a niche and a city, and you have audited businesses. There is no API key to create and nothing to connect — every source works out of the box.",
   },
   {
     q: "Where does my data live?",
@@ -102,7 +121,95 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Browser-framed shot of the real screen, for a lead-only deployment. */
+function LeadFinderShot() {
+  return (
+    <div className="overflow-hidden rounded-[20px] border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/10">
+      <div className="flex items-center gap-2 border-b border-zinc-100 bg-zinc-50 px-4 py-2.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-zinc-300" aria-hidden />
+        <span className="h-2.5 w-2.5 rounded-full bg-zinc-300" aria-hidden />
+        <span className="h-2.5 w-2.5 rounded-full bg-zinc-300" aria-hidden />
+        <span className="ml-3 truncate text-xs text-zinc-400">
+          Find leads — dentist · Austin, USA · outdated or broken site
+        </span>
+      </div>
+      <Image
+        src="/product-lead-finder.jpg"
+        alt="Outreach Studio Lead Finder showing Austin dental practices with an audit score and the specific website problem behind each lead"
+        width={1620}
+        height={760}
+        sizes="(max-width: 1023px) 100vw, 900px"
+        priority
+        className="h-auto w-full"
+      />
+    </div>
+  );
+}
+
+/**
+ * An in-page mock of the audit report. The numbers and wording are the real
+ * ones this engine produces, so the illustration cannot drift from the product.
+ */
+function AuditPanel() {
+  const findings = [
+    ["the security certificate is invalid", "browsers warn 'your connection is not private'"],
+    ["3 broken links on the homepage", "/prices, /book-online, /team-old"],
+    ["not mobile-friendly", "no responsive viewport tag, so phones show a shrunken desktop"],
+  ];
+  return (
+    <div className="rounded-[20px] border border-zinc-100 bg-white p-5 text-left">
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-medium">Tarrytown Dental</div>
+        <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-semibold text-orange-700">
+          55/100 · poor
+        </span>
+      </div>
+      <div className="mt-1 text-xs text-zinc-400">tarrytowndental.com · Austin, United States</div>
+      <ul className="mt-4 space-y-2.5">
+        {findings.map(([label, detail]) => (
+          <li key={label} className="text-xs leading-5">
+            <span className="font-medium text-orange-700">• {label}</span>
+            <div className="text-zinc-400">{detail}</div>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-4 border-t border-zinc-100 pt-3 text-[11px] text-zinc-400">
+        HTTP 200 · 1.4s · 240 KB — measured, not inferred
+      </div>
+    </div>
+  );
+}
+
+/** The four filters, with the tier each one belongs to. */
+function FilterPanel() {
+  const filters = [
+    ["No website", "Sell them their first site", "Pro"],
+    ["Outdated or broken site", "Redesign prospects, evidence attached", "Starter"],
+    ["Has a website", "Website owners — the audit shows the gaps", "Free"],
+    ["Any business", "Everything found, each one audited", "Free"],
+  ];
+  return (
+    <div className="grid gap-2.5 text-left">
+      {filters.map(([title, desc, plan]) => (
+        <div
+          key={title}
+          className="rounded-xl border border-zinc-200 bg-white px-4 py-3"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm font-medium">{title}</span>
+            <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-500">
+              {plan}
+            </span>
+          </div>
+          <div className="mt-0.5 text-xs text-zinc-500">{desc}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function LandingPage() {
+  const outreachEnabled = isOutreachEnabled();
   return (
     <div className="bg-white text-zinc-900 antialiased">
       {/* Nav */}
@@ -170,19 +277,19 @@ export default function LandingPage() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
-            Email · Instagram · LinkedIn — one pipeline
+            Find a business · see what&apos;s wrong · know your opening line
           </p>
           <h1 className="rise rise-2 mx-auto max-w-3xl text-4xl font-semibold tracking-tight sm:text-6xl sm:leading-[1.08]">
-            Outreach that finds the leads,{" "}
+            Find the businesses that{" "}
             <span className="bg-gradient-to-r from-blue-600 via-violet-600 to-blue-600 bg-clip-text text-transparent">
-              writes the words
+              need you
             </span>
-            , and follows up
+            , with the proof
           </h1>
           <p className="rise rise-3 mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-500">
-            Outreach Studio discovers businesses with contact emails included, has AI
-            write a genuinely personal message to each one, sends at a human pace,
-            and watches your inbox for replies — so you only step in to close.
+            Type a niche and a city. Outreach Studio pulls real businesses live from the
+            web and audits every website it finds — a score, precisely what is wrong, and
+            the words to open with — so you never have to guess who to approach or why.
           </p>
           <div className="rise rise-3 mt-9 flex items-center justify-center gap-3">
             <Link
@@ -199,7 +306,7 @@ export default function LandingPage() {
             </Link>
           </div>
           <p className="rise rise-3 mt-5 text-xs text-zinc-400">
-            No credit card · Bring your own AI key · Self-hostable with one command
+            No credit card · Live sources, no data vendor · Self-hostable with one command
           </p>
 
           {/* Launch film — the real product, 22s, silent-legible */}
@@ -213,10 +320,14 @@ export default function LandingPage() {
                 filter: "blur(28px)",
               }}
             />
-            <HeroFilm />
+            {/* The film demonstrates the outreach half, so it only appears on
+                deployments that have that half switched on. */}
+            {outreachEnabled ? <HeroFilm /> : <LeadFinderShot />}
             <div className="relative mt-7 flex flex-wrap items-center justify-center gap-x-3.5 gap-y-2 text-sm">
               <span className="text-zinc-500">
-                22 seconds · no narration · the actual product
+                {outreachEnabled
+                  ? "22 seconds · no narration · the actual product"
+                  : "The real screen — a live search, every site audited"}
               </span>
               <span className="hidden h-4 w-px bg-zinc-200 sm:block" />
               <Link
@@ -235,10 +346,10 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-6 py-20">
           <Eyebrow>How it works</Eyebrow>
           <h2 className="text-center text-3xl font-semibold tracking-tight sm:text-4xl">
-            From “who do I even contact?” to booked replies
+            From “who should I even approach?” to a shortlist you can prove
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-zinc-500">
-            Three steps. The first campaign takes about ten minutes.
+            Three steps. The first search takes about a minute.
           </p>
           <div className="relative mt-12 grid gap-6 md:grid-cols-3">
             <div className="absolute left-[16%] right-[16%] top-10 hidden border-t-2 border-dashed border-zinc-200 md:block" />
@@ -262,11 +373,11 @@ export default function LandingPage() {
       <section id="features" className="mx-auto max-w-6xl px-6 py-20">
         <Eyebrow>Features</Eyebrow>
         <h2 className="text-center text-3xl font-semibold tracking-tight sm:text-4xl">
-          See how a lead becomes a real conversation
+          Search, audit, filter — and a reason to reach out
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-center text-zinc-500">
-          Three connected stages, shown with the real product — from finding the right
-          business to knowing exactly which reply needs you.
+          The list is the easy part. What you get here is the evidence: what is actually
+          wrong with each website, written the way you would say it out loud.
         </p>
         <div className="mt-16 space-y-20 lg:space-y-28">
           {PRODUCT_STORIES.map((story, index) => (
@@ -280,14 +391,20 @@ export default function LandingPage() {
                     className="pointer-events-none absolute inset-x-12 -bottom-10 h-28 rounded-full bg-blue-500/10 blur-3xl"
                     aria-hidden
                   />
-                  <Image
-                    src={story.image}
-                    alt={story.alt}
-                    width={1620}
-                    height={760}
-                    sizes="(max-width: 1023px) 100vw, 54vw"
-                    className="relative h-auto w-full rounded-[20px] border border-zinc-100"
-                  />
+                  {story.image ? (
+                    <Image
+                      src={story.image}
+                      alt={story.alt ?? ""}
+                      width={1620}
+                      height={760}
+                      sizes="(max-width: 1023px) 100vw, 54vw"
+                      className="relative h-auto w-full rounded-[20px] border border-zinc-100"
+                    />
+                  ) : story.panel === "audit" ? (
+                    <AuditPanel />
+                  ) : (
+                    <FilterPanel />
+                  )}
                 </div>
               </div>
 
@@ -343,44 +460,46 @@ export default function LandingPage() {
         />
         <div className="relative mx-auto max-w-6xl px-6 py-20">
           <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.18em] text-blue-400">
-            Channels
+            The filters
           </p>
           <h2 className="text-center text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Three channels, one compliance-first pipeline
+            Four filters, four different problems to solve
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-center text-zinc-400">
-            Automate what platforms allow. Draft what they don&apos;t. Never risk your accounts.
+            This is the choice that matters: not who exists, but whose business you can
+            genuinely help. Two are free — the other two are what the paid tiers pay for.
           </p>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-6 transition-colors hover:border-emerald-500/40">
+              <span className="inline-block rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
+                No website
+              </span>
+              <h3 className="mt-4 font-medium text-white">The strongest pitch there is</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                Businesses with nothing online at all, found in open map data, then
+                researched individually for a phone number, Instagram or email so the
+                lead is actually reachable.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-6 transition-colors hover:border-orange-500/40">
+              <span className="inline-block rounded-full bg-orange-500/15 px-2.5 py-0.5 text-xs font-medium text-orange-400">
+                Outdated or broken
+              </span>
+              <h3 className="mt-4 font-medium text-white">Evidence, ranked worst first</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                Only sites with at least one real, checkable defect — an invalid
+                certificate, broken links, no mobile layout — so you open with a specific
+                observation instead of a generic compliment.
+              </p>
+            </div>
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-6 transition-colors hover:border-sky-500/40">
               <span className="inline-block rounded-full bg-sky-500/15 px-2.5 py-0.5 text-xs font-medium text-sky-400">
-                Email
+                Has a website
               </span>
-              <h3 className="mt-4 font-medium text-white">Fully automatic</h3>
+              <h3 className="mt-4 font-medium text-white">Improvements, not rebuilds</h3>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                Sent on schedule through your own SMTP, throttled to a human pace, with
-                open/click tracking, unsubscribe handling, and automatic follow-ups.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-6 transition-colors hover:border-pink-500/40">
-              <span className="inline-block rounded-full bg-pink-500/15 px-2.5 py-0.5 text-xs font-medium text-pink-400">
-                Instagram DM
-              </span>
-              <h3 className="mt-4 font-medium text-white">Drafted, sent by you</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                Instagram bans automated cold DMs — accounts that try get banned. The AI
-                drafts each DM; you copy, open the profile, paste, mark sent. Ban-safe.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-6 transition-colors hover:border-blue-500/40">
-              <span className="inline-block rounded-full bg-blue-500/15 px-2.5 py-0.5 text-xs font-medium text-blue-400">
-                LinkedIn
-              </span>
-              <h3 className="mt-4 font-medium text-white">Drafted, sent by you</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                Same protection for your professional identity. Profiles are found
-                automatically — including the owner behind each business — and messages
-                are written in a professional register.
+                Healthy businesses whose sites still have gaps — the audit shows what is
+                missing, and lets you say plainly when a site needs nothing at all.
               </p>
             </div>
           </div>
@@ -391,10 +510,11 @@ export default function LandingPage() {
       <section id="pricing" className="mx-auto max-w-6xl px-6 py-20">
         <Eyebrow>Pricing</Eyebrow>
         <h2 className="text-center text-3xl font-semibold tracking-tight sm:text-4xl">
-          Simple pricing
+          Priced on audited leads
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-center text-zinc-500">
-          Start free with AI writing included. No per-message markup, ever.{" "}
+          One meter: leads. The paid tiers buy volume and the two filters that cost real
+          work to run.{" "}
           <Link href="/pricing" className="text-blue-600 underline hover:text-blue-700">
             Full pricing details →
           </Link>
@@ -407,10 +527,10 @@ export default function LandingPage() {
               period: "forever",
               badge: null,
               points: [
-                "50 Lead Finder results / month",
-                "25 emails / day, your own SMTP",
-                "50 AI generations / day included",
-                "Unlimited contacts & campaigns",
+                "50 audited leads / month",
+                "Any business · has a website",
+                "Score and findings on every lead",
+                "CSV export & decision-maker lookup",
               ],
               cta: "Create your account",
               href: "/signup",
@@ -422,10 +542,9 @@ export default function LandingPage() {
               period: "/ month",
               badge: null,
               points: [
-                "400 Lead Finder results / month",
+                "400 audited leads / month",
                 "+100 bonus leads in your first week",
-                "40 emails / day",
-                "500 AI generations / day included",
+                "Unlocks “outdated or broken site”",
                 "Email support",
               ],
               cta: "Get Starter",
@@ -438,10 +557,9 @@ export default function LandingPage() {
               period: "/ month",
               badge: "Best value",
               points: [
-                "2,500 Lead Finder results / month",
+                "2,500 audited leads / month",
                 "+100 bonus leads in your first week",
-                "50 emails / day",
-                "Unlimited AI writing included",
+                "Unlocks the “no website” hunt",
                 "Priority support & early access",
               ],
               cta: "Get Pro",
@@ -529,8 +647,8 @@ export default function LandingPage() {
             Your next client hasn&apos;t heard from you yet
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-zinc-400">
-            Set up in ten minutes. Test everything in simulation mode before a single
-            real email leaves your mailbox.
+            Type a niche and a city, and you are reading audits in about a minute. No data
+            to buy, nothing to configure, and the first fifty leads are free.
           </p>
           <Link
             href="/signup"
