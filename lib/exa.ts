@@ -20,6 +20,7 @@ import {
   socialProfileMatches,
   splitSearchResults,
 } from "./scrape";
+import { CACHE_TTL_SECONDS, cached, contactKey } from "./search-cache";
 import {
   countryAgrees,
   countryFromHost,
@@ -30,7 +31,6 @@ import {
   SearchAllowanceSpentError,
   allowanceResetFrom,
   allowanceResumesAt,
-  utcClock,
 } from "./search-budget";
 
 const EXA_MCP_URL = "https://mcp.exa.ai/mcp";
@@ -441,20 +441,55 @@ export async function searchExaPeople(
 
 // ---------- offline-business contact hunt ----------
 
+/** What one offline-business lookup found (empty strings = it found nothing). */
+export interface OfflineContact {
+  instagram: string;
+  phone: string;
+  email: string;
+  website: string;
+}
+
+const NO_CONTACT: OfflineContact = { instagram: "", phone: "", email: "", website: "" };
+
 /**
  * A business with no website usually still has a public footprint — an
  * Instagram page, a directory listing with a phone, sometimes an email.
  * One web search per business digs those up so offline leads become
  * actually reachable (IG DM campaigns / calls).
+ *
+ * This is the most budget-hungry call in the product: one web search per
+ * business, on a keyless endpoint whose daily allowance is shared by the whole
+ * deployment, and the same business turns up under the same name in every
+ * search that finds it. So the lookup is cached by business + market (see
+ * lib/search-cache.ts) — including the empty answer, which is a real finding
+ * ("this business publishes nothing findable") and worth not paying for twice.
+ * A *failed* lookup is not cached: `findOfflineContactLive` returns null for
+ * that, and a null is never stored.
  */
 export async function findOfflineContact(
+  businessName: string,
+  location: string,
+  opts: { country?: "GB" | "US" | null } = {}
+): Promise<OfflineContact> {
+  const found = await cached<OfflineContact | null>(
+    {
+      key: contactKey(businessName, location, opts.country),
+      kind: "contact",
+      ttlSeconds: CACHE_TTL_SECONDS.contact,
+    },
+    () => findOfflineContactLive(businessName, location, opts)
+  );
+  return found ?? NO_CONTACT;
+}
+
+async function findOfflineContactLive(
   businessName: string,
   location: string,
   // The market, when the caller has already worked it out from the results.
   // Without it the location box is the only evidence, and "Leeds" names no
   // country — which is how a truncated UK number survives a digit count.
   opts: { country?: "GB" | "US" | null } = {}
-): Promise<{ instagram: string; phone: string; email: string; website: string }> {
+): Promise<OfflineContact | null> {
   try {
     const text = await exaSearch(
       `"${businessName}" ${location} instagram contact phone`,
@@ -546,7 +581,9 @@ export async function findOfflineContact(
       ),
     };
   } catch {
-    // Best-effort — never fail the search.
-    return { instagram: "", phone: "", email: "", website: "" };
+    // Best-effort — never fail the search. Returning null (rather than an empty
+    // contact) is what tells the cache above not to remember this attempt as an
+    // answer: a minute of Exa trouble must not blank out a month of leads.
+    return null;
   }
 }

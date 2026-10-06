@@ -2,10 +2,12 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts && npm rebuild better-sqlite3 2>/dev/null || true
+RUN npm ci --ignore-scripts && (npm rebuild better-sqlite3 2>/dev/null || true)
 
 FROM node:22-alpine AS build
 WORKDIR /app
+ARG OUTREACH_ENABLED=false
+ENV OUTREACH_ENABLED=${OUTREACH_ENABLED}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

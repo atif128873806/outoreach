@@ -36,6 +36,8 @@ export default function Sidebar() {
   const [isAdmin, setIsAdmin] = useState(false);
   // Defaults to the single-feature product until the server says otherwise.
   const [outreachEnabled, setOutreachEnabled] = useState(false);
+  /** Parked, so it defaults to hidden and only the server can reveal it. */
+  const [newBusinessesEnabled, setNewBusinessesEnabled] = useState(false);
   /**
    * How many new businesses are waiting, read from the stored counter rather
    * than the register — a badge is not worth a request to a shared quota on
@@ -53,6 +55,7 @@ export default function Sidebar() {
         setEmail(d?.user?.email ?? null);
         setIsAdmin(Boolean(d?.user?.isAdmin));
         setOutreachEnabled(Boolean(d?.outreachEnabled));
+        setNewBusinessesEnabled(Boolean(d?.newBusinessesEnabled));
       })
       .catch(() => {});
   }, [onAuthPage, pathname]);
@@ -60,12 +63,14 @@ export default function Sidebar() {
   // The count refreshes on navigation, so the badge drops the moment the user
   // has actually looked at the digest rather than on the next reload.
   useEffect(() => {
-    if (onAuthPage) return;
+    // No badge for a hidden feature: while it is parked the API answers 404, and
+    // asking anyway would be one pointless request on every navigation.
+    if (onAuthPage || !newBusinessesEnabled) return;
     fetch("/api/watches")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setUnseen(Number(d?.unseen ?? 0)))
       .catch(() => {});
-  }, [onAuthPage, pathname]);
+  }, [onAuthPage, pathname, newBusinessesEnabled]);
 
   // ...and immediately when the digest page itself clears the count, since a
   // badge that keeps its number on the page that just emptied it reads as a bug.
@@ -75,7 +80,13 @@ export default function Sidebar() {
     return () => window.removeEventListener("watches:seen", cleared);
   }, []);
 
-  const nav = outreachEnabled ? OUTREACH_NAV : PRODUCT_NAV;
+  // "New businesses" is parked: it stays in PRODUCT_NAV so re-enabling is one
+  // env var, but the nav it is filtered out of until the server says otherwise,
+  // and the default is the hidden state on purpose — a link that appears before
+  // the flag has been read is a link to a redirect.
+  const nav = outreachEnabled
+    ? OUTREACH_NAV
+    : PRODUCT_NAV.filter((item) => item.href !== "/watches" || newBusinessesEnabled);
 
   if (onAuthPage) return null; // auth screens are full-width
 

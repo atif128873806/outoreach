@@ -2,7 +2,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 const product = await import("../lib/product.ts");
-const { isOutreachPath, isOutreachBlocked, isOutreachEnabled, getAppLandingPath } = product;
+const {
+  isOutreachPath,
+  isOutreachBlocked,
+  isOutreachEnabled,
+  getAppLandingPath,
+  isNewBusinessesPath,
+  isNewBusinessesBlocked,
+} = product;
 
 /**
  * The product is one feature — real-time lead generation with a website audit.
@@ -118,4 +125,76 @@ test("a signed-in user lands on the search screen, not a hidden dashboard", () =
   // /dashboard with outreach off would bounce them straight back.
   withOutreach(undefined, () => assert.equal(getAppLandingPath(), "/leads"));
   withOutreach("true", () => assert.equal(getAppLandingPath(), "/dashboard"));
+});
+
+/** Runs `fn` with NEW_BUSINESSES_ENABLED set as given, then restores it. */
+function withNewBusinesses<T>(value: string | undefined, fn: () => T): T {
+  const before = process.env.NEW_BUSINESSES_ENABLED;
+  if (value === undefined) delete process.env.NEW_BUSINESSES_ENABLED;
+  else process.env.NEW_BUSINESSES_ENABLED = value;
+  try {
+    return fn();
+  } finally {
+    if (before === undefined) delete process.env.NEW_BUSINESSES_ENABLED;
+    else process.env.NEW_BUSINESSES_ENABLED = before;
+  }
+}
+
+/**
+ * "New businesses" is parked while the product's direction is reconsidered. Like
+ * the outreach half it is *unreachable*, not merely unlinked — and it hides its
+ * API with its page, or the app keeps `fetch`ing a route the UI no longer offers.
+ */
+test("while New businesses is parked, its page and its API are unreachable", () => {
+  withNewBusinesses(undefined, () => {
+    for (const path of [
+      "/watches",
+      "/api/watches",
+      "/api/watches/digest",
+      // A route *under* the page belongs to it too.
+      "/watches/anything",
+    ]) {
+      assert.equal(isNewBusinessesBlocked(path), true, `${path} must not be reachable`);
+    }
+  });
+  // Same rule as the outreach flag: only the exact string "true" opts in, so a
+  // half-set variable can never reveal a feature that was parked.
+  withNewBusinesses("false", () => assert.equal(isNewBusinessesBlocked("/watches"), true));
+  withNewBusinesses("1", () => assert.equal(isNewBusinessesBlocked("/watches"), true));
+});
+
+test("parking New businesses does not take a neighbouring path with it", () => {
+  withNewBusinesses(undefined, () => {
+    for (const path of ["/", "/leads", "/contacts", "/watchlist", "/leads/watches"]) {
+      assert.equal(isNewBusinessesBlocked(path), false, `${path} must stay reachable`);
+    }
+  });
+});
+
+test("the two flags are independent, and the feature returns whole", () => {
+  // Outreach stays off; only the parked feature is switched back on. Both orders
+  // matter — a shared path list would hide "New businesses" again the moment the
+  // outreach rules were applied.
+  withOutreach(undefined, () => {
+    withNewBusinesses("true", () => {
+      for (const path of ["/watches", "/api/watches", "/api/watches/digest"]) {
+        assert.equal(isNewBusinessesBlocked(path), false, `${path} should be reachable again`);
+        // Still classified as part of the feature, which is what the flag is for.
+        assert.equal(isNewBusinessesPath(path), true);
+      }
+      // ...without exposing the sending half along with it.
+      assert.equal(isOutreachBlocked("/campaigns"), true);
+    });
+  });
+});
+
+test("parking outreach also closes campaign and message APIs", () => {
+  withOutreach(undefined, () => {
+    for (const path of ["/api/campaigns", "/api/campaigns/1", "/api/campaigns/preview", "/api/messages"]) {
+      assert.equal(isOutreachBlocked(path), true, `${path} must not run while parked`);
+    }
+    assert.equal(isOutreachBlocked("/api/leads"), false);
+    assert.equal(isOutreachBlocked("/api/admin/dashboard"), false);
+  });
+  withOutreach("true", () => assert.equal(isOutreachBlocked("/api/campaigns/1"), false));
 });

@@ -100,10 +100,6 @@ const FAQS = [
     a: "Because they cost real work per lead. \"Outdated or broken site\" re-checks each site's links to prove a defect, and \"No website\" spends a separate web lookup on every business to find a phone, Instagram or an email. The free tier runs the cheap searches; the paid tiers pay for the expensive ones.",
   },
   {
-    q: "How do I keep finding new businesses without searching every week?",
-    a: "Save the search. \"New businesses\" watches a niche and a place and asks the official UK company register what has been incorporated since you last looked — so the list fills itself with businesses that registered days ago, with their directors named. It shows up in the app, and one weekly email per account when this deployment has email turned on. Starter and up, UK-only, because the register is the only source that publishes a date you can rely on.",
-  },
-  {
     q: "Do I need any technical setup?",
     a: "None. Create an account, type a niche and a city, and you have audited businesses. There is no API key to create and nothing to connect — every source works out of the box.",
   },

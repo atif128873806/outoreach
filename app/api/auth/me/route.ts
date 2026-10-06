@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUserId, getUser, changePassword, isVerificationEnforced } from "@/lib/auth";
 import { NextRequest } from "next/server";
-import { isOutreachEnabled } from "@/lib/product";
+import { isNewBusinessesEnabled, isOutreachEnabled } from "@/lib/product";
 import {
   PLANS,
   FILTER_LABELS,
@@ -47,6 +47,9 @@ export async function GET() {
     // Drives which half of the app the shell renders. Server-owned so it can't
     // be frozen into the client bundle at build time.
     outreachEnabled: isOutreachEnabled(),
+    // "New businesses" is parked for now, so the sidebar reads this rather than
+    // linking to a page the router would send straight back to /leads.
+    newBusinessesEnabled: isNewBusinessesEnabled(),
   });
 }
 

@@ -29,7 +29,7 @@ const BARE_PATHS = new Set([
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  if (BARE_PATHS.has(pathname)) return <>{children}</>;
+  if (BARE_PATHS.has(pathname) || pathname === "/admin" || pathname.startsWith("/admin/")) return <>{children}</>;
 
   return (
     <div className="flex min-h-screen">

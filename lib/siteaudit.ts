@@ -478,10 +478,6 @@ export async function probeSite(url: string, timeoutMs = 12_000): Promise<SitePr
     const askedWww = hostnameOf(target).startsWith("www.");
     const certNames = tlsProblem === "mismatch" ? await readCertNames(hostnameOf(target) || base) : [];
     const plain = await probePlainHttp(base);
-    const covers = (n: string) => certNames.some((c) => c.toLowerCase() === n);
-    // The certificate covers only the www address, and we asked the bare one —
-    // the site is probably fine, so say exactly that instead of "invalid".
-    const wwwOnly = tlsProblem === "mismatch" && !askedWww && covers(`www.${base}`) && !covers(base);
     // "Broken" and "no https at all" are different findings, and only the second
     // is a critical one. So whenever the address we were handed fails on TLS,
     // check the www address too: a bare domain pointed at a hosting default

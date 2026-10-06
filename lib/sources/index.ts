@@ -17,13 +17,12 @@ import { searchOsm, type Lead } from "../leads";
 import { searchExaCompanies } from "../exa";
 import { CompaniesHouseError, searchCompaniesHouse } from "../companieshouse";
 import type { Settings } from "../settings";
+import { cached, sourceKey, sourceTtl } from "../search-cache";
 import {
   ACTIVE_SOURCES,
   SOURCE_META,
   inventoryProblems,
   isSourceId,
-  sourceFilterMessage,
-  sourceFitsFilter,
   type SourceId,
   type SourceMeta,
 } from "./meta";
@@ -111,10 +110,48 @@ const IMPLEMENTATIONS: Partial<Record<SourceId, SourceSearch>> = {
   }
 }
 
+/**
+ * Wraps a source so its answer for one niche + place is fetched once and then
+ * served from the cache (see lib/search-cache.ts).
+ *
+ * This is deliberately applied here, at the registry, rather than in the route:
+ * every source a user can pick inherits it, including the next one added, and
+ * no source implementation has to know it exists. It is also a licence matter
+ * rather than a pure optimization — Overpass mirrors and the register both run
+ * on deployment-wide budgets, and Nominatim's policy requires cached results.
+ *
+ * The TTL is per source (`sourceTtl`): a directory that changes slowly is
+ * cached longer than the register, which publishes new companies every working
+ * day.
+ *
+ * A stored answer is reused when it covers what the *user* asked for (`count`),
+ * not the larger enrichment budget the pipeline pads a request with (`needed`).
+ * The padding exists to absorb drop-outs — already-saved contacts, out-of-area
+ * businesses, sites that turn out to be modern after all — so falling short of
+ * it costs a few results the route already explains, while re-asking costs a
+ * round trip to the flakiest dependency in the product. Measured: this rule is
+ * the difference between a repeat search taking 40 ms and taking 40 seconds on a
+ * day the Overpass mirrors are busy.
+ */
+function cachedSearch(id: SourceId, search: SourceSearch): SourceSearch {
+  return async (req) => {
+    const answer = await cached<{ leads: Lead[]; requested: number }>(
+      {
+        key: sourceKey(id, req.niche, req.location, req.needed),
+        kind: "source",
+        ttlSeconds: sourceTtl(id),
+        usable: (hit) => hit.requested >= req.count,
+      },
+      async () => ({ leads: await search(req), requested: req.needed })
+    );
+    return answer.leads;
+  };
+}
+
 export const SOURCES: Partial<Record<SourceId, LeadSource>> = Object.fromEntries(
-  Object.entries(IMPLEMENTATIONS).map(([id, search]) => [
+  (Object.entries(IMPLEMENTATIONS) as [SourceId, SourceSearch][]).map(([id, search]) => [
     id,
-    { ...SOURCE_META[id as SourceId], search },
+    { ...SOURCE_META[id], search: cachedSearch(id, search) },
   ])
 ) as Partial<Record<SourceId, LeadSource>>;
 

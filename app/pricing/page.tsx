@@ -56,7 +56,6 @@ const CARDS = [
       `${starter.leadsPerMonth} audited leads / month (≈100 a week)`,
       `+${UPGRADE_BONUS_LEADS} bonus leads in your first week`,
       "Everything in Free",
-      "New businesses: watch a niche and a place, and see what registered since you last looked",
       "Practical for a full week of prospecting, not a taster",
       "Email support",
     ],
@@ -71,7 +70,6 @@ const CARDS = [
       `+${UPGRADE_BONUS_LEADS} bonus leads in your first week`,
       "Everything in Starter",
       "The no-website hunt, which costs us a lookup per business",
-      "Newly incorporated businesses with their directors named — the ones with no incumbent yet",
       "Priority support (same business day)",
       "Early access to new features",
     ],
@@ -99,10 +97,6 @@ const BILLING_FAQS = [
   {
     q: "What counts as a lead?",
     a: "Every audited business the search hands you, plus each decision-maker lookup you run. Leads already in your list are hidden from later searches and don't count twice.",
-  },
-  {
-    q: "What are \"new businesses\", and how new are they?",
-    a: "Companies registered in the last few days. Save up to 10 searches and we ask the official UK company register what has been incorporated since your last check, so you see businesses before they have a website, a Google listing or anyone working with them. It is a list you open rather than a stream: nothing is emailed on a deployment without a mailer configured, and the register only covers the UK.",
   },
   {
     q: "Why are the filters split across plans?",

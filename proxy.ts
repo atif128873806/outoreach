@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifySessionToken, SESSION_COOKIE } from "./lib/crypto";
-import { getAppLandingPath, isOutreachBlocked } from "./lib/product";
+import { ADMIN_COOKIE } from "./lib/admin-session";
+import { getAppLandingPath, isNewBusinessesBlocked, isOutreachBlocked } from "./lib/product";
 
 /**
  * Session gate. Every page and API requires a signed-in user, except:
@@ -36,6 +37,15 @@ const PUBLIC_PREFIXES = [
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (pathname === "/admin/login" || pathname === "/api/admin/auth/login" || pathname === "/api/admin/auth/logout") return NextResponse.next();
+  if (pathname === "/admin" || pathname.startsWith("/admin/") || pathname.startsWith("/api/admin/")) {
+    // Presence only here; every page/API verifies the revocable session + role in DB.
+    if (request.cookies.get(ADMIN_COOKIE)?.value) return NextResponse.next();
+    if (pathname.startsWith("/api/")) return NextResponse.json({error:"Administrator sign-in required"},{status:401});
+    const login = new URL("/admin/login",request.url);
+    login.searchParams.set("next",pathname+request.nextUrl.search);
+    return NextResponse.redirect(login);
+  }
   const authed =
     verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value) != null;
 
@@ -52,6 +62,19 @@ export function proxy(request: NextRequest) {
   // flag and the path list are combined in one place (see isOutreachBlocked), so
   // a route cannot be hidden in the router and left advertised in the footer.
   if (isOutreachBlocked(pathname)) {
+    if (pathname.startsWith("/api/")) return NextResponse.json({error:"Feature is parked"},{status:404});
+    return NextResponse.redirect(new URL("/leads", request.url));
+  }
+
+  // "New businesses" is parked (see isNewBusinessesBlocked) — the page and its API
+  // both still exist and both still work, they are just not offered. A page lands
+  // on the search screen; an API path gets a 404 instead, because a redirect would
+  // hand `fetch()` the search screen's HTML with a 200 on it and any caller that
+  // checks `res.ok` would treat that as data.
+  if (isNewBusinessesBlocked(pathname)) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
     return NextResponse.redirect(new URL("/leads", request.url));
   }
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { searchExaPeople } from "@/lib/exa";
 import { getUserId } from "@/lib/auth";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
-import { getLeadQuota, leadQuotaMessage, recordUsage } from "@/lib/usage";
+import { getLeadQuota, leadQuotaMessage, consumeLeadQuota } from "@/lib/usage";
 import { friendlyProviderError } from "@/lib/friendly-error";
 
 export const runtime = "nodejs";
@@ -54,7 +54,8 @@ export async function POST(req: NextRequest) {
     const candidates = await searchExaPeople(businessName, body.location?.trim() ?? "", {
       people,
     });
-    await recordUsage(userId, "leads", 1);
+    const spent = await consumeLeadQuota(userId, 1);
+    if (!spent.accepted) return NextResponse.json({ error: leadQuotaMessage(spent.quota) }, { status: 403 });
     return NextResponse.json({ candidates });
   } catch (err) {
     return NextResponse.json({ error: friendlyProviderError(err, "search") }, { status: 500 });

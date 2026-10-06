@@ -55,7 +55,7 @@ export default function PublicFooter() {
   // disappears rather than rendering as an empty heading.
   const groups = FOOTER_GROUPS.map((g) => ({
     label: g.label,
-    links: g.links.filter(([label, href]) => outreach || !OUTREACH_LINKS.has(href)),
+    links: g.links.filter(([, href]) => outreach || !OUTREACH_LINKS.has(href)),
   })).filter((g) => g.links.length > 0);
 
   return (

@@ -30,6 +30,8 @@ export function isOutreachEnabled(): boolean {
  * is. They come back with the flag, like everything else here.
  */
 const OUTREACH_PREFIXES = [
+  "/api/campaigns",
+  "/api/messages",
   "/dashboard",
   "/campaigns",
   "/messages",
@@ -64,4 +66,40 @@ export function isOutreachBlocked(pathname: string): boolean {
 /** Where a signed-in user belongs: the campaign dashboard, or the search screen. */
 export function getAppLandingPath(): string {
   return isOutreachEnabled() ? "/dashboard" : "/leads";
+}
+
+/**
+ * "New businesses" — saved searches that report what the company register has
+ * incorporated since you last looked — is parked.
+ *
+ * Parked on the same terms as the outreach half above: the page, its API, the
+ * daily register job and every stored row stay in the codebase and still work,
+ * and a deployment brings the whole thing back with
+ * `NEW_BUSINESSES_ENABLED=true`. Until then nothing links to it, a typed URL or
+ * a bookmark lands on the search screen, and its API answers 404 rather than
+ * pretending the feature never existed.
+ *
+ * The job is paused with it rather than left running out of sight: its only
+ * output is an email pointing at a page the app no longer offers, which is worse
+ * than no email at all. A pause loses nothing — re-enabling runs the usual
+ * catch-up window (DIGEST_MAX_DAYS), so a watch checked today and re-enabled in
+ * six months reports the same recent week it would have either way.
+ */
+export function isNewBusinessesEnabled(): boolean {
+  return process.env.NEW_BUSINESSES_ENABLED === "true";
+}
+
+/** The page plus its API — both have to move together, or the app fetches a route the UI no longer offers. */
+const NEW_BUSINESSES_PREFIXES = ["/watches", "/api/watches"];
+
+/** True when `pathname` belongs to the parked "New businesses" feature. */
+export function isNewBusinessesPath(pathname: string): boolean {
+  return NEW_BUSINESSES_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
+
+/** Whether this request must be turned away because the feature is parked. */
+export function isNewBusinessesBlocked(pathname: string): boolean {
+  return !isNewBusinessesEnabled() && isNewBusinessesPath(pathname);
 }

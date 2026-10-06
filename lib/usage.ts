@@ -1,4 +1,4 @@
-import { q, q1 } from "./db";
+import { q, q1, getDb, type Queryable } from "./db";
 import {
   PLANS,
   normalizePlan,
@@ -69,4 +69,29 @@ export function leadQuotaMessage(quota: LeadQuota): string {
   return `You've used all ${quota.limit} Lead Finder results included in the ${quota.plan.name} plan this month.${
     next ? ` Upgrade to ${next} for more, or wait until next month.` : " The counter resets next month."
   }`;
+}
+
+/** Lock the account while spending the remaining allowance. No network work
+ * runs under this lock. Queue completion passes its transaction so metering
+ * and publishing the durable result commit (or roll back) together. */
+export async function consumeLeadQuota(userId: number, requested: number, tx?: Queryable): Promise<{ accepted: number; quota: LeadQuota }> {
+  const consume = async (db: Queryable) => {
+    const [user] = await db.query<{ plan: string; created_at: string; plan_changed_at: string | null }>(
+      "SELECT plan, created_at, plan_changed_at FROM users WHERE id = $1 FOR UPDATE", [userId]);
+    if (!user) throw new Error("Account no longer exists");
+    const plan = PLANS[normalizePlan(user.plan)];
+    const bonus = upgradeBonusLeads(plan, user.plan_changed_at ?? user.created_at);
+    const [usage] = await db.query<{ n: number }>(
+      "SELECT COALESCE(SUM(count), 0)::int n FROM usage_daily WHERE user_id = $1 AND kind = 'leads' AND day >= $2", [userId, monthStart()]);
+    const limit = plan.leadsPerMonth == null ? null : plan.leadsPerMonth + bonus;
+    const remaining = remainingLeads(plan, Number(usage.n), bonus);
+    const accepted = Math.min(Math.max(0, Math.floor(requested)), remaining ?? requested);
+    if (accepted > 0) await db.query(
+      `INSERT INTO usage_daily (user_id, day, kind, count) VALUES ($1, $2, 'leads', $3)
+       ON CONFLICT (user_id, day, kind) DO UPDATE SET count = usage_daily.count + EXCLUDED.count`,
+      [userId, today(), accepted]);
+    return { accepted, quota: { plan, bonus, limit, used: Number(usage.n) + accepted,
+      remaining: remaining == null ? null : remaining - accepted } };
+  };
+  return tx ? consume(tx) : (await getDb()).transaction(consume);
 }

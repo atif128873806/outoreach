@@ -1,6 +1,8 @@
+import { isOutreachEnabled } from "@/lib/product";
 import { NextRequest, NextResponse } from "next/server";
 import { q, q1 } from "@/lib/db";
-import { getUserId, isAdmin } from "@/lib/auth";
+import { getAdminId } from "@/lib/admin-auth";
+import { validAdminOrigin } from "@/lib/admin-session";
 import { isSystemMailerConfigured } from "@/lib/system-mailer";
 import { getAiConfig } from "@/lib/settings";
 import { normalizePlan } from "@/lib/plans";
@@ -29,11 +31,8 @@ interface AdminUserRow {
 
 /** Admin-only: all accounts with basic usage counts, plus instance status. */
 export async function GET() {
-  const uid = await getUserId();
+  const uid = await getAdminId();
   if (uid == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!(await isAdmin(uid))) {
-    return NextResponse.json({ error: "Admins only" }, { status: 403 });
-  }
 
   const userRows = await q<AdminUserRow>(
     `SELECT u.id, u.email, u.name, u.is_admin, u.plan, u.created_at, u.email_verified,
@@ -115,11 +114,12 @@ export async function GET() {
     users,
     funnel,
     instance: {
+      outreachEnabled: isOutreachEnabled(),
       signupsDisabled: process.env.SIGNUPS_DISABLED === "true",
       systemMailer: isSystemMailerConfigured(),
       globalAi: globalAi ? globalAi.provider : null,
     },
-  });
+  }, {headers:{"Cache-Control":"no-store"}});
 }
 
 /**
@@ -127,13 +127,12 @@ export async function GET() {
  * checkout is wired in, this is how paid plans are assigned after purchase.
  */
 export async function PATCH(req: NextRequest) {
-  const uid = await getUserId();
+  const uid = await getAdminId();
   if (uid == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!(await isAdmin(uid))) {
-    return NextResponse.json({ error: "Admins only" }, { status: 403 });
-  }
 
-  const body = (await req.json()) as { userId?: number; plan?: string };
+  if (!validAdminOrigin(req.url,req.headers)) return NextResponse.json({error:"Invalid origin"},{status:403});
+  const body = await req.json().catch(()=>null) as { userId?: number; plan?: string } | null;
+  if (!body) return NextResponse.json({error:"Invalid request"},{status:400});
   const targetId = Number(body.userId);
   if (!Number.isInteger(targetId) || targetId <= 0) {
     return NextResponse.json({ error: "userId is required" }, { status: 400 });
@@ -147,12 +146,15 @@ export async function PATCH(req: NextRequest) {
 
   // Stamp plan_changed_at only on a real change — re-saving the same plan
   // must not restart the first-week upgrade bonus.
-  await q(
-    `UPDATE users SET
-       plan_changed_at = CASE WHEN plan = $1 THEN plan_changed_at ELSE now() END,
-       plan = $1
-     WHERE id = $2`,
-    [normalizePlan(body.plan), targetId]
-  );
+  const { getDb } = await import("@/lib/db");
+  await (await getDb()).transaction(async tx => {
+    const [before] = await tx.query<{plan:string}>("SELECT plan FROM users WHERE id=$1 FOR UPDATE",[targetId]);
+    if (!before) return;
+    await tx.query(`UPDATE users SET
+      plan_changed_at = CASE WHEN plan=$1 THEN plan_changed_at ELSE now() END,
+      plan=$1 WHERE id=$2`,[normalizePlan(body.plan),targetId]);
+    if (before.plan !== body.plan) await tx.query(`INSERT INTO admin_audit_events(actor_id,subject_id,action,detail)
+      VALUES ($1,$2,'plan-change',$3)`,[uid,targetId,`${before.plan} → ${body.plan}`]);
+  });
   return NextResponse.json({ ok: true });
 }

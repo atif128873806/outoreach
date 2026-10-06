@@ -65,7 +65,6 @@ async function createAdapter(): Promise<Adapter> {
   fs.mkdirSync(path.dirname(storagePath), { recursive: true });
   const lite = new PGlite(storagePath);
   await lite.waitReady;
-  let chain: Promise<unknown> = Promise.resolve(); // serialize transactions
 
   const q = async <T>(text: string, params: unknown[] = []) => {
     const res = await lite.query(text, params);
@@ -78,19 +77,13 @@ async function createAdapter(): Promise<Adapter> {
       await lite.exec(sql);
     },
     transaction<T>(fn: (tx: Queryable) => Promise<T>): Promise<T> {
-      const run = chain.then(async () => {
-        await lite.query("BEGIN");
-        try {
-          const result = await fn({ query: q });
-          await lite.query("COMMIT");
-          return result;
-        } catch (err) {
-          await lite.query("ROLLBACK").catch(() => {});
-          throw err;
-        }
-      });
-      chain = run.catch(() => {});
-      return run as Promise<T>;
+      // PGlite's transaction mutex also excludes standalone queries. A manual
+      // BEGIN allowed unrelated requests to join (and be rolled back with) fn.
+      return lite.transaction(async (tx) => fn({
+        async query<R>(text: string, params: unknown[] = []) {
+          return (await tx.query(text, params)).rows as R[];
+        },
+      }));
     },
   };
 }
@@ -277,6 +270,147 @@ CREATE TABLE IF NOT EXISTS replies (
   handled         INTEGER NOT NULL DEFAULT 0,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Search cache: the payload store for fetched source results, website facts and
+-- geocoding. Mutable, evictable, and shared by every account (the data is
+-- public; the point is to stop re-fetching it). See lib/search-cache.ts.
+CREATE TABLE IF NOT EXISTS search_cache (
+  cache_key    TEXT PRIMARY KEY,
+  kind         TEXT NOT NULL,
+  payload      TEXT NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  refreshed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  hits         INTEGER NOT NULL DEFAULT 0,
+  last_hit_at  TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_search_cache_kind ON search_cache(kind);
+CREATE INDEX IF NOT EXISTS idx_search_cache_refreshed ON search_cache(refreshed_at);
+
+-- Search activity log: one append-only row per search attempt. Never updated,
+-- never evicted — it is the record of what people searched for, where they got
+-- nothing, and where they gave up. Deliberately a separate table from
+-- search_cache: expiring a cached payload must not erase the history of
+-- everyone who searched it.
+CREATE TABLE IF NOT EXISTS search_events (
+  id           SERIAL PRIMARY KEY,
+  -- Nullable and SET NULL: an account can be deleted, its search history stays.
+  user_id      INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  niche        TEXT NOT NULL DEFAULT '',
+  location     TEXT NOT NULL DEFAULT '',
+  source       TEXT NOT NULL DEFAULT '',
+  filter       TEXT NOT NULL DEFAULT '',
+  requested    INTEGER NOT NULL DEFAULT 0,
+  returned     INTEGER NOT NULL DEFAULT 0,
+  cache_hits   INTEGER NOT NULL DEFAULT 0,
+  cache_misses INTEGER NOT NULL DEFAULT 0,
+  latency_ms   INTEGER NOT NULL DEFAULT 0,
+  -- ok = returned leads | empty = ran, found nothing | rejected = never ran,
+  -- because of quota, plan or a bad request | error = the search itself failed.
+  outcome      TEXT NOT NULL,
+  detail       TEXT NOT NULL DEFAULT '',
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_search_events_created ON search_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_search_events_user ON search_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_search_events_outcome ON search_events(outcome);
+
+-- Audit re-checks: a user asking us to visit a site again because the audit we
+-- showed them was cached. Deliberately its own table rather than rows in
+-- search_events — a re-check is not a search, and mixing the two would corrupt
+-- the funnel numbers that log exists to report.
+--
+-- It answers the one question that decides the site cache's TTL: when someone
+-- checks again, does the cached audit turn out to have been wrong? age_seconds
+-- is how old the audit being replaced actually was, and score_before/after say
+-- whether the fresh visit agreed with it. "Of the audits older than 3 days that
+-- were re-checked, 40% had changed" is a decision; a guess is not.
+CREATE TABLE IF NOT EXISTS recheck_events (
+  id           SERIAL PRIMARY KEY,
+  user_id      INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  website      TEXT NOT NULL,
+  -- Age of the audit this replaced, in seconds. NULL = no stored audit at all.
+  age_seconds  INTEGER,
+  score_before INTEGER,
+  score_after  INTEGER,
+  -- ok = site visited | failed = it could not be loaded | refused = never ran
+  -- (a bad or internal address, or the rate limit).
+  outcome      TEXT NOT NULL,
+  detail       TEXT NOT NULL DEFAULT '',
+  latency_ms   INTEGER NOT NULL DEFAULT 0,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_recheck_events_created ON recheck_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_recheck_events_site ON recheck_events(website);
+
+-- Lead searches run as jobs, not as a held-open HTTP request: a search takes a
+-- minute on a cold cache, and the user should be able to queue another while one
+-- runs (see lib/search-jobs.ts).
+--
+-- The result column holds the finished payload whole, which is what lets a
+-- search be reopened after a page reload without re-fetching or re-auditing
+-- anything. It is also the biggest thing in this database, which is why finished
+-- jobs are aged out after a week.
+CREATE TABLE IF NOT EXISTS search_jobs (
+  id          SERIAL PRIMARY KEY,
+  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  source      TEXT NOT NULL DEFAULT 'web',
+  niche       TEXT NOT NULL,
+  location    TEXT NOT NULL,
+  filter      TEXT NOT NULL DEFAULT 'any',
+  count       INTEGER NOT NULL DEFAULT 10,
+  -- queued | running | done | failed
+  status      TEXT NOT NULL DEFAULT 'queued',
+  result      TEXT,
+  lead_count  INTEGER NOT NULL DEFAULT 0,
+  error       TEXT NOT NULL DEFAULT '',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  started_at  TIMESTAMPTZ,
+  finished_at TIMESTAMPTZ,
+  worker_token TEXT,
+  lease_until TIMESTAMPTZ,
+  opened_at TIMESTAMPTZ,
+  exported_at TIMESTAMPTZ,
+  copied_at TIMESTAMPTZ,
+  saved_at TIMESTAMPTZ
+);
+
+-- The claim walks the queue in id order, and the per-account cap counts active
+-- jobs by user, so both need an index that starts where they do.
+CREATE INDEX IF NOT EXISTS idx_search_jobs_queue ON search_jobs(status, id);
+CREATE INDEX IF NOT EXISTS idx_search_jobs_user ON search_jobs(user_id, status);
+
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  token_hash TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  password_stamp TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_expiry ON admin_sessions(expires_at);
+CREATE TABLE IF NOT EXISTS admin_audit_events (
+  id SERIAL PRIMARY KEY,
+  actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  subject_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  detail TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS search_extractions (
+  id SERIAL PRIMARY KEY,
+  job_id INTEGER NOT NULL,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  niche TEXT NOT NULL,
+  location TEXT NOT NULL,
+  source TEXT NOT NULL,
+  action TEXT NOT NULL CHECK (action IN ('exported','copied','saved')),
+  lead_count INTEGER NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(job_id, action)
+);
+CREATE INDEX IF NOT EXISTS idx_search_extractions_created ON search_extractions(created_at DESC);
 `;
 
 async function init(): Promise<Adapter> {
@@ -331,6 +465,15 @@ async function init(): Promise<Adapter> {
     `ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS test_batch INTEGER NOT NULL DEFAULT 0;
      ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS test_done INTEGER NOT NULL DEFAULT 0`
   );
+  await db.exec(`ALTER TABLE search_jobs ADD COLUMN IF NOT EXISTS worker_token TEXT;
+    ALTER TABLE search_jobs ADD COLUMN IF NOT EXISTS lease_until TIMESTAMPTZ;
+    ALTER TABLE search_jobs ADD COLUMN IF NOT EXISTS opened_at TIMESTAMPTZ;
+    ALTER TABLE search_jobs ADD COLUMN IF NOT EXISTS exported_at TIMESTAMPTZ;
+    ALTER TABLE search_jobs ADD COLUMN IF NOT EXISTS copied_at TIMESTAMPTZ;
+    ALTER TABLE search_jobs ADD COLUMN IF NOT EXISTS saved_at TIMESTAMPTZ`);
+  await db.exec(`ALTER TABLE search_events ADD COLUMN IF NOT EXISTS job_id INTEGER REFERENCES search_jobs(id) ON DELETE SET NULL;
+    ALTER TABLE search_events ADD COLUMN IF NOT EXISTS stage TEXT NOT NULL DEFAULT 'lead-search';
+    CREATE INDEX IF NOT EXISTS idx_search_events_job ON search_events(job_id)`);
   return db;
 }
 

@@ -26,12 +26,12 @@ export default function PublicShell({
   return (
     <div className="min-h-screen bg-white text-zinc-900 antialiased">
       <header className="sticky top-0 z-40 border-b border-zinc-100 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
+        <div className="mx-auto flex min-h-14 max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 py-3 sm:flex-nowrap sm:py-0">
           <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
             <LogoTile className="h-7 w-7" />
             {SITE.name}
           </Link>
-          <nav className="flex items-center gap-6 text-sm text-zinc-500">
+          <nav className="flex flex-wrap items-center gap-4 text-sm sm:gap-6 text-zinc-500">
             <Link href="/features" className="hidden hover:text-zinc-900 sm:inline">Features</Link>
             <span className="hidden sm:block"><ToolsDropdown /></span>
             <Link href="/docs" className="hidden hover:text-zinc-900 sm:inline">Docs</Link>

@@ -14,7 +14,6 @@ const TOC = [
   ["leads", "Finding leads"],
   ["accuracy", "What we refuse to claim"],
   ["working", "Working the list"],
-  ["new-businesses", "New businesses (the weekly list)"],
   ["limits", "Plans & limits"],
   ["troubleshooting", "Troubleshooting"],
 ] as const;
@@ -240,53 +239,6 @@ export default function DocsPage() {
               business and attaches their name and role to the lead.
             </li>
           </ul>
-        </Section>
-      </div>
-
-      <div id="new-businesses" className="scroll-mt-20">
-        <Section heading="New businesses — the list that fills itself">
-          <p>
-            Save a niche and a place on the <b>New businesses</b> page (Starter and up) and the
-            list stops depending on you remembering to search. Everything here comes from the
-            official UK company register, and a company is judged new by the one thing that
-            cannot go stale: its <b>incorporation date</b>.
-          </p>
-          <ul className="list-disc space-y-2 pl-5">
-            <li>
-              <b>What you get</b> — companies incorporated since your last check, newest first,
-              each with its registered office, business type and director names taken from the
-              register.
-            </li>
-            <li>
-              <b>Why it is worth opening</b> — a business registered this week has no website to
-              audit and nobody working with it yet. That is the one moment it is a lead and not a
-              competitor&apos;s customer.
-            </li>
-            <li>
-              <b>When it runs</b> — every day, per search. A search is picked up once seven days
-              have passed since its last check, so a quiet week does not skip it and a failed run
-              never loses the companies it failed to see.
-            </li>
-            <li>
-              <b>The email</b> — one message per account covering every search that found
-              something, and nothing at all when there is nothing to say. If the deployment has no
-              system mailer set up (<Code>SYSTEM_SMTP_*</Code>), the list still builds; it simply
-              stays in the app, and the page says so rather than leaving you waiting.
-            </li>
-            <li>
-              <b>Clearing the list</b> — opening the page marks what you have seen, so the badge
-              in the sidebar is a count of things you have not looked at yet.
-            </li>
-            <li>
-              <b>Its one limit</b> — the register is UK-only. Searching a US city here is not a
-              smaller list, it is the wrong list, so keep the watch to UK places.
-            </li>
-          </ul>
-          <p>
-            A row here is a name, a place and a director — <b>not an audit</b>. These businesses
-            have not had their website checked, because a company this new usually has none. Open
-            one in the Lead Finder when you are ready to check and pitch.
-          </p>
         </Section>
       </div>
 

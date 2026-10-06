@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   Card,
@@ -20,6 +20,12 @@ import {
   sourceLabel,
   type SourceId,
 } from "@/lib/sources/meta";
+// Freshness wording comes from its own dependency-free module: the audit age has
+// to be described identically here and on the server (lib/freshness.ts).
+import { describeFreshness, isOlderThan } from "@/lib/freshness";
+// The queue's shape as the server hands it over. Type-only on purpose:
+// importing the module itself would drag the database into the browser bundle.
+import type { PublicJob } from "@/lib/search-jobs";
 
 interface PersonCandidate {
   name: string;
@@ -156,6 +162,8 @@ interface Lead {
   source: string;
   site_flags?: string[];
   site_audit?: SiteAudit;
+  /** When the audit was actually taken — a cached visit carries an older date. */
+  site_audited_at?: string;
   tech?: string;
   pixels?: string[];
 }
@@ -181,11 +189,31 @@ const SEVERITY_CLS: Record<string, string> = {
 /**
  * The audit, in one cell: the score with the worst findings listed, so the user
  * can see at a glance which leads already have a concrete reason to be pitched.
+ *
+ * The date is part of the cell, not a detail: the website visit behind an audit
+ * is cached by site, so a score can be days old, and a user about to quote it at
+ * a stranger is entitled to know when it was taken — and to ask for a fresh one.
+ * Past three days the date turns amber, which is the point at which "their site
+ * is broken" stops being safe to say without looking again.
  */
-function SiteAuditCell({ audit }: { audit?: SiteAudit }) {
+function SiteAuditCell({
+  audit,
+  auditedAt,
+  busy,
+  message,
+  onRecheck,
+}: {
+  audit?: SiteAudit;
+  auditedAt?: string;
+  busy?: boolean;
+  message?: string;
+  onRecheck?: () => void;
+}) {
   if (!audit) return <span className="text-zinc-300">not checked</span>;
   const tone = auditTone(audit);
   const findings = audit.checks.filter((c) => c.severity === "critical" || c.severity === "high");
+  const stale = isOlderThan(auditedAt, 3 * 86_400);
+  const age = describeFreshness(auditedAt);
 
   return (
     <div className="min-w-[210px]">
@@ -230,6 +258,27 @@ function SiteAuditCell({ audit }: { audit?: SiteAudit }) {
             </div>
           )}
         </details>
+      )}
+      {(onRecheck || auditedAt) && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span
+            className={`text-[11px] ${stale ? "text-amber-600" : "text-zinc-400"}`}
+            title={auditedAt ? new Date(auditedAt).toLocaleString() : undefined}
+          >
+            {age}
+          </span>
+          {onRecheck && (
+            <button
+              onClick={onRecheck}
+              disabled={busy}
+              className="text-[11px] text-zinc-500 underline hover:text-zinc-700 disabled:opacity-50"
+              title="Visit the site again now, and use what comes back instead of the cached audit"
+            >
+              {busy ? "checking…" : "re-check"}
+            </button>
+          )}
+          {message && <span className="text-[11px] text-zinc-500">{message}</span>}
+        </div>
       )}
     </div>
   );
@@ -276,7 +325,7 @@ function toCsv(leads: Lead[]): string {
   // to reach them, then why to reach out and the evidence behind it. Import
   // maps by header name, so this round-trips.
   const header =
-    "business_name,category,address,website,email,phone,instagram,linkedin,contact_name,contact_profile,why_reach_out,site_score,site_grade,site_verdict,site_problems,site_audit_summary,notes";
+    "business_name,category,address,website,email,phone,instagram,linkedin,contact_name,contact_profile,why_reach_out,site_score,site_grade,site_verdict,site_problems,site_audit_summary,site_audited_at,notes";
   const rows = leads.map((l) =>
     [
       l.business_name,
@@ -298,6 +347,10 @@ function toCsv(leads: Lead[]): string {
       verdictLabel(l.site_audit),
       l.site_audit ? l.site_audit.flags.join("; ") : l.website ? "" : "no website at all",
       l.site_audit ? l.site_audit.summary : "",
+      // When the audit was taken, ISO. The export leaves the app and gets quoted
+      // in public, so the date travels with it — a stale finding in a pitch is
+      // the user's embarrassment, not ours to hide.
+      l.site_audit && l.site_audited_at ? l.site_audited_at : "",
       // Company intel + address both help the AI personalize
       [l.notes, l.address].filter(Boolean).join(" — "),
     ]
@@ -360,13 +413,58 @@ function reachScore(l: Lead): number {
   );
 }
 
+/** Whether a job is still waiting or in flight — the two "wait for me" states. */
+function isActiveJob(job: PublicJob): boolean {
+  return job.status === "queued" || job.status === "running";
+}
+
+/** A job's filter, narrowed from JSON without trusting it. */
+function asWebsiteFilter(value: unknown): WebsiteFilter {
+  return value === "with" || value === "without" || value === "outdated" ? value : "any";
+}
+
+/**
+ * When a search finished, in words — coarse, like the audit ages on the rows.
+ * A stored result is worth saying *when* about, because that is how stale the
+ * audit inside it might be.
+ */
+function describeWhen(at: string | null): string {
+  if (!at) return "finished";
+  const ms = Date.parse(at);
+  if (!Number.isFinite(ms)) return "finished";
+  const minutes = Math.round((Date.now() - ms) / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
 export default function LeadsPage() {
   const [source, setSource] = useState<SourceId>("web");
   const [niche, setNiche] = useState("");
   const [location, setLocation] = useState("");
   const [count, setCount] = useState(10);
   const [websiteFilter, setWebsiteFilter] = useState<WebsiteFilter>("any");
-  const [searching, setSearching] = useState(false);
+  /**
+   * The search queue as the server reports it: this account's recent searches,
+   * newest first, without their leads — a finished payload is the largest thing
+   * in the database and this list is polled every couple of seconds
+   * (see app/api/leads/jobs/route.ts).
+   */
+  const [jobs, setJobs] = useState<PublicJob[]>([]);
+  /** How many searches this account may have in flight at once (server-owned). */
+  const [queueCap, setQueueCap] = useState(2);
+  /** The job whose leads are on screen, so the list can mark it as showing. */
+  const [openJobId, setOpenJobId] = useState<number | null>(null);
+  /**
+   * The job this browser is waiting for. Set when the user submits a search,
+   * cleared when its result opens or its failure is shown — so a search the user
+   * started always ends in either leads or an error on screen, even though the
+   * request that started it answered two minutes earlier.
+   */
+  const [watchJobId, setWatchJobId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [leads, setLeads] = useState<Lead[] | null>(null);
@@ -382,6 +480,10 @@ export default function LeadsPage() {
   } | null>(null);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  /** Per-row re-check state, keyed by row index: busy while it runs, plus what it said. */
+  const [rechecks, setRechecks] = useState<
+    Record<number, { busy?: boolean; message?: string }>
+  >({});
   const [people, setPeople] = useState<Record<number, PeopleState>>({});
   /** Result-view chip: null = all, "pixels"/"issues" = special, else a stack name. */
   const [chip, setChip] = useState<string | null>(null);
@@ -410,6 +512,20 @@ export default function LeadsPage() {
    * source, or the user clicks it and gets an error that isn't their fault.
    */
   const [sourceIds, setSourceIds] = useState<SourceId[] | null>(null);
+
+  const activeJobs = jobs.filter(isActiveJob);
+  /** Whether anything is waiting or in flight — the form stays usable either way. */
+  const hasActive = activeJobs.length > 0;
+  const runningJob = activeJobs.find((j) => j.status === "running");
+  /** Settled searches, newest first — the ones worth reopening. */
+  const finishedJobs = jobs.filter((j) => !isActiveJob(j));
+  /** At the cap the server would answer 429, so the button says so first. */
+  const submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const pollingRef = useRef(false);
+  const [queueWarning, setQueueWarning] = useState<string | null>(null);
+
+  const capReached = activeJobs.length >= queueCap;
 
   /**
    * Prefill from the query string, so a link like the digest's "search this
@@ -464,6 +580,114 @@ export default function LeadsPage() {
       setSource(sourceIds[0]);
     }
   }, [sourceIds, source]);
+
+  /** Pulls the queue's current state. Cheap: no lead payloads travel with it. */
+  const refreshJobs = useCallback(async () => {
+    if (pollingRef.current) return;
+    pollingRef.current = true;
+    try {
+      const res = await fetch("/api/leads/jobs");
+      if (!res.ok) throw new Error("Could not check search progress. Retrying…");
+      const data = (await res.json()) as { jobs?: PublicJob[]; cap?: number };
+      if (Array.isArray(data.jobs)) setJobs(data.jobs);
+      if (typeof data.cap === "number" && data.cap > 0) setQueueCap(data.cap);
+      setQueueWarning(null);
+    } catch {
+      setQueueWarning("Search progress is temporarily unavailable. Retrying…");
+    } finally {
+      pollingRef.current = false;
+    }
+  }, []);
+
+  const trackAction = useCallback((id: number | null, action: "opened" | "exported" | "copied") => {
+    if (id == null) return;
+    void fetch(`/api/leads/jobs/${id}/actions`, { method: "POST",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) }).catch(() => {});
+  }, []);
+
+  /**
+   * Opens one finished search's leads.
+   *
+   * The queue list deliberately carries no leads, so this is where a result is
+   * actually read — and the job's own parameters are what the results header
+   * describes, not the form as it happens to look now. Reopening a stored result
+   * costs nothing: the work was already done and paid for when it ran.
+   */
+  const openJob = useCallback(async (id: number) => {
+    try {
+      const res = await fetch(`/api/leads/jobs/${id}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not open that search");
+      if (!data.result) throw new Error("That search has no leads to show");
+      const job = data.job as PublicJob;
+      setLeads(data.result.leads as Lead[]);
+      setMeta(data.result.meta ?? null);
+      setNote(typeof data.result.note === "string" ? data.result.note : null);
+      setLastSearch({
+        niche: job?.niche ?? niche,
+        location: job?.location ?? location,
+        filter: asWebsiteFilter(job?.filter),
+      });
+      setOpenJobId(id);
+      trackAction(id, "opened");
+      setError(null);
+      setChip(null);
+      setSelected(new Set());
+      setImportMsg(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not open that search");
+    }
+  }, [niche, location, trackAction]);
+
+
+  // On arrival, read the queue once: a search started in another tab, or before
+  // a reload, is still this account's search and should still be on screen.
+  useEffect(() => {
+    void refreshJobs();
+  }, [refreshJobs]);
+
+  /**
+   * Polls while anything is in flight, then stops.
+   *
+   * Two seconds is the compromise: often enough that a finished search feels
+   * immediate, rarely enough that a minute-long cold search costs thirty tiny
+   * JSON reads rather than a stream. `hasActive` and `watchJobId` are the
+   * dependencies rather than `jobs` itself, because a new array every poll would
+   * rebuild the interval every two seconds — and an idle screen makes no
+   * requests at all.
+   */
+  useEffect(() => {
+    if (!hasActive && watchJobId == null && !queueWarning) return;
+    let stop = false;
+    const tick = async () => {
+      if (stop) return;
+      await refreshJobs();
+    };
+    void tick();
+    const timer = setInterval(() => void tick(), 2000);
+    return () => {
+      stop = true;
+      clearInterval(timer);
+    };
+  }, [hasActive, watchJobId, queueWarning, refreshJobs]);
+
+  /**
+   * A search the user started has to end somewhere. When the job it asked for
+   * finishes, its leads open; if it fails, its own message is shown. Without
+   * this the 202 would leave the screen silent.
+   */
+  useEffect(() => {
+    if (watchJobId == null) return;
+    const job = jobs.find((j) => j.id === watchJobId);
+    if (!job) return;
+    if (job.status === "done") {
+      setWatchJobId(null);
+      void openJob(job.id);
+    } else if (job.status === "failed") {
+      setWatchJobId(null);
+      setError(job.error || "That search failed.");
+    }
+  }, [jobs, watchJobId, openJob]);
 
   /** The plan that unlocks a filter, or undefined when it is available. */
   function accessFor(f: WebsiteFilter): LeadFilterAccess | undefined {
@@ -538,7 +762,10 @@ export default function LeadsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           business_name: lead.business_name,
-          location,
+          // The place from the search that produced this row, not whatever the
+          // form happens to hold now — results stay open while the next search
+          // is being typed.
+          location: lastSearch?.location ?? location,
           // When the source already named the people behind the company, the
           // lookup is for those people — not a guess at who runs it. Both
           // directors go in one search: the one with a profile is often not the
@@ -584,16 +811,81 @@ export default function LeadsPage() {
     setPeople((p) => ({ ...p, [i]: { chosen: c } }));
   }
 
+  /**
+   * Visits one lead's site again, now, and replaces the row's audit with what
+   * comes back.
+   *
+   * Nothing about this is optimistic: the row keeps showing the old audit until
+   * the fresh one arrives, and a site that can't be reached says so rather than
+   * silently keeping a date the user would read as "checked just now".
+   */
+  async function recheck(i: number) {
+    const lead = leads?.[i];
+    if (!lead?.website) return;
+    setRechecks((r) => ({ ...r, [i]: { busy: true } }));
+    try {
+      const res = await fetch("/api/leads/recheck", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          website: lead.website,
+          // The row's own search, so re-checking an older result audits it under
+          // the filter and place it was found with rather than the current form's.
+          location: lastSearch?.location ?? location,
+          filter: lastSearch?.filter ?? websiteFilter,
+          // Only what a fresh visit can change, so the server merges against the
+          // row as the user sees it without being trusted with the rest of it.
+          lead: {
+            business_name: lead.business_name,
+            email: lead.email,
+            phone: lead.phone,
+            instagram: lead.instagram,
+            linkedin: lead.linkedin,
+            address: lead.address,
+            notes: lead.notes,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Re-check failed");
+      setLeads((ls) => {
+        if (!ls) return ls;
+        const next = [...ls];
+        next[i] = { ...next[i], ...data.lead };
+        return next;
+      });
+      // The server's line, not ours: it is the one that knows whether the audit
+      // moved ("82 → 74/100 (worse), 3 days ago") or held ("still 82/100, 3 days
+      // ago"), and that comparison is the only reason to press the button.
+      setRechecks((r) => ({ ...r, [i]: { message: data.note ?? "updated" } }));
+    } catch (err) {
+      setRechecks((r) => ({
+        ...r,
+        [i]: { message: err instanceof Error ? err.message : "Re-check failed" },
+      }));
+    }
+  }
+
+  /**
+   * Queues a search and returns immediately.
+   *
+   * The request used to run the whole search, which is why the screen felt
+   * broken: a cold search takes a minute and the user could not do anything else.
+   * Now it stores a job (202) and this polls for it, so the form stays usable and
+   * a second search can be queued while the first one runs. Whatever results are
+   * already on screen stay there until the new ones arrive, rather than blanking
+   * the page the moment a search starts.
+   */
   async function search() {
+    if (submittingRef.current) return;
     const gate = accessFor(websiteFilter);
     if (gate && !gate.unlocked) {
       setLockedNotice(gate);
       return;
     }
-    setSearching(true);
+    submittingRef.current = true;
+    setSubmitting(true);
     setError(null);
-    setNote(null);
-    setLeads(null);
     setImportMsg(null);
     try {
       const res = await fetch("/api/leads", {
@@ -602,18 +894,20 @@ export default function LeadsPage() {
         body: JSON.stringify({ source, niche, location, count, websiteFilter }),
       });
       const data = await res.json();
+      // A refusal — rate limited, the queue full, a filter this plan doesn't
+      // include — arrives in the queue's own words, so it is shown as it came.
       if (!res.ok) throw new Error(data.error || "Search failed");
-      setLeads(data.leads);
-      setMeta(data.meta);
-      setNote(data.note ?? null);
-      setLastSearch({ niche, location, filter: websiteFilter });
-      setChip(null);
-      setSelected(new Set());
-      setImportMsg(null);
+      const job = data.job as PublicJob | undefined;
+      if (job) {
+        setJobs((prev) => [job, ...prev.filter((j) => j.id !== job.id)]);
+        setWatchJobId(job.id);
+        void refreshJobs();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
     } finally {
-      setSearching(false);
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   }
 
@@ -623,8 +917,12 @@ export default function LeadsPage() {
     const blob = new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `leads-${slug(niche)}-${slug(location)}-${websiteFilter}.csv`;
+    // Named after the search the rows came from, not after the form: results
+    // stay open while the next search is being typed.
+    const named = lastSearch ?? { niche, location, filter: websiteFilter };
+    a.download = `leads-${slug(named.niche)}-${slug(named.location)}-${named.filter}.csv`;
     a.click();
+    trackAction(openJobId, "exported");
     URL.revokeObjectURL(a.href);
   }
 
@@ -634,6 +932,7 @@ export default function LeadsPage() {
     if (!rows.length) return;
     try {
       await navigator.clipboard.writeText(toPitchText(rows));
+      trackAction(openJobId, "copied");
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -647,6 +946,7 @@ export default function LeadsPage() {
     if (!lead) return;
     try {
       await navigator.clipboard.writeText(toPitchText([lead]));
+      trackAction(openJobId, "copied");
       setCopiedIdx(i);
       setTimeout(() => setCopiedIdx((c) => (c === i ? null : c)), 2000);
     } catch {
@@ -667,11 +967,11 @@ export default function LeadsPage() {
       const res = await fetch("/api/contacts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csv: toCsv(withEmail) }),
+        body: JSON.stringify({ csv: toCsv(withEmail), searchJobId: openJobId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Import failed");
-      setImportMsg(`Imported ${data.imported} contact${data.imported === 1 ? "" : "s"} — ready for a campaign.`);
+      setImportMsg(`Imported ${data.imported} contact${data.imported === 1 ? "" : "s"} — saved to your Contacts.`);
     } catch (err) {
       setImportMsg(err instanceof Error ? err.message : "Import failed");
     } finally {
@@ -819,13 +1119,24 @@ export default function LeadsPage() {
           <button
             className={`${btnPrimary} justify-center sm:min-w-52`}
             onClick={search}
-            disabled={searching || !niche.trim() || !location.trim()}
+            disabled={submitting || capReached || !niche.trim() || !location.trim()}
           >
-            {searching ? "Searching…" : `Find ${count} leads`}
+            {submitting ? "Queueing…" : capReached
+              ? `${queueCap} searches in flight`
+              : hasActive
+                ? "Queue another search"
+                : `Find ${count} leads`}
           </button>
           <span className="text-xs text-zinc-500">{FILTER_CTA[websiteFilter]}</span>
         </div>
-        {websiteFilter === "outdated" && !searching && (
+        {queueWarning && <p role="status" className="mt-3 text-sm text-amber-700">{queueWarning}</p>}
+        {capReached && (
+          <p className="mt-2 text-xs text-amber-600">
+            You already have {queueCap} searches queued or running — the next one can start the
+            moment one of them finishes.
+          </p>
+        )}
+        {websiteFilter === "outdated" && !hasActive && (
           <p className="text-xs text-zinc-500 mt-3">
             Only sites with at least one serious, checkable problem are kept: unreachable or
             erroring pages, invalid certificates, no HTTPS, no mobile layout, broken homepage
@@ -833,7 +1144,7 @@ export default function LeadsPage() {
             description are recorded but never used to call a working site broken.
           </p>
         )}
-        {websiteFilter === "without" && !searching && (
+        {websiteFilter === "without" && !hasActive && (
           <p className="text-xs text-zinc-500 mt-3">
             Businesses with no website at all — the strongest pitch there is.{" "}
             {/* Which data behind this search depends on the source picked above;
@@ -844,14 +1155,87 @@ export default function LeadsPage() {
               : "This search reads open map data (OpenStreetMap), then looks up each business's Instagram, phone and email across the web so you can actually reach them."}
           </p>
         )}
-        {searching && <SearchProgress source={source} />}
+        {/*
+          What is in flight right now, one card per job. The queue's whole point
+          is that these can be plural: two searches running side by side, with
+          the form still open underneath for the next one.
+        */}
+        {activeJobs.map((job) => (
+          <div key={job.id} className="mt-4 rounded-xl border border-zinc-200 px-4 py-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="text-sm font-medium text-zinc-800">
+                {job.niche} in {job.location}
+              </span>
+              <span className="text-xs text-zinc-400">
+                {job.status === "queued" ? "Queued" : "In progress"} · {job.count} leads
+              </span>
+            </div>
+            {job.status === "running" ? (
+              <SearchProgress source={job.source} startedAt={job.startedAt} />
+            ) : (
+              <div className="mt-2 flex items-center gap-2 text-sm text-zinc-500">
+                <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-400" />
+                Waiting for a free slot…
+              </div>
+            )}
+          </div>
+        ))}
         {error && <div className="text-sm text-red-500 mt-3">{error}</div>}
         {note && <div className="text-sm text-amber-600 mt-3">{note}</div>}
       </Card>
 
-      {searching && <SkeletonResults rows={Math.min(count, 6)} />}
+      {finishedJobs.length > 0 && (
+        <Card className="p-0 mb-6 overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 px-5 py-3">
+            <span className="text-sm font-medium text-zinc-700">Your recent searches</span>
+            <span className="text-xs text-zinc-400">
+              Kept for a week — reopen one without spending another search
+            </span>
+          </div>
+          <div className="divide-y divide-zinc-100">
+            {finishedJobs.map((job) => {
+              const open = job.id === openJobId;
+              return (
+                <div
+                  key={job.id}
+                  className={`flex flex-wrap items-center gap-3 px-5 py-3 ${open ? "bg-blue-50/60" : ""}`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-zinc-800">
+                      {job.niche} in {job.location}
+                      {job.filter !== "any" && (
+                        <span className="font-normal text-zinc-400"> · {job.filter}</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-zinc-400">
+                      {job.status === "failed" ? (
+                        <span className="text-red-500">{job.error || "That search failed."}</span>
+                      ) : (
+                        `${job.leadCount} lead${job.leadCount === 1 ? "" : "s"} · ${describeWhen(job.finishedAt)}`
+                      )}
+                    </div>
+                  </div>
+                  {job.status === "done" && (
+                    <button
+                      className={btnSecondary}
+                      onClick={() => void openJob(job.id)}
+                      disabled={open}
+                    >
+                      {open ? "Showing" : "View leads"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
-      {!searching && leads && leads.length > 0 && (
+      {runningJob != null && leads == null && (
+        <SkeletonResults rows={Math.min(runningJob.count, 6)} />
+      )}
+
+      {leads && leads.length > 0 && (
         <Card className="p-0 overflow-hidden">
           <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between flex-wrap gap-3">
             <div className="text-sm">
@@ -1077,7 +1461,13 @@ export default function LeadsPage() {
                     </td>
                     <td className="px-4 py-2.5 align-top">
                       {l.website ? (
-                        <SiteAuditCell audit={l.site_audit} />
+                        <SiteAuditCell
+                          audit={l.site_audit}
+                          auditedAt={l.site_audited_at}
+                          busy={rechecks[i]?.busy}
+                          message={rechecks[i]?.message}
+                          onRecheck={() => recheck(i)}
+                        />
                       ) : (
                         <div className="min-w-[210px]">
                           <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
@@ -1237,42 +1627,36 @@ function SourceOption({
   );
 }
 
-/** Staged progress line — tells the user what the pipeline is doing right now. */
-const SEARCH_STAGES: { at: number; label: (src: string) => string }[] = [
-  { at: 0, label: (src) => `Searching ${src} for businesses…` },
-  { at: 6, label: () => "Found candidates — visiting their websites…" },
-  { at: 16, label: () => "Extracting emails, Instagram, and LinkedIn…" },
-  { at: 32, label: () => "Rendering JS-heavy sites to find hidden contact info…" },
-  { at: 50, label: () => "Sorting the most contactable leads first — almost done…" },
-];
+/** Whole seconds since a job started, read from the job's own clock. */
+function secondsSince(startedAt: string | null | undefined): number {
+  if (!startedAt) return 0;
+  const at = Date.parse(startedAt);
+  return Number.isFinite(at) ? Math.max(0, Math.floor((Date.now() - at) / 1000)) : 0;
+}
 
-function SearchProgress({ source }: { source: string }) {
-  const [elapsed, setElapsed] = useState(0);
+/**
+ * The stage the running search is at.
+ *
+ * It counts from the job's `startedAt` rather than from when this component
+ * mounted: a search that has been running for a minute, opened in a second tab,
+ * must not read "1s" simply because that tab just noticed it.
+ */
+function SearchProgress({ source, startedAt }: { source: string; startedAt?: string | null }) {
+  const [elapsed, setElapsed] = useState(() => secondsSince(startedAt));
   useEffect(() => {
-    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
+    const t = setInterval(() => setElapsed(secondsSince(startedAt)), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [startedAt]);
   // Web search reads as "the web" in a sentence; everything else is its label.
   const srcName = source === "web" ? "the web" : sourceLabel(source);
-  let idx = 0;
-  for (let i = 0; i < SEARCH_STAGES.length; i++) if (elapsed >= SEARCH_STAGES[i].at) idx = i;
   return (
     <div className="mt-4">
       <div className="flex items-center gap-2.5 text-sm text-zinc-600">
         <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-zinc-200 border-t-blue-600" />
-        {SEARCH_STAGES[idx].label(srcName)}
+        Searching {srcName} and checking business details…
         <span className="text-xs tabular-nums text-zinc-400">{elapsed}s</span>
       </div>
-      <div className="mt-2.5 flex gap-1.5">
-        {SEARCH_STAGES.map((s, i) => (
-          <span
-            key={s.at}
-            className={`h-1 flex-1 rounded-full transition-colors duration-500 ${
-              i <= idx ? "bg-blue-600" : "bg-zinc-100"
-            }`}
-          />
-        ))}
-      </div>
+
     </div>
   );
 }

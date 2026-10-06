@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * "New businesses" — the saved-search digest.
+ *
+ * Parked for now: the router redirects /watches to the search screen and its API
+ * answers 404 unless the deployment sets `NEW_BUSINESSES_ENABLED=true` (see
+ * lib/product.ts), so nothing on this page is reachable in the meantime. It is
+ * kept whole and working rather than deleted, because the feature is paused, not
+ * dropped — the tables, the register job and this screen come back with the flag.
+ */
+
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 

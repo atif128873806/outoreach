@@ -1,3 +1,4 @@
+import { recordSearchAction } from "@/lib/search-actions";
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import Papa from "papaparse";
@@ -87,6 +88,7 @@ export async function POST(req: NextRequest) {
 
   const payload = (await req.json()) as {
     csv?: string;
+    searchJobId?: number;
     contact?: {
       email?: string;
       business_name?: string;
@@ -198,6 +200,9 @@ export async function POST(req: NextRequest) {
         email ? "unchecked" : "unknown",
       ]);
       imported++;
+    }
+    if (imported > 0 && payload.searchJobId != null) {
+      await recordSearchAction(userId, payload.searchJobId, "saved", tx);
     }
   });
 

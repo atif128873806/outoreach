@@ -15,6 +15,7 @@ const PAGES = [
   "app/page.tsx",
   "app/features/page.tsx",
   "app/docs/page.tsx",
+  "app/demo/page.tsx",
   "app/layout.tsx",
   "app/pricing/page.tsx",
   "app/components/PublicFooter.tsx",
@@ -58,6 +59,29 @@ for (const page of PAGES) {
     assert.deepEqual(found, [], `${page} still advertises sending:\n${found.join("\n")}`);
   });
 }
+
+/**
+ * "New businesses" is parked for now (see lib/product.ts, NEW_BUSINESSES_ENABLED):
+ * the page and the register job still exist, but the app does not offer them — and
+ * a landing page, a pricing bullet or a docs section still selling them would
+ * promise a feature no visitor can open. This is the copy half of that hide, and
+ * it fails the moment someone re-adds the words without the flag.
+ */
+const PARKED_FEATURE = /\bnew businesses\b|\bnewly incorporated\b|\bweekly list\b/i;
+
+test("no public page advertises the parked New businesses feature", () => {
+  const found: string[] = [];
+  for (const page of PAGES) {
+    const source = fs
+      .readFileSync(new URL(`../${page}`, import.meta.url), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    const match = source.match(PARKED_FEATURE);
+    if (!match) continue;
+    const at = source.indexOf(match[0]);
+    found.push(`${page}: …${source.slice(Math.max(0, at - 45), at + 45).replace(/\s+/g, " ")}…`);
+  }
+  assert.deepEqual(found, [], `these pages still sell the parked feature:\n${found.join("\n")}`);
+});
 
 test("the browser title describes lead intelligence, not outreach", () => {
   const layout = fs.readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");

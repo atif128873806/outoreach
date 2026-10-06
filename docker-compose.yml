@@ -15,7 +15,11 @@ services:
       retries: 10
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # Also required while Next.js renders public server components.
+        OUTREACH_ENABLED: ${OUTREACH_ENABLED:-false}
     restart: unless-stopped
     depends_on:
       db:
@@ -32,6 +36,9 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       JINA_API_KEY: ${JINA_API_KEY:-}
+      # Deployment-owned search keys (never exposed as customer settings)
+      EXA_API_KEY: ${EXA_API_KEY:-}
+      COMPANIES_HOUSE_API_KEY: ${COMPANIES_HOUSE_API_KEY:-}
       # Instance-wide hard ceiling on included-AI generations/day per user
       # (cost brake; overrides plan limits, including Pro's "unlimited")
       GLOBAL_AI_DAILY_LIMIT: ${GLOBAL_AI_DAILY_LIMIT:-}
@@ -50,6 +57,9 @@ services:
       SYSTEM_SMTP_INSECURE_TLS: ${SYSTEM_SMTP_INSECURE_TLS:-}
       # Close registration once your accounts exist
       SIGNUPS_DISABLED: ${SIGNUPS_DISABLED:-}
+      # Product mode and local HTTP cookie override
+      OUTREACH_ENABLED: ${OUTREACH_ENABLED:-false}
+      INSECURE_COOKIES: ${INSECURE_COOKIES:-}
     ports:
       - "${PORT:-3000}:3000"
     healthcheck:

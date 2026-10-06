@@ -377,7 +377,7 @@ export default function SettingsPage() {
               <div className="text-sm font-medium text-zinc-800">Companies House (UK)</div>
               <p className="mt-1 text-xs text-zinc-500">
                 Newly registered UK companies with the people behind them. Runs on this
-                deployment's own key (<code>COMPANIES_HOUSE_API_KEY</code>) — users never need
+                deployment&apos;s own key (<code>COMPANIES_HOUSE_API_KEY</code>) — users never need
                 one.{" "}
                 <span
                   className={
