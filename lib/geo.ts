@@ -173,8 +173,8 @@ export function inferCountryFromAddresses(addresses: string[]): "GB" | "US" | nu
     if (country === "GB") gb++;
     else if (country === "US") us++;
   }
-  if (gb === us) return null;
-  return gb > us ? "GB" : "US";
+  if (gb > 0 && us > 0) return null;
+  return gb > 0 ? "GB" : us > 0 ? "US" : null;
 }
 
 /** A US phone written the American way: "(951) 230-8701", "+1 951 230 8701". */

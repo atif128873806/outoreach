@@ -230,3 +230,11 @@ test("locationTerms keeps the city and drops the country", () => {
     "ny",
   ]);
 });
+
+// A majority is still contradictory evidence, not permission to rewrite all
+// phone numbers in the search into the majority country's format.
+test("unequal mixed-country evidence never establishes one market", () => {
+  assert.equal(inferCountryFromAddresses(["London, UK", "Leeds, UK", "Bristol, UK", "Austin, TX 78701"]), null);
+  assert.equal(inferCountryFromAddresses(["Austin, TX 78701", "Dallas, TX 75201", "London, UK"]), null);
+  assert.equal(inferCountryFromAddresses(["10 Test Street", "London, UK", ""]), "GB");
+});

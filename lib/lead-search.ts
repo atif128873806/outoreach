@@ -219,7 +219,6 @@ export async function runLeadSearch(
     const droppedSet = new Set(dropped);
     let candidates = leads.filter((l) => !droppedSet.has(l));
     let outOfArea = dropped.length;
-    let localityUnconfirmed = false;
     // How many sites we actually looked at, which is not the same as how many
     // survived the filter. On a 40-lead "outdated" search only 7 of the 48
     // local roofers met the bar, and saying "7 of the sites audited" read as if
@@ -233,15 +232,9 @@ export async function runLeadSearch(
         outOfArea -= rescued.size;
       }
     }
-    if (leads.length > 0 && candidates.length === 0) {
-      // Fail open. If the rule would remove every result, the likelier
-      // explanation is a location we can't match (a state, a region, a city the
-      // addresses spell differently) than that every business found is out of
-      // area. An empty list would teach the user nothing; show them, flagged.
-      candidates = leads;
-      outOfArea = 0;
-      localityUnconfirmed = true;
-    }
+    // Exclusions stand even when no candidate survives. Restoring the source
+    // response here would return known foreign/distant businesses and enrich
+    // them as if they were valid matches. Unknown addresses were never dropped.
 
     if (candidates.length === 0) {
       // Nothing came back for this niche + place, or nothing local in it. The
@@ -258,15 +251,17 @@ export async function runLeadSearch(
           sitesAudited: 0,
           needsWork: 0,
           skippedExisting: 0,
-          outOfArea: 0,
+          outOfArea,
           quota: { plan: quota.plan.id, limit: quota.limit, remaining: quota.remaining },
         },
         detail:
           leads.length === 0
             ? "no businesses from the source"
-            : `${leads.length} found, none in ${terms.label}`,
+            : `${leads.length} found, none confirmed in ${terms.label}`,
         note:
-          websiteFilter === "without"
+          outOfArea > 0
+            ? `No businesses could be confirmed in ${terms.label}. ${outOfArea} out-of-area ${outOfArea === 1 ? "result was" : "results were"} excluded. Try a different source or a broader area.`
+            : websiteFilter === "without"
             ? `No businesses without a website found here. ${chosen.gives.website ? "OpenStreetMap is the best source for offline businesses" : `${chosen.label} lists no websites, but every business it returned turned out to have one`} — or try a bigger area.`
             : websiteFilter === "outdated"
               ? "No businesses with websites found for this search — try a broader niche or bigger area, then the audit can look for outdated sites."
@@ -434,12 +429,12 @@ export async function runLeadSearch(
     }
     if (outOfArea > 0) {
       notes.push(
-        `${outOfArea} result${outOfArea === 1 ? " wasn't" : "s weren't"} in ${terms.label} and ${outOfArea === 1 ? "was" : "were"} left out, so every row here is a business in or around ${terms.label}.`
+        `${outOfArea} result${outOfArea === 1 ? " wasn't" : "s weren't"} in ${terms.label} and ${outOfArea === 1 ? "was" : "were"} left out.`
       );
     }
-    if (localityUnconfirmed) {
+    if (result.some(l => classifyLocality(l.address, terms) === "unknown")) {
       notes.push(
-        `Couldn't confirm from the addresses that these businesses are in ${terms.label} — showing them anyway. Check the address before you reach out.`
+        `Some businesses have incomplete addresses, so their location in ${terms.label} could not be confirmed from the source. Check the address before you reach out.`
       );
     }
     if (result.length < count) {
@@ -534,12 +529,14 @@ async function verifyDropped(
   terms: LocationTerms
 ): Promise<Set<Lead>> {
   const kept = new Set<Lead>();
+  // Explicit country conflicts do not need a network second opinion.
+  const eligible = dropped.filter(lead => !countryConflict(lead.address, terms));
+  if (eligible.length === 0) return kept;
   const origin = await geocodePoint(location);
   if (!origin) return kept; // geocoder unavailable — the stricter verdict stands
   let lookups = 0;
-  for (const lead of dropped) {
+  for (const lead of eligible) {
     if (lookups >= LOOKUP_CAP) break;
-    if (countryConflict(lead.address, terms)) continue; // names another country outright
     lookups++;
     const point = await geocodePoint(lead.address);
     if (withinLocalRadius(origin, point)) kept.add(lead);
