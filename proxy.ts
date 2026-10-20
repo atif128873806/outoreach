@@ -33,6 +33,8 @@ const PUBLIC_PREFIXES = [
   "/api/t/",
   "/api/unsubscribe",
   "/api/health",
+  "/api/pilot/preview",
+  "/api/pilot/journey",
 ];
 
 export function proxy(request: NextRequest) {
