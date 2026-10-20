@@ -603,7 +603,9 @@ export async function recordRecheckEvent(event: RecheckEvent): Promise<void> {
  * data, and the query below leaves anything younger than a year alone.
  */
 export async function pruneSearchCache(): Promise<void> {
+  const {cleanupPilotJourneys}=await import("./pilot-journey");
   try {
+    await cleanupPilotJourneys();
     const { q } = await import("./db");
     await q("DELETE FROM search_cache WHERE refreshed_at < now() - interval '180 days'");
     await q(

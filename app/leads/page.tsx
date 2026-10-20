@@ -1,7 +1,9 @@
 "use client";
+import { PILOT_AUDIENCES,isPilotAudience,type PilotAudience } from "@/lib/pilot";
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
+import Icon from "../components/Icon";
 import {
   Card,
   PageHeader,
@@ -64,24 +66,24 @@ interface LeadFilterAccess {
  * "Any business" is the default and still audits whatever it finds.
  */
 const WEBSITE_FILTERS: { value: WebsiteFilter; title: string; desc: string }[] = [
-  { value: "any", title: "Any business", desc: "Everything found — each one audited" },
-  { value: "without", title: "No website", desc: "Sell them their first site" },
+  { value: "any", title: "Any business", desc: "Public records; audits where available" },
+  { value: "without", title: "No website", desc: "No website listed; qualify the business" },
   { value: "outdated", title: "Outdated or broken site", desc: "Redesign prospects, evidence included" },
-  { value: "with", title: "Has a website", desc: "Website owners — the audit shows the gaps" },
+  { value: "with", title: "Has a website", desc: "Website owners; review available findings" },
 ];
 
 /** What the primary button will actually do for the chosen filter — the
  *  button never promises more than the search delivers. */
 const FILTER_CTA: Record<WebsiteFilter, string> = {
-  any: "Every result is audited — you'll see the score and what's wrong with each site.",
-  without: "Finds businesses with no site, then hunts a phone, Instagram or email for each.",
+  any: "Review dated findings where a website could be audited. Missing websites and failed audits need follow-up.",
+  without: "Researches businesses without a listed site, then looks for available contact routes.",
   outdated: "Keeps only sites with a real, checkable problem — worst site first.",
-  with: "Website owners, with the audit showing the gaps to pitch against.",
+  with: "Listed websites, with findings where a site could be checked.",
 };
 
 /** Short filter wording for the results header. */
 const FILTER_SHORT: Record<WebsiteFilter, string> = {
-  any: "all businesses, each audited",
+  any: "all businesses, with available website evidence",
   without: "no website",
   outdated: "outdated or broken site",
   with: "has a website",
@@ -114,21 +116,21 @@ function FilterOption({
       aria-pressed={active}
       aria-disabled={Boolean(lockedFor)}
       title={lockedFor ? `${title} is part of ${lockedFor}` : undefined}
-      className={`rounded-xl border p-3 text-left transition-colors ${
+      className={`search-filter-option rounded-lg border px-3 py-2 text-left transition-colors ${
         lockedFor
-          ? "border-dashed border-zinc-300 bg-zinc-50/70 text-zinc-500 hover:border-zinc-400"
+          ? "border-dashed border-field bg-canvas/70 text-muted hover:border-field"
           : active
-            ? "border-zinc-900 bg-zinc-900 text-white"
-            : "border-zinc-200 bg-white hover:border-zinc-400"
+            ? "border-action bg-action text-action-ink"
+            : "border-field bg-surface hover:border-muted"
       }`}
     >
       <div className="flex items-center gap-1.5 text-sm font-medium">
-        {lockedFor && <span aria-hidden>🔒</span>}
+        {lockedFor && <Icon name="shield" className="h-3.5 w-3.5"/>}
         {title}
       </div>
       <div
         className={`mt-0.5 text-xs ${
-          active && !lockedFor ? "text-zinc-300" : "text-zinc-500"
+          active && !lockedFor ? "text-action-ink" : "text-muted"
         }`}
       >
         {lockedFor ? `Unlocked on ${lockedFor}` : desc}
@@ -171,19 +173,19 @@ interface Lead {
 /** Score colour + wording for a website audit. */
 function auditTone(audit: SiteAudit): { cls: string; label: string } {
   if (audit.grade === "unknown") {
-    return { cls: "bg-zinc-100 text-zinc-500", label: "couldn't load" };
+    return { cls: "bg-raised text-muted", label: "couldn't load" };
   }
-  if (audit.score >= 85) return { cls: "bg-emerald-50 text-emerald-700", label: "healthy" };
-  if (audit.score >= 65) return { cls: "bg-amber-50 text-amber-700", label: "needs work" };
-  if (audit.score >= 40) return { cls: "bg-orange-100 text-orange-700", label: "poor" };
-  return { cls: "bg-red-100 text-red-700", label: "broken" };
+  if (audit.score >= 85) return { cls: "bg-success-surface text-success", label: "healthy" };
+  if (audit.score >= 65) return { cls: "bg-warning-surface text-warning", label: "needs work" };
+  if (audit.score >= 40) return { cls: "bg-warning-surface text-warning", label: "poor" };
+  return { cls: "bg-danger-surface text-danger", label: "broken" };
 }
 
 const SEVERITY_CLS: Record<string, string> = {
-  critical: "text-red-700",
-  high: "text-orange-700",
-  medium: "text-amber-700",
-  low: "text-zinc-500",
+  critical: "text-danger",
+  high: "text-warning",
+  medium: "text-warning",
+  low: "text-muted",
 };
 
 /**
@@ -209,7 +211,7 @@ function SiteAuditCell({
   message?: string;
   onRecheck?: () => void;
 }) {
-  if (!audit) return <span className="text-zinc-300">not checked</span>;
+  if (!audit) return <span className="text-muted">not checked</span>;
   const tone = auditTone(audit);
   const findings = audit.checks.filter((c) => c.severity === "critical" || c.severity === "high");
   const stale = isOlderThan(auditedAt, 3 * 86_400);
@@ -226,33 +228,33 @@ function SiteAuditCell({
       {findings.length > 0 ? (
         <ul className="mt-1.5 space-y-0.5">
           {findings.slice(0, 3).map((c) => (
-            <li key={c.id} className="text-[11px] leading-4 text-zinc-600" title={c.detail}>
-              <span className="text-orange-500">•</span> {c.label}
+            <li key={c.id} className="text-[11px] leading-4 text-muted" title={c.detail}>
+              <span className="text-warning" aria-hidden>•</span> {c.label}
             </li>
           ))}
         </ul>
       ) : (
-        <div className="mt-1 text-[11px] text-zinc-400">
+        <div className="mt-1 text-[11px] text-muted">
           {audit.grade === "unknown" ? "verify manually" : "no big problems found"}
         </div>
       )}
       {audit.checks.length > 0 && (
         <details className="mt-1">
-          <summary className="cursor-pointer text-[11px] text-zinc-400 hover:text-zinc-600">
+          <summary className="cursor-pointer text-[11px] text-muted hover:text-muted">
             full audit ({audit.checks.length})
           </summary>
           <ul className="mt-1 space-y-1">
             {audit.checks.map((c) => (
               <li key={c.id} className="text-[11px] leading-4">
-                <span className={`font-medium ${SEVERITY_CLS[c.severity] ?? "text-zinc-500"}`}>
+                <span className={`font-medium ${SEVERITY_CLS[c.severity] ?? "text-muted"}`}>
                   {c.label}
                 </span>
-                <div className="text-zinc-400">{c.detail}</div>
+                <div className="text-muted">{c.detail}</div>
               </li>
             ))}
           </ul>
           {(audit.facts.status > 0 || audit.facts.ms > 0) && (
-            <div className="mt-1.5 text-[11px] text-zinc-400">
+            <div className="mt-1.5 text-[11px] text-muted">
               HTTP {audit.facts.status} · {(audit.facts.ms / 1000).toFixed(1)}s ·{" "}
               {Math.max(1, Math.round(audit.facts.bytes / 1024))} KB
             </div>
@@ -262,7 +264,7 @@ function SiteAuditCell({
       {(onRecheck || auditedAt) && (
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span
-            className={`text-[11px] ${stale ? "text-amber-600" : "text-zinc-400"}`}
+            className={`text-[11px] ${stale ? "text-warning" : "text-muted"}`}
             title={auditedAt ? new Date(auditedAt).toLocaleString() : undefined}
           >
             {age}
@@ -271,13 +273,13 @@ function SiteAuditCell({
             <button
               onClick={onRecheck}
               disabled={busy}
-              className="text-[11px] text-zinc-500 underline hover:text-zinc-700 disabled:opacity-50"
+              className="text-[11px] text-muted underline hover:text-ink disabled:opacity-50"
               title="Visit the site again now, and use what comes back instead of the cached audit"
             >
               {busy ? "checking…" : "re-check"}
             </button>
           )}
-          {message && <span className="text-[11px] text-zinc-500">{message}</span>}
+          {message && <span className="text-[11px] text-muted">{message}</span>}
         </div>
       )}
     </div>
@@ -311,7 +313,7 @@ function verdictLabel(audit: SiteAudit | undefined): string {
  * spreadsheet or paste it into a first message.
  */
 function whyReachOut(l: Lead): string {
-  if (!l.website) return "No website at all — needs one built.";
+  if (!l.website) return "Website not listed in this source — confirm the current website presence.";
   const a = l.site_audit;
   if (!a) return "";
   if (a.grade === "unknown") return "Site refused our automated check — verify by hand before pitching.";
@@ -468,6 +470,17 @@ export default function LeadsPage() {
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [leads, setLeads] = useState<Lead[] | null>(null);
+  const [inspectIndex, setInspectIndex] = useState<number | null>(null);
+  const inspectTitle = useRef<HTMLHeadingElement>(null);
+  const inspectTrigger = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    if (inspectIndex !== null) {
+      inspectTitle.current?.focus();
+      if (window.matchMedia("(max-width: 767px)").matches) inspectTitle.current?.scrollIntoView({block:"start"});
+    }
+  }, [inspectIndex]);
+  function closeInspection() { setInspectIndex(null); inspectTrigger.current?.focus(); }
+  function inspectBusiness(index: number, trigger: HTMLButtonElement) { inspectTrigger.current = trigger; setInspectIndex(index); }
   const [meta, setMeta] = useState<{
     found: number;
     withEmail: number;
@@ -512,6 +525,7 @@ export default function LeadsPage() {
    * source, or the user clicks it and gets an error that isn't their fault.
    */
   const [sourceIds, setSourceIds] = useState<SourceId[] | null>(null);
+  const [pilotWorkflow,setPilotWorkflow]=useState<PilotAudience|null>(null);
 
   const activeJobs = jobs.filter(isActiveJob);
   /** Whether anything is waiting or in flight — the form stays usable either way. */
@@ -538,6 +552,7 @@ export default function LeadsPage() {
    */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const audience=params.get('audience');if(isPilotAudience(audience))setPilotWorkflow(audience);
     const q = params.get("niche")?.trim();
     const where = params.get("location")?.trim();
     const from = params.get("source");
@@ -620,6 +635,7 @@ export default function LeadsPage() {
       if (!res.ok) throw new Error(data.error || "Could not open that search");
       if (!data.result) throw new Error("That search has no leads to show");
       const job = data.job as PublicJob;
+      setInspectIndex(null);
       setLeads(data.result.leads as Lead[]);
       setMeta(data.result.meta ?? null);
       setNote(typeof data.result.note === "string" ? data.result.note : null);
@@ -981,6 +997,7 @@ export default function LeadsPage() {
 
   // Counts follow the selection when there is one, so the buttons never
   // promise more than they will do.
+  const inspected = inspectIndex == null ? null : leads?.[inspectIndex];
   const importableCount = actionRows().filter(importable).length;
   const actionLabel = selected.size > 0 ? `${selected.size} selected` : `all ${visible.length}`;
 
@@ -1003,15 +1020,16 @@ export default function LeadsPage() {
   return (
     <div>
       <PageHeader
-        title="Find businesses that need you"
-        subtitle="Real businesses pulled live from the web — each one audited, with what's wrong with its site and what to say about it"
+        title="Business research"
+        subtitle="Search a niche and area. Inspect the details. Keep the businesses that fit."
       />
 
-      <Card className="p-6 mb-6">
-        <details className="mb-5 rounded-xl border border-zinc-200 bg-zinc-50/60 px-4 py-3">
-          <summary className="cursor-pointer text-sm text-zinc-600">
+      {pilotWorkflow&&<section aria-label="Your London workflow" className="mb-6 border-y border-line py-5"><h2 className="font-semibold text-ink">{PILOT_AUDIENCES[pilotWorkflow].label} · London first search</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-muted">{PILOT_AUDIENCES[pilotWorkflow].guidance}</p><p className="mt-2 text-sm text-muted">Review the prefilled niche and area, then start the search. Nothing runs until you choose Search.</p></section>}
+      <Card className="search-composer p-5 mb-6">
+        <details className="mb-5 rounded-xl border border-line bg-canvas/60 px-4 py-3">
+          <summary className="cursor-pointer text-sm text-muted">
             Search source:{" "}
-            <span className="font-medium text-zinc-800">{sourceLabel(source)}</span>
+            <span className="font-medium text-ink">{sourceLabel(source)}</span>
           </summary>
           <div className="mt-3 flex flex-wrap gap-2">
             {visibleSources.map((id) => (
@@ -1037,7 +1055,7 @@ export default function LeadsPage() {
               />
             ))}
           </div>
-          <p className="mt-2 text-xs text-zinc-400">
+          <p className="mt-2 text-xs text-muted">
             Web search finds the most businesses that have a site to audit. The map sources are
             better when you want businesses with no website at all.
           </p>
@@ -1045,7 +1063,7 @@ export default function LeadsPage() {
 
         <div className="grid gap-4 md:grid-cols-12 items-end">
           <label className="block md:col-span-5">
-            <div className="text-sm font-medium text-zinc-600 mb-1.5">Niche</div>
+            <div className="text-sm font-medium text-muted mb-1.5">Business type</div>
             <input
               className={inputCls}
               value={niche}
@@ -1054,16 +1072,16 @@ export default function LeadsPage() {
             />
           </label>
           <label className="block md:col-span-5">
-            <div className="text-sm font-medium text-zinc-600 mb-1.5">Location</div>
+            <div className="text-sm font-medium text-muted mb-1.5">Location</div>
             <input
               className={inputCls}
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g. New York, USA"
+              placeholder="e.g. Croydon, London, UK"
             />
           </label>
           <label className="block md:col-span-2">
-            <div className="text-sm font-medium text-zinc-600 mb-1.5">How many</div>
+            <div className="text-sm font-medium text-muted mb-1.5">How many</div>
             <select className={inputCls} value={count} onChange={(e) => setCount(Number(e.target.value))}>
               {[5, 10, 20, 30, 50].map((n) => (
                 <option key={n} value={n}>{n}</option>
@@ -1072,12 +1090,12 @@ export default function LeadsPage() {
           </label>
         </div>
 
-        <div className="mt-6">
-          <div className="text-sm font-medium text-zinc-600 mb-2">
-            Who are you looking for?{" "}
-            <span className="font-normal text-zinc-400">— this picks which leads you get</span>
+        <div className="mt-4">
+          <div className="text-sm font-medium text-muted mb-2">
+            Website filter{" "}
+            <span className="font-normal text-muted">— choose the research criteria</span>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="search-filter-options flex flex-wrap gap-2">
             {WEBSITE_FILTERS.map((f) => {
               const locked = lockedFor(f.value);
               return (
@@ -1102,13 +1120,13 @@ export default function LeadsPage() {
         </div>
 
         {lockedNotice && (
-          <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+          <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-line bg-canvas px-4 py-3 text-sm text-muted">
             <span>
-              <span className="font-medium text-zinc-800">{lockedNotice.label}</span> is part of
+              <span className="font-medium text-ink">{lockedNotice.label}</span> is part of
               the {lockedNotice.requires} plan.
               {planName && <> Your {planName} plan keeps everything else here.</>}
             </span>
-            <Link href="/pricing" className="font-medium text-blue-600 hover:underline">
+            <Link href="/pricing" className="font-medium text-accent hover:underline">
               See what each plan unlocks →
             </Link>
           </div>
@@ -1127,17 +1145,17 @@ export default function LeadsPage() {
                 ? "Queue another search"
                 : `Find ${count} leads`}
           </button>
-          <span className="text-xs text-zinc-500">{FILTER_CTA[websiteFilter]}</span>
+          <span className="text-xs text-muted">{FILTER_CTA[websiteFilter]}</span>
         </div>
-        {queueWarning && <p role="status" className="mt-3 text-sm text-amber-700">{queueWarning}</p>}
+        {queueWarning && <p role="status" className="mt-3 text-sm text-warning">{queueWarning}</p>}
         {capReached && (
-          <p className="mt-2 text-xs text-amber-600">
+          <p className="mt-2 text-xs text-warning">
             You already have {queueCap} searches queued or running — the next one can start the
             moment one of them finishes.
           </p>
         )}
         {websiteFilter === "outdated" && !hasActive && (
-          <p className="text-xs text-zinc-500 mt-3">
+          <p className="text-xs text-muted mt-3">
             Only sites with at least one serious, checkable problem are kept: unreachable or
             erroring pages, invalid certificates, no HTTPS, no mobile layout, broken homepage
             links, free-builder hosting, stale content. Soft gaps like a missing meta
@@ -1145,13 +1163,13 @@ export default function LeadsPage() {
           </p>
         )}
         {websiteFilter === "without" && !hasActive && (
-          <p className="text-xs text-zinc-500 mt-3">
-            Businesses with no website at all — the strongest pitch there is.{" "}
+          <p className="text-xs text-muted mt-3">
+            Businesses without a listed website — confirm their current website presence.{" "}
             {/* Which data behind this search depends on the source picked above;
                 saying "map data" while the register is selected contradicts the
                 line right over it. */}
             {source === "companies_house"
-              ? "This search reads the official UK register (newly registered companies, with the people behind them), then hunts each business's Instagram, phone and email across the web so you can actually reach them."
+              ? "This search reads the official UK register, then researches available contact routes. A registered office may differ from the trading address."
               : "This search reads open map data (OpenStreetMap), then looks up each business's Instagram, phone and email across the web so you can actually reach them."}
           </p>
         )}
@@ -1161,55 +1179,55 @@ export default function LeadsPage() {
           the form still open underneath for the next one.
         */}
         {activeJobs.map((job) => (
-          <div key={job.id} className="mt-4 rounded-xl border border-zinc-200 px-4 py-3">
+          <div key={job.id} className="mt-4 rounded-xl border border-line px-4 py-3">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-              <span className="text-sm font-medium text-zinc-800">
+              <span className="text-sm font-medium text-ink">
                 {job.niche} in {job.location}
               </span>
-              <span className="text-xs text-zinc-400">
+              <span className="text-xs text-muted">
                 {job.status === "queued" ? "Queued" : "In progress"} · {job.count} leads
               </span>
             </div>
             {job.status === "running" ? (
               <SearchProgress source={job.source} startedAt={job.startedAt} />
             ) : (
-              <div className="mt-2 flex items-center gap-2 text-sm text-zinc-500">
-                <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-400" />
+              <div className="mt-2 flex items-center gap-2 text-sm text-muted">
+                <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-line border-t-zinc-400" />
                 Waiting for a free slot…
               </div>
             )}
           </div>
         ))}
-        {error && <div className="text-sm text-red-500 mt-3">{error}</div>}
-        {note && <div className="text-sm text-amber-600 mt-3">{note}</div>}
+        {error && <div className="text-sm text-danger mt-3">{error}</div>}
+        {note && <div className="text-sm text-warning mt-3">{note}</div>}
       </Card>
 
       {finishedJobs.length > 0 && (
-        <Card className="p-0 mb-6 overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 px-5 py-3">
-            <span className="text-sm font-medium text-zinc-700">Your recent searches</span>
-            <span className="text-xs text-zinc-400">
-              Kept for a week — reopen one without spending another search
+        <Card className="search-history p-0 mb-6 overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3">
+            <span className="text-sm font-medium text-ink">Your recent searches</span>
+            <span className="text-xs text-muted">
+              Retained for seven days · reopening uses no further allowance
             </span>
           </div>
-          <div className="divide-y divide-zinc-100">
+          <div className="divide-y divide-line">
             {finishedJobs.map((job) => {
               const open = job.id === openJobId;
               return (
                 <div
                   key={job.id}
-                  className={`flex flex-wrap items-center gap-3 px-5 py-3 ${open ? "bg-blue-50/60" : ""}`}
+                  className={`flex flex-wrap items-center gap-3 px-5 py-3 ${open ? "bg-info/60" : ""}`}
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-zinc-800">
+                    <div className="truncate text-sm font-medium text-ink">
                       {job.niche} in {job.location}
                       {job.filter !== "any" && (
-                        <span className="font-normal text-zinc-400"> · {job.filter}</span>
+                        <span className="font-normal text-muted"> · {job.filter}</span>
                       )}
                     </div>
-                    <div className="text-xs text-zinc-400">
+                    <div className="text-xs text-muted">
                       {job.status === "failed" ? (
-                        <span className="text-red-500">{job.error || "That search failed."}</span>
+                        <span className="text-danger">{job.error || "That search failed."}</span>
                       ) : (
                         `${job.leadCount} lead${job.leadCount === 1 ? "" : "s"} · ${describeWhen(job.finishedAt)}`
                       )}
@@ -1237,16 +1255,16 @@ export default function LeadsPage() {
 
       {leads && leads.length > 0 && (
         <Card className="p-0 overflow-hidden">
-          <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between flex-wrap gap-3">
+          <div className="px-5 py-4 border-b border-line flex items-center justify-between flex-wrap gap-3">
             <div className="text-sm">
               {lastSearch && (
-                <div className="mb-0.5 text-xs text-zinc-400">
+                <div className="mb-0.5 text-xs text-muted">
                   {lastSearch.niche} in {lastSearch.location} · {FILTER_SHORT[lastSearch.filter]} ·{" "}
                   {SORT_SHORT[sort]}
                 </div>
               )}
               <span className="font-medium">{meta?.found} leads</span>
-              <span className="text-zinc-400">
+              <span className="text-muted">
                 {" "}· {meta?.withEmail} with email · {meta?.withInstagram} with Instagram
                 {lastSearch?.filter === "without" && <> · {meta?.withPhone ?? 0} with phone</>}
                 {(meta?.sitesAudited ?? 0) > 0 && <> · {meta?.sitesAudited} sites audited</>}
@@ -1258,23 +1276,23 @@ export default function LeadsPage() {
               )}
               {(meta?.outOfArea ?? 0) > 0 && (
                 <span
-                  className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600"
+                  className="ml-2 rounded-full bg-raised px-2 py-0.5 text-xs text-muted"
                   title="These businesses are in a different place, so they are not in this list"
                 >
                   {meta?.outOfArea} outside {lastSearch?.location} left out
                 </span>
               )}
               {selected.size > 0 && (
-                <span className="ml-2 rounded-full bg-zinc-900 px-2 py-0.5 text-xs font-medium text-white">
+                <span className="ml-2 rounded-full bg-action px-2 py-0.5 text-xs font-medium text-action-ink">
                   {selected.size} selected
                 </span>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <label className="mr-1 flex items-center gap-1.5 text-xs text-zinc-500">
+              <label className="mr-1 flex items-center gap-1.5 text-xs text-muted">
                 Order
                 <select
-                  className="rounded-lg border border-zinc-300 bg-white px-2 py-1 text-xs"
+                  className="rounded-lg border border-field bg-surface px-2 py-1 text-xs"
                   value={sort}
                   onChange={(e) => setSort(e.target.value as "prospects" | "reachable")}
                 >
@@ -1284,7 +1302,7 @@ export default function LeadsPage() {
                 </select>
               </label>
               <button className={btnSecondary} onClick={copyPitch}>
-                {copied ? "Copied ✓" : `Copy pitch (${actionLabel})`}
+                {copied ? "Copied ✓" : `Copy notes (${actionLabel})`}
               </button>
               <button className={btnSecondary} onClick={downloadCsv}>
                 Download CSV ({actionLabel})
@@ -1299,7 +1317,7 @@ export default function LeadsPage() {
             </div>
           </div>
           {importMsg && (
-            <div className="px-5 py-3 border-b border-zinc-100 text-sm text-emerald-700 bg-emerald-50">
+            <div role="status" className={`px-5 py-3 border-b border-line text-sm ${importMsg.startsWith("Imported") ? "text-success bg-success-surface" : "text-warning bg-warning-surface"}`}>
               {importMsg}{" "}
               <Link href="/contacts" className="underline font-medium">
                 View my leads →
@@ -1307,13 +1325,13 @@ export default function LeadsPage() {
             </div>
           )}
           {chipDefs.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 px-5 py-3 border-b border-zinc-100">
+            <div className="flex flex-wrap items-center gap-2 px-5 py-3 border-b border-line">
               <button
                 onClick={() => setChip(null)}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                   chip === null
-                    ? "bg-zinc-900 text-white"
-                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                    ? "bg-action text-action-ink"
+                    : "bg-raised text-muted hover:bg-raised"
                 }`}
               >
                 All ({leads.length})
@@ -1324,187 +1342,53 @@ export default function LeadsPage() {
                   onClick={() => setChip(chip === c.key ? null : c.key)}
                   className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                     chip === c.key
-                      ? "bg-zinc-900 text-white"
-                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                      ? "bg-action text-action-ink"
+                      : "bg-raised text-muted hover:bg-raised"
                   }`}
                 >
                   {c.label}
                 </button>
               ))}
-              <span className="text-xs text-zinc-400">
+              <span className="text-xs text-muted">
                 {visible.length !== leads.length && `showing ${visible.length} of ${leads.length} — `}
                 tick rows to work on just those
               </span>
             </div>
           )}
-          <div className="x-scroll">
-            <table className="w-full min-w-[1560px] text-sm">
-              <thead>
-                <tr className="text-left text-xs text-zinc-400 uppercase tracking-wide">
-                  <th className="sticky left-0 z-10 bg-white px-4 py-2.5 font-medium border-r border-zinc-100">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        className="accent-zinc-900"
-                        checked={allVisibleSelected}
-                        onChange={toggleAllVisible}
-                        aria-label="Select all visible rows"
-                      />
-                      Business
-                    </label>
-                  </th>
-                  <th className="px-4 py-2.5 font-medium">Email</th>
-                  <th className="px-4 py-2.5 font-medium">Social</th>
-                  <th className="px-4 py-2.5 font-medium">Decision maker</th>
-                  <th className="px-4 py-2.5 font-medium">Phone</th>
-                  <th className="px-4 py-2.5 font-medium">Website</th>
-                  <th className="px-4 py-2.5 font-medium">Site audit — why them</th>
-                  <th className="px-4 py-2.5 font-medium">Pitch</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
-                {visible.map(({ l, i }) => (
-                  <tr key={i} className="group hover:bg-zinc-50">
-                    <td className="sticky left-0 z-10 bg-white group-hover:bg-zinc-50 px-4 py-2.5 border-r border-zinc-100">
-                      <div className="flex gap-2.5">
-                        <input
-                          type="checkbox"
-                          className="mt-1 shrink-0 accent-zinc-900"
-                          checked={selected.has(i)}
-                          onChange={() => toggleOne(i)}
-                          aria-label={`Select ${l.business_name}`}
-                        />
-                        <div className="min-w-0">
-                          <div className="max-w-[230px] font-medium">{l.business_name}</div>
-                          {l.address && <div className="max-w-[230px] truncate text-xs text-zinc-400">{l.address}</div>}
-                          {l.notes && (
-                            <div className="text-xs text-zinc-400 mt-0.5 max-w-[230px] truncate" title={l.notes}>
-                              {intelOnly(l.notes)}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="max-w-[220px] break-all px-4 py-2.5">
-                      {/* break-all is right for a long address, which has to wrap
-                          somewhere — but it also broke "not found" into "not fou / nd"
-                          once the column was squeezed, so the placeholder holds
-                          itself together. */}
-                      {l.email || <span className="text-zinc-300 whitespace-nowrap">not found</span>}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex flex-col gap-0.5">
-                        {l.instagram && (
-                          <a
-                            href={`https://instagram.com/${l.instagram}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-pink-600 hover:underline text-xs"
-                          >
-                            @{l.instagram}
-                          </a>
-                        )}
-                        {l.linkedin && (
-                          <a
-                            href={`https://www.linkedin.com/${l.linkedin}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sky-700 hover:underline text-xs"
-                          >
-                            in/{l.linkedin.split("/")[1] ?? l.linkedin}
-                          </a>
-                        )}
-                        {!l.instagram && !l.linkedin && <span className="text-zinc-300">—</span>}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <PersonCell
-                        state={people[i]}
-                        director={l.directors?.[0]}
-                        onFind={() => findPeople(i)}
-                        onChoose={(c) => choosePerson(i, c)}
-                      />
-                    </td>
-                    <td className="px-4 py-2.5 text-xs">{l.phone || "—"}</td>
-                    <td className="px-4 py-2.5 text-xs max-w-48 truncate">
-                      {l.website ? (
-                        <div>
-                          <a
-                            href={l.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title={l.website}
-                            className="inline-block max-w-[200px] truncate align-bottom text-zinc-500 hover:underline"
-                          >
-                            {l.website.replace(/^https?:\/\/(www\.)?/, "")}
-                          </a>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {l.tech && (
-                              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
-                                {l.tech}
-                              </span>
-                            )}
-                            {(l.pixels ?? []).map((p) => (
-                              <span
-                                key={p}
-                                className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700"
-                                title="This business invests in marketing"
-                              >
-                                {p}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 align-top">
-                      {l.website ? (
-                        <SiteAuditCell
-                          audit={l.site_audit}
-                          auditedAt={l.site_audited_at}
-                          busy={rechecks[i]?.busy}
-                          message={rechecks[i]?.message}
-                          onRecheck={() => recheck(i)}
-                        />
-                      ) : (
-                        <div className="min-w-[210px]">
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
-                            no website
-                          </span>
-                          <div className="mt-1 text-[11px] leading-4 text-zinc-500">
-                            the strongest pitch there is — needs a site built
-                          </div>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 align-top">
-                      <button
-                        onClick={() => copyOne(i)}
-                        title="Copy this lead's pitch — the business, its site, how to reach them, and why them"
-                        className="whitespace-nowrap rounded-lg border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
-                      >
-                        {copiedIdx === i ? "Copied ✓" : "Copy pitch"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className={`research-results ${inspected ? "has-inspection" : ""}`}>
+            <div className="min-w-0 x-scroll"><table className="research-table w-full text-sm">
+              <thead><tr><th><label className="flex items-center gap-2"><input type="checkbox" className="accent-accent" checked={allVisibleSelected} onChange={toggleAllVisible} aria-label="Select all visible rows"/>Business & location</label></th><th className="hidden xl:table-cell">Contact routes</th><th className="hidden md:table-cell">Website</th><th>Evidence</th></tr></thead>
+              <tbody>{visible.map(({l,i})=><tr key={i} className={inspectIndex===i?"is-inspected":""}>
+                <td><div className="flex items-start gap-3"><input type="checkbox" className="mt-1 shrink-0 accent-accent" checked={selected.has(i)} onChange={()=>toggleOne(i)} aria-label={`Select ${l.business_name}`}/><div className="min-w-0"><button type="button" onClick={e=>inspectBusiness(i,e.currentTarget)} aria-expanded={inspectIndex===i} aria-controls="business-inspection" className="business-open">{l.business_name}</button><p className="mt-1 text-xs leading-5 text-muted">{l.address || l.category || "Location not provided"}</p><p className="mt-1 text-[11px] text-muted">{l.source?.replace(/_/g," ") || "Source not recorded"}</p></div></div></td>
+                <td className="hidden xl:table-cell"><p className="break-all text-xs">{l.email || "Email not found"}</p><p className="mt-1 text-xs text-muted">{l.phone || (l.instagram ? `Instagram: @${l.instagram}` : "No phone listed")}</p></td>
+                <td className="hidden md:table-cell">{l.website?<><a href={l.website} target="_blank" rel="noopener noreferrer" className="break-all text-xs text-accent underline underline-offset-4">{l.website.replace(/^https?:\/\/(www\.)?/,"")}</a>{l.tech&&<p className="mt-2 text-xs text-muted">{l.tech}</p>}</>:<span className="text-xs text-muted">Not listed</span>}</td>
+                <td><button type="button" className="evidence-open" onClick={e=>inspectBusiness(i,e.currentTarget)} aria-label={`Review evidence for ${l.business_name}`} aria-controls="business-inspection"><span className={`inline-flex rounded-md px-2 py-1 text-[11px] ${l.site_audit ? auditTone(l.site_audit).cls : "bg-raised text-muted"}`}>{l.website ? l.site_audit ? auditTone(l.site_audit).label : "Not checked" : "Website not listed"}</span><span className="mt-2 flex items-center gap-1 text-xs text-accent">Review<Icon name="arrow" className="h-3 w-3"/></span></button></td>
+              </tr>)}</tbody>
+            </table>{visible.length===0&&<p className="p-8 text-sm text-muted">No rows match this view filter. Choose All to return to your results.</p>}</div>
+            {inspected&&inspectIndex!==null&&<aside id="business-inspection" className="business-inspection" aria-labelledby="inspection-title" onKeyDown={e=>{if(e.key==="Escape"){e.stopPropagation();closeInspection();}}}>
+              <div className="flex items-start justify-between gap-4"><h2 ref={inspectTitle} tabIndex={-1} id="inspection-title" className="text-xl font-medium leading-7">{inspected.business_name}</h2><button type="button" onClick={closeInspection} aria-label="Close business details" className="ui-secondary !min-h-10 !p-2"><Icon name="close" className="h-4 w-4"/></button></div>
+              <p className="mt-3 text-sm text-muted">{inspected.category}{inspected.address&&<> · {inspected.address}</>}</p>
+              <div className="inspection-section"><h3>Public contact details</h3><dl><div><dt>Email</dt><dd>{inspected.email || "Not found"}</dd></div><div><dt>Phone</dt><dd>{inspected.phone || "Not listed"}</dd></div>{inspected.instagram&&<div><dt>Instagram</dt><dd><a href={`https://instagram.com/${inspected.instagram}`} target="_blank" rel="noopener noreferrer" className="text-accent">@{inspected.instagram}</a></dd></div>}{inspected.linkedin&&<div><dt>LinkedIn</dt><dd><a href={`https://www.linkedin.com/${inspected.linkedin}`} target="_blank" rel="noopener noreferrer" className="text-accent">Open profile</a></dd></div>}<div><dt>Source</dt><dd>{inspected.source?.replace(/_/g," ") || "Not recorded"}</dd></div></dl></div>
+              <div className="inspection-section"><h3>Website evidence</h3>{inspected.website?<><a href={inspected.website} target="_blank" rel="noopener noreferrer" className="mb-4 block break-all text-xs text-accent underline">{inspected.website}</a><SiteAuditCell audit={inspected.site_audit} auditedAt={inspected.site_audited_at} busy={rechecks[inspectIndex]?.busy} message={rechecks[inspectIndex]?.message} onRecheck={()=>recheck(inspectIndex)}/>{inspected.tech&&<p className="mt-4 text-xs text-muted">Detected platform: {inspected.tech}</p>}{(inspected.pixels??[]).length>0&&<p className="mt-2 text-xs text-muted">Detected tags: {inspected.pixels?.join(", ")}</p>}</>:<p className="text-sm leading-6 text-muted">This source did not list a website. Confirm the business&apos;s current website presence before approaching it.</p>}</div>
+              <div className="inspection-section"><h3>Decision maker</h3><p className="mb-3 text-xs leading-5 text-muted">A lookup uses your lead allowance. Availability varies.</p><PersonCell state={people[inspectIndex]} director={inspected.directors?.[0]} onFind={()=>findPeople(inspectIndex)} onChoose={c=>choosePerson(inspectIndex,c)}/></div>
+              {inspected.notes&&<div className="inspection-section"><h3>Research notes</h3><p className="text-sm leading-6 text-muted">{intelOnly(inspected.notes)}</p></div>}
+              <button type="button" onClick={()=>copyOne(inspectIndex)} className="ui-secondary mt-5 w-full">{copiedIdx===inspectIndex?"Copied":"Copy this business’s notes"}</button>
+            </aside>}
           </div>
         </Card>
       )}
 
+      {leads === null && !hasActive && <section className="research-empty" aria-label="Start your business research"><Icon name="search" className="h-8 w-8 text-accent"/><h2>Your next shortlist starts here.</h2><p>Enter a business type and area above. Results will appear here with available details and website evidence.</p><div><span>Choose a niche & area</span><Icon name="arrow" className="h-4 w-4"/><span>Inspect the businesses</span><Icon name="arrow" className="h-4 w-4"/><span>Save or export</span></div></section>}
+
       {leads && leads.length === 0 && (
         <Card className="p-8 text-center">
-          <div className="text-sm font-medium text-zinc-700">
+          <div className="text-sm font-medium text-ink">
             {websiteFilter === "outdated"
-              ? "These sites look modern — nothing to pitch here"
+              ? "No matching website findings were returned"
               : "No businesses matched this search"}
           </div>
-          <p className="mx-auto mt-1 max-w-md text-sm text-zinc-500">
-            Nothing is broken — the search just came up empty. Three things to try:
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+            The search returned no matching businesses. You can adjust the criteria and try again:
           </p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             {[
@@ -1512,7 +1396,7 @@ export default function LeadsPage() {
               "Widen the area — the city, not the suburb",
               "Switch source — OpenStreetMap finds different businesses",
             ].map((tip) => (
-              <span key={tip} className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600">
+              <span key={tip} className="rounded-full bg-raised px-3 py-1 text-xs text-muted">
                 {tip}
               </span>
             ))}
@@ -1541,15 +1425,15 @@ function PersonCell({
         href={personHref(state.chosen)}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-sky-700 hover:underline"
+        className="text-xs text-accent hover:underline"
         title={`${state.chosen.role} — ${personLabel(state.chosen)}`}
       >
         ✓ {state.chosen.name}
-        <span className="text-zinc-400"> · {state.chosen.linkedin ? "LinkedIn" : "X"}</span>
+        <span className="text-muted"> · {state.chosen.linkedin ? "LinkedIn" : "X"}</span>
       </a>
     );
   }
-  if (state?.loading) return <span className="text-xs text-zinc-400">Searching…</span>;
+  if (state?.loading) return <span className="text-xs text-muted">Searching…</span>;
   // Errors from the search provider are full sentences, and a table cell will
   // happily stretch to fit them — one row grew to three lines while the rest of
   // the list stayed single-spaced. Clamped to the column, with the whole message
@@ -1557,10 +1441,10 @@ function PersonCell({
   if (state?.error) {
     return (
       <span
-        className="inline-block max-w-[190px] truncate align-bottom text-xs text-amber-700"
+        className="inline-block max-w-[190px] truncate align-bottom text-xs text-warning"
         title={state.error}
       >
-        ⚠ {state.error}
+        {state.error}
       </span>
     );
   }
@@ -1572,12 +1456,12 @@ function PersonCell({
             key={c.linkedin || `x/${c.x}`}
             onClick={() => onChoose(c)}
             title={`Attach to this lead${c.role ? ` — ${c.role}` : ""} (${personLabel(c)})`}
-            className="text-left text-xs rounded border border-zinc-200 px-1.5 py-0.5 hover:border-zinc-400"
+            className="text-left text-xs rounded border border-line px-1.5 py-0.5 hover:border-field"
           >
-            {c.isOwner && "★ "}
+            {c.isOwner && <Icon name="check" className="mr-1 inline h-3 w-3"/>}
             {c.name}
-            <span className="text-zinc-400"> · {c.linkedin ? "LinkedIn" : "X"}</span>
-            {c.role && <span className="text-zinc-400"> · {c.role.slice(0, 22)}</span>}
+            <span className="text-muted"> · {c.linkedin ? "LinkedIn" : "X"}</span>
+            {c.role && <span className="text-muted"> · {c.role.slice(0, 22)}</span>}
           </button>
         ))}
       </div>
@@ -1593,9 +1477,9 @@ function PersonCell({
           ? `Find ${director} — named as a director on the register`
           : "Find the owner or a senior decision maker"
       }
-      className="text-xs text-zinc-400 hover:text-zinc-700 underline decoration-dotted"
+      className="text-xs text-muted hover:text-ink underline decoration-dotted"
     >
-      {director ? `👤 Find ${director.split(/\s+/)[0]}` : "👤 Find owner"}
+      {director ? `Find ${director.split(/\s+/)[0]}` : "Find decision maker"}
     </button>
   );
 }
@@ -1615,14 +1499,15 @@ function SourceOption({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={`flex-1 rounded-lg border px-4 py-3 text-left transition-colors ${
         active
-          ? "border-zinc-900 bg-zinc-50 ring-1 ring-zinc-900"
-          : "border-zinc-200 hover:border-zinc-400"
+          ? "border-action bg-canvas ring-1 ring-action"
+          : "border-field hover:border-muted"
       }`}
     >
       <div className="text-sm font-medium">{title}</div>
-      <div className="text-xs text-zinc-400 mt-0.5">{desc}</div>
+      <div className="text-xs text-muted mt-0.5">{desc}</div>
     </button>
   );
 }
@@ -1651,10 +1536,10 @@ function SearchProgress({ source, startedAt }: { source: string; startedAt?: str
   const srcName = source === "web" ? "the web" : sourceLabel(source);
   return (
     <div className="mt-4">
-      <div className="flex items-center gap-2.5 text-sm text-zinc-600">
-        <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-zinc-200 border-t-blue-600" />
+      <div className="flex items-center gap-2.5 text-sm text-muted">
+        <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-line border-t-blue-600" />
         Searching {srcName} and checking business details…
-        <span className="text-xs tabular-nums text-zinc-400">{elapsed}s</span>
+        <span className="text-xs tabular-nums text-muted">{elapsed}s</span>
       </div>
 
     </div>
@@ -1665,16 +1550,16 @@ function SearchProgress({ source, startedAt }: { source: string; startedAt?: str
 function SkeletonResults({ rows }: { rows: number }) {
   return (
     <Card className="p-0 overflow-hidden">
-      <div className="divide-y divide-zinc-100">
+      <div className="divide-y divide-line">
         {Array.from({ length: rows }).map((_, i) => (
           <div key={i} className="flex animate-pulse items-center gap-3 px-5 py-4">
-            <span className="h-9 w-9 shrink-0 rounded-lg bg-zinc-100" />
+            <span className="h-9 w-9 shrink-0 rounded-lg bg-raised" />
             <div className="min-w-0 flex-1 space-y-2">
-              <div className="h-3.5 w-44 max-w-full rounded bg-zinc-100" />
-              <div className="h-3 w-64 max-w-full rounded bg-zinc-100/80" />
+              <div className="h-3.5 w-44 max-w-full rounded bg-raised" />
+              <div className="h-3 w-64 max-w-full rounded bg-raised/80" />
             </div>
-            <span className="hidden h-5 w-24 rounded-full bg-zinc-100 sm:block" />
-            <span className="hidden h-5 w-20 rounded-full bg-zinc-100 md:block" />
+            <span className="hidden h-5 w-24 rounded-full bg-raised sm:block" />
+            <span className="hidden h-5 w-20 rounded-full bg-raised md:block" />
           </div>
         ))}
       </div>

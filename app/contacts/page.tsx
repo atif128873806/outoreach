@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import Icon from "../components/Icon";
 import {
   Card,
   PageHeader,
@@ -44,6 +46,8 @@ export default function ContactsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [outreachEnabled, setOutreachEnabled] = useState(false);
+  useEffect(() => { const controller = new AbortController(); void fetch("/api/auth/me", {signal:controller.signal}).then(r=>r.ok?r.json():null).then(d=>{if(!controller.signal.aborted)setOutreachEnabled(Boolean(d?.outreachEnabled));}).catch(()=>{});return()=>controller.abort(); }, []);
   const [form, setForm] = useState(EMPTY_FORM);
   const [adding, setAdding] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -170,7 +174,7 @@ export default function ContactsPage() {
       />
 
       {message && (
-        <Card className="mb-4 p-3 text-sm text-zinc-700 bg-zinc-50">{message}</Card>
+        <Card className="mb-4 p-3 text-sm text-ink bg-canvas">{message}</Card>
       )}
 
       {showAdd && (
@@ -203,8 +207,9 @@ export default function ContactsPage() {
         </Card>
       )}
 
+      {contacts.length === 0 && !query && <div className="mb-6 flex flex-wrap items-center justify-between gap-5 rounded-lg bg-surface p-6"><div><h2 className="text-lg font-medium">Build a shortlist, then keep the useful contacts.</h2><p className="mt-2 text-sm text-muted">Save eligible contacts from a completed search or use the existing CSV import.</p></div><Link href="/leads" className="ui-secondary">Find businesses<Icon name="arrow" className="h-4 w-4"/></Link></div>}
       <Card className="p-0 overflow-hidden">
-        <div className="p-4 border-b border-zinc-100">
+        <div className="p-4 border-b border-line">
           <input
             className={inputCls}
             placeholder="Search by email, business, category, Instagram, or LinkedIn…"
@@ -213,40 +218,40 @@ export default function ContactsPage() {
           />
         </div>
         {contacts.length === 0 ? (
-          <p className="text-sm text-zinc-400 py-12 text-center">
-            No contacts yet. Import a CSV with columns like{" "}
-            <code className="bg-zinc-100 px-1 rounded">email</code>,{" "}
-            <code className="bg-zinc-100 px-1 rounded">business_name</code>,{" "}
-            <code className="bg-zinc-100 px-1 rounded">category</code>,{" "}
-            <code className="bg-zinc-100 px-1 rounded">instagram</code>.
+          <p className="text-sm text-muted py-12 text-center">
+            Your saved contacts will appear here. Import a CSV with columns like{" "}
+            <code className="bg-raised px-1 rounded">email</code>,{" "}
+            <code className="bg-raised px-1 rounded">business_name</code>,{" "}
+            <code className="bg-raised px-1 rounded">category</code>,{" "}
+            <code className="bg-raised px-1 rounded">instagram</code>.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="contacts-table overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-zinc-400 uppercase tracking-wide">
+                <tr className="text-left text-xs text-muted uppercase tracking-wide">
                   <th className="px-4 py-2.5 font-medium">Email</th>
                   <th className="px-4 py-2.5 font-medium">Business</th>
                   <th className="px-4 py-2.5 font-medium">Category</th>
                   <th className="px-4 py-2.5 font-medium">Social</th>
-                  <th className="px-4 py-2.5 font-medium">Status</th>
-                  <th className="px-4 py-2.5 font-medium" title="Replied contacts stop receiving follow-ups">Replied</th>
+                  {outreachEnabled && <th className="px-4 py-2.5 font-medium">Status</th>}
+                  {outreachEnabled && <th className="px-4 py-2.5 font-medium" title="Replied contacts stop receiving follow-ups">Replied</th>}
                   <th className="px-4 py-2.5" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-line">
                 {contacts.map((c) => (
-                  <tr key={c.id} className="hover:bg-zinc-50">
+                  <tr key={c.id} className="hover:bg-canvas">
                     <td className="px-4 py-2.5 font-medium">
                       <div>{c.email || "—"}</div>
                       {c.email && (
                         <div
                           className={`mt-0.5 text-[11px] font-normal ${
                             c.email_status === "valid"
-                              ? "text-emerald-600"
+                              ? "text-success"
                               : c.email_status === "invalid" || c.email_status === "risky"
-                                ? "text-red-500"
-                                : "text-zinc-400"
+                                ? "text-danger"
+                                : "text-muted"
                           }`}
                         >
                           {c.email_status === "valid"
@@ -255,14 +260,14 @@ export default function ContactsPage() {
                               ? "invalid domain"
                               : c.email_status === "risky"
                                 ? "risky address"
-                                : "checked before sending"}
+                                : "Not verified"}
                         </div>
                       )}
                     </td>
                     <td className="px-4 py-2.5">{c.business_name || "—"}</td>
                     <td className="px-4 py-2.5">
                       {c.category ? (
-                        <span className="inline-block rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs">
+                        <span className="inline-block rounded-full bg-raised px-2.5 py-0.5 text-xs">
                           {c.category}
                         </span>
                       ) : (
@@ -276,7 +281,7 @@ export default function ContactsPage() {
                             href={`https://instagram.com/${c.instagram}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-pink-600 hover:underline text-xs"
+                            className="text-channel hover:underline text-xs"
                           >
                             @{c.instagram}
                           </a>
@@ -286,7 +291,7 @@ export default function ContactsPage() {
                             href={`https://www.linkedin.com/${c.linkedin}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sky-700 hover:underline text-xs"
+                            className="text-accent hover:underline text-xs"
                           >
                             in/{c.linkedin.split("/")[1] ?? c.linkedin}
                           </a>
@@ -294,13 +299,14 @@ export default function ContactsPage() {
                         {!c.instagram && !c.linkedin && "—"}
                       </div>
                     </td>
+                    {outreachEnabled && <>
                     <td className="px-4 py-2.5">
                       {c.unsubscribed ? (
-                        <span className="text-xs text-red-500 font-medium">unsubscribed</span>
+                        <span className="text-xs text-danger font-medium">unsubscribed</span>
                       ) : c.bounced ? (
                         <span className="text-xs text-orange-500 font-medium" title="Email bounced — excluded from sending">bounced</span>
                       ) : (
-                        <span className="text-xs text-emerald-600">subscribed</span>
+                        <span className="text-xs text-success">subscribed</span>
                       )}
                     </td>
                     <td className="px-4 py-2.5">
@@ -311,10 +317,11 @@ export default function ContactsPage() {
                         title="Mark as replied — stops follow-up emails to this contact"
                       />
                     </td>
+                    </>}
                     <td className="px-4 py-2.5 text-right">
                       <button
                         onClick={() => remove(c.id)}
-                        className="text-xs text-zinc-400 hover:text-red-500"
+                        className="text-xs text-muted hover:text-danger"
                       >
                         Delete
                       </button>

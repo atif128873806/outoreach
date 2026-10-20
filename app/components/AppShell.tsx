@@ -32,10 +32,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   if (BARE_PATHS.has(pathname) || pathname === "/admin" || pathname.startsWith("/admin/")) return <>{children}</>;
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col lg:flex-row">
       <Sidebar />
       <main className="flex-1 min-w-0">
-        <div className="mx-auto w-full max-w-6xl px-8 py-8">
+        <div className="workspace-main w-full">
           <VerifyEmailBanner />
           {children}
         </div>

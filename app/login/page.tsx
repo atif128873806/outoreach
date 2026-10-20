@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from "react";
 import Link from "next/link";
+import AuthFrame from "../components/AuthFrame";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginForm() {
@@ -25,7 +26,7 @@ function LoginForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
       const next = params.get("next");
-      router.replace(next && next.startsWith("/") ? next : "/leads");
+      router.replace(next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") && !next.startsWith("/api/") && !next.startsWith("/admin") ? next : "/leads");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -34,39 +35,39 @@ function LoginForm() {
   }
 
   const input =
-    "w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400";
+    "ui-input";
 
   return (
     <form
       onSubmit={submit}
-      className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm"
+      className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 sm:p-8"
     >
-      <div className="text-lg font-semibold tracking-tight">Outreach Studio</div>
-      <p className="text-sm text-zinc-400 mt-1 mb-6">Sign in to your workspace.</p>
+      <h1 className="text-2xl font-semibold tracking-tight">Sign in to your workspace</h1>
+      <p className="text-sm leading-6 text-muted mt-3 mb-6">Continue your business research and return to your saved work.</p>
       <label className="block mb-4">
-        <div className="text-sm font-medium text-zinc-600 mb-1.5">Email</div>
-        <input type="email" autoFocus className={input} value={email} onChange={(e) => setEmail(e.target.value)} />
+        <div className="text-sm font-medium text-muted mb-1.5">Email</div>
+        <input type="email" required autoComplete="email" className={input} value={email} onChange={(e) => setEmail(e.target.value)} />
       </label>
       <label className="block">
         <div className="flex items-baseline justify-between mb-1.5">
-          <div className="text-sm font-medium text-zinc-600">Password</div>
-          <Link href="/forgot-password" className="text-xs text-zinc-400 underline hover:text-zinc-600">
+          <div className="text-sm font-medium text-muted">Password</div>
+          <Link href="/forgot-password" className="text-xs text-muted underline hover:text-muted">
             Forgot password?
           </Link>
         </div>
-        <input type="password" className={input} value={password} onChange={(e) => setPassword(e.target.value)} />
+        <input type="password" required autoComplete="current-password" className={input} value={password} onChange={(e) => setPassword(e.target.value)} />
       </label>
-      {error && <div className="text-sm text-red-500 mt-3">{error}</div>}
+      {error && <div role="alert" className="text-sm text-danger mt-3">{error}</div>}
       <button
         type="submit"
         disabled={busy || !email || !password}
-        className="mt-5 w-full rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
+        className="ui-primary mt-6 w-full"
       >
         {busy ? "Signing in…" : "Sign in"}
       </button>
-      <p className="text-xs text-zinc-400 mt-4 text-center">
+      <p className="text-xs text-muted mt-4 text-center">
         No account yet?{" "}
-        <Link href="/signup" className="underline hover:text-zinc-600">
+        <Link href="/signup" className="underline hover:text-muted">
           Create one
         </Link>
       </p>
@@ -76,10 +77,10 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4">
+    <AuthFrame>
       <Suspense>
         <LoginForm />
       </Suspense>
-    </div>
+    </AuthFrame>
   );
 }

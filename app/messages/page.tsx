@@ -42,11 +42,11 @@ interface Reply {
 }
 
 const CLASS_STYLES: Record<string, { cls: string; label: string }> = {
-  interested: { cls: "bg-emerald-100 text-emerald-700", label: "interested" },
-  question: { cls: "bg-sky-100 text-sky-700", label: "question" },
-  not_interested: { cls: "bg-zinc-200 text-zinc-600", label: "not interested" },
-  out_of_office: { cls: "bg-amber-100 text-amber-700", label: "out of office" },
-  other: { cls: "bg-zinc-100 text-zinc-500", label: "other" },
+  interested: { cls: "bg-success-surface text-success", label: "interested" },
+  question: { cls: "bg-info text-accent", label: "question" },
+  not_interested: { cls: "bg-raised text-muted", label: "not interested" },
+  out_of_office: { cls: "bg-warning-surface text-warning", label: "out of office" },
+  other: { cls: "bg-raised text-muted", label: "other" },
 };
 
 function profileUrl(d: Draft): string | null {
@@ -127,8 +127,8 @@ export default function MessagesPage() {
 
       {tab === "drafts" && (
         <>
-          <Card className="mb-6 p-4 text-sm text-zinc-600 bg-blue-50 border-blue-200">
-            <span className="font-medium text-blue-900">How this works:</span>{" "}
+          <Card className="mb-6 p-4 text-sm text-muted bg-info border-accent">
+            <span className="font-medium text-accent">How this works:</span>{" "}
             Instagram and LinkedIn ban automated cold DMs, so drafts are prepared
             here for one-click manual sending — <em>copy</em> the message,{" "}
             <em>open</em> the profile, paste it, then <em>mark sent</em>. Marking
@@ -137,9 +137,9 @@ export default function MessagesPage() {
           </Card>
 
           {!loaded ? (
-            <div className="text-zinc-400 text-sm py-20 text-center">Loading…</div>
+            <div className="text-muted text-sm py-20 text-center">Loading…</div>
           ) : drafts.length === 0 ? (
-            <Card className="p-12 text-center text-sm text-zinc-400">
+            <Card className="p-12 text-center text-sm text-muted">
               No drafts waiting. Create an{" "}
               <Link href="/campaigns" className="underline">
                 Instagram or LinkedIn campaign
@@ -164,7 +164,7 @@ export default function MessagesPage() {
                               target="_blank"
                               rel="noopener noreferrer"
                               className={`${
-                                d.channel === "linkedin" ? "text-sky-700" : "text-pink-600"
+                                d.channel === "linkedin" ? "text-accent" : "text-channel"
                               } hover:underline font-normal`}
                             >
                               {d.channel === "linkedin"
@@ -172,7 +172,7 @@ export default function MessagesPage() {
                                 : `@${d.instagram}`}
                             </a>
                           )}
-                          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                          <span className="rounded-full bg-raised px-2 py-0.5 text-xs font-medium text-muted">
                             {isConnectionNote
                               ? "connection note"
                               : d.step === 1
@@ -183,10 +183,10 @@ export default function MessagesPage() {
                             <span
                               className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                                 chars <= 200
-                                  ? "bg-emerald-100 text-emerald-700"
+                                  ? "bg-success-surface text-success"
                                   : chars <= 300
-                                    ? "bg-amber-100 text-amber-700"
-                                    : "bg-red-100 text-red-700"
+                                    ? "bg-warning-surface text-warning"
+                                    : "bg-danger-surface text-danger"
                               }`}
                               title="LinkedIn caps connection notes at 200–300 characters depending on account type"
                             >
@@ -194,7 +194,7 @@ export default function MessagesPage() {
                             </span>
                           )}
                         </div>
-                        <div className="text-xs text-zinc-400 mt-0.5">
+                        <div className="text-xs text-muted mt-0.5">
                           {d.category && `${d.category} · `}
                           <Link href={`/campaigns/${d.campaign_id}`} className="hover:underline">
                             {d.campaign_name}
@@ -205,7 +205,7 @@ export default function MessagesPage() {
                       </div>
                     </div>
 
-                    <div className="rounded-lg bg-zinc-50 border border-zinc-100 p-4 text-sm whitespace-pre-wrap mb-4">
+                    <div className="rounded-lg bg-canvas border border-line p-4 text-sm whitespace-pre-wrap mb-4">
                       {d.body}
                     </div>
 
@@ -223,7 +223,7 @@ export default function MessagesPage() {
                       </button>
                       {d.step > 1 && (
                         <button
-                          className={`${btnSecondary} text-emerald-700`}
+                          className={`${btnSecondary} text-success`}
                           onClick={() => act(d.id, "got_reply")}
                           title="They answered — stop this contact's sequence"
                         >
@@ -231,7 +231,7 @@ export default function MessagesPage() {
                         </button>
                       )}
                       <button
-                        className={`${btnSecondary} text-zinc-400`}
+                        className={`${btnSecondary} text-muted`}
                         onClick={() => act(d.id, "skip")}
                       >
                         Skip
@@ -248,9 +248,9 @@ export default function MessagesPage() {
       {tab === "replies" && (
         <>
           {!loaded ? (
-            <div className="text-zinc-400 text-sm py-20 text-center">Loading…</div>
+            <div className="text-muted text-sm py-20 text-center">Loading…</div>
           ) : replies.length === 0 ? (
-            <Card className="p-12 text-center text-sm text-zinc-400">
+            <Card className="p-12 text-center text-sm text-muted">
               No replies captured yet. When someone answers one of your campaign
               emails, it appears here — classified by AI, with a suggested response.
               (Requires IMAP to be configured in Settings.)
@@ -269,25 +269,25 @@ export default function MessagesPage() {
                             {style.label}
                           </span>
                           {Boolean(r.handled) && (
-                            <span className="text-xs text-zinc-400">handled</span>
+                            <span className="text-xs text-muted">handled</span>
                           )}
                         </div>
-                        <div className="text-xs text-zinc-400 mt-0.5">
+                        <div className="text-xs text-muted mt-0.5">
                           {r.from_email} · {r.subject || "(no subject)"} · {fmtDate(r.created_at)}
                         </div>
                       </div>
                     </div>
 
-                    <div className="rounded-lg bg-zinc-50 border border-zinc-100 p-4 text-sm whitespace-pre-wrap mb-3">
+                    <div className="rounded-lg bg-canvas border border-line p-4 text-sm whitespace-pre-wrap mb-3">
                       {r.snippet}
                     </div>
 
                     {r.suggested_reply && (
-                      <div className="rounded-lg border border-violet-200 bg-violet-50 p-4 mb-4">
-                        <div className="text-xs font-medium text-violet-700 mb-1.5">
+                      <div className="rounded-lg border border-accent bg-info p-4 mb-4">
+                        <div className="text-xs font-medium text-accent mb-1.5">
                           ✨ AI-suggested response
                         </div>
-                        <div className="text-sm whitespace-pre-wrap text-zinc-700">
+                        <div className="text-sm whitespace-pre-wrap text-ink">
                           {r.suggested_reply}
                         </div>
                       </div>
@@ -314,7 +314,7 @@ export default function MessagesPage() {
                       )}
                       {!r.handled && (
                         <button
-                          className={`${btnSecondary} text-zinc-400`}
+                          className={`${btnSecondary} text-muted`}
                           onClick={() => markHandled(r.id)}
                         >
                           Mark handled
@@ -346,8 +346,8 @@ function TabButton({
       onClick={onClick}
       className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
         active
-          ? "bg-zinc-900 text-white"
-          : "border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
+          ? "bg-action text-action-ink"
+          : "border border-field bg-surface text-ink hover:bg-canvas"
       }`}
     >
       {children}
@@ -359,7 +359,7 @@ function Count({ n, accent = false }: { n: number; accent?: boolean }) {
   return (
     <span
       className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${
-        accent ? "bg-emerald-500 text-white" : "bg-zinc-200 text-zinc-700"
+        accent ? "bg-success text-action-ink" : "bg-raised text-ink"
       }`}
     >
       {n}

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { trackPilot } from "../components/PilotAnalytics";
 import { Card, PageHeader } from "../components/ui";
+import { SITE } from "@/lib/site";
 
 interface PlanInfo {
   id: string;
@@ -45,39 +47,39 @@ function Meter({
   const pct = limit == null ? 0 : Math.min(100, Math.round((used / Math.max(1, limit)) * 100));
   const tone =
     limit == null
-      ? "bg-blue-600"
+      ? "bg-accent-action"
       : pct >= 100
-        ? "bg-red-500"
+        ? "bg-danger"
         : pct >= 80
-          ? "bg-amber-500"
-          : "bg-blue-600";
+          ? "bg-warning"
+          : "bg-accent-action";
   return (
     <Card className="p-5">
       <div className="flex items-baseline justify-between">
-        <div className="text-sm font-medium text-zinc-700">{label}</div>
-        <div className="text-sm tabular-nums text-zinc-500">
+        <div className="text-sm font-medium text-ink">{label}</div>
+        <div className="text-sm tabular-nums text-muted">
           {limit == null ? (
-            <span className="font-medium text-emerald-600">{unlimitedNote ?? "Unlimited"}</span>
+            <span className="font-medium text-success">{unlimitedNote ?? "Unlimited"}</span>
           ) : (
             <>
-              <span className="font-semibold text-zinc-900">{used}</span> / {limit}
+              <span className="font-semibold text-ink">{used}</span> / {limit}
             </>
           )}
         </div>
       </div>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-zinc-100">
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-raised">
         <div
           className={`h-full rounded-full transition-all ${tone}`}
           style={{ width: limit == null ? "100%" : `${pct}%`, opacity: limit == null ? 0.25 : 1 }}
         />
       </div>
-      <div className="mt-2 flex items-center justify-between text-xs text-zinc-400">
+      <div className="mt-2 flex items-center justify-between text-xs text-muted">
         <span>{hint}</span>
         {limit != null && pct >= 100 && (
-          <span className="font-medium text-red-500">Limit reached</span>
+          <span className="font-medium text-danger">Limit reached</span>
         )}
         {limit != null && pct >= 80 && pct < 100 && (
-          <span className="font-medium text-amber-600">{limit - used} left</span>
+          <span className="font-medium text-warning">{limit - used} left</span>
         )}
       </div>
     </Card>
@@ -97,14 +99,14 @@ export default function BillingPage() {
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, []);
 
-  if (error) return <div className="py-20 text-center text-sm text-red-500">{error}</div>;
-  if (!data) return <div className="py-20 text-center text-sm text-zinc-400">Loading…</div>;
+  if (error) return <div className="py-20 text-center text-sm text-danger">{error}</div>;
+  if (!data) return <div className="py-20 text-center text-sm text-muted">Loading…</div>;
 
   const { plan, plans, leads, emails, ai, supportEmail } = data;
   const planRank = { free: 0, starter: 1, pro: 2 } as Record<string, number>;
   const upgradeMail = (target: string) =>
-    `mailto:${supportEmail}?subject=${encodeURIComponent(`Upgrade to ${target} — Outreach Studio`)}&body=${encodeURIComponent(
-      "Hi! I'd like to upgrade my Outreach Studio account to " + target + ". My account email is: "
+    `mailto:${supportEmail}?subject=${encodeURIComponent(`Upgrade to ${target} — ${SITE.name}`)}&body=${encodeURIComponent(
+      `Hi! I'd like to upgrade my ${SITE.name} account to ${target}. My account email is: `
     )}`;
 
   return (
@@ -119,21 +121,21 @@ export default function BillingPage() {
         <div>
           <div className="flex items-center gap-2.5">
             <span className="text-lg font-semibold">{plan.name} plan</span>
-            <span className="rounded-full bg-zinc-900 px-2.5 py-0.5 text-[11px] font-medium text-white">
+            <span className="rounded-full bg-action px-2.5 py-0.5 text-[11px] font-medium text-action-ink">
               current
             </span>
           </div>
-          <p className="mt-1 text-sm text-zinc-500">{plan.tagline}</p>
+          <p className="mt-1 text-sm text-muted">{plan.tagline}</p>
         </div>
         <div className="text-right">
           <div className="text-2xl font-semibold">
             ${plan.priceMonthlyUsd}
-            <span className="text-sm font-normal text-zinc-400"> / month</span>
+            <span className="text-sm font-normal text-muted"> / month</span>
           </div>
           {plan.id !== "pro" && (
             <a
-              href={upgradeMail(plan.id === "free" ? "Starter or Pro" : "Pro")}
-              className="mt-1 inline-block text-sm font-medium text-blue-600 hover:underline"
+              onClick={()=>trackPilot('upgrade_interest')} href={upgradeMail(plan.id === "free" ? "Starter or Pro" : "Pro")}
+              className="mt-1 inline-block text-sm font-medium text-accent hover:underline"
             >
               Upgrade →
             </a>
@@ -174,7 +176,7 @@ export default function BillingPage() {
 
       {/* plans comparison */}
       <div className="mt-10">
-        <div className="mb-4 text-sm font-medium text-zinc-600">All plans</div>
+        <div className="mb-4 text-sm font-medium text-muted">All plans</div>
         <div className="grid gap-4 md:grid-cols-3">
           {plans.map((p) => {
             const isCurrent = p.id === plan.id;
@@ -182,16 +184,16 @@ export default function BillingPage() {
             return (
               <Card
                 key={p.id}
-                className={`p-5 ${isCurrent ? "ring-2 ring-zinc-900" : ""}`}
+                className={`p-5 ${isCurrent ? "ring-2 ring-action" : ""}`}
               >
                 <div className="flex items-baseline justify-between">
                   <span className="font-semibold">{p.name}</span>
                   <span className="text-lg font-semibold">
                     ${p.priceMonthlyUsd}
-                    <span className="text-xs font-normal text-zinc-400">/mo</span>
+                    <span className="text-xs font-normal text-muted">/mo</span>
                   </span>
                 </div>
-                <ul className="mt-3 space-y-1.5 text-sm text-zinc-500">
+                <ul className="mt-3 space-y-1.5 text-sm text-muted">
                   <li>
                     {p.leadsPerMonth == null
                       ? "Unlimited leads"
@@ -207,24 +209,24 @@ export default function BillingPage() {
                   </li>
                 </ul>
                 {isCurrent ? (
-                  <div className="mt-4 rounded-lg bg-zinc-100 py-2 text-center text-xs font-medium text-zinc-500">
+                  <div className="mt-4 rounded-lg bg-raised py-2 text-center text-xs font-medium text-muted">
                     Your current plan
                   </div>
                 ) : isUpgrade ? (
                   <a
-                    href={upgradeMail(p.name)}
-                    className="mt-4 block rounded-lg bg-zinc-900 py-2 text-center text-xs font-semibold text-white hover:bg-zinc-700"
+                    onClick={()=>trackPilot('upgrade_interest')} href={upgradeMail(p.name)}
+                    className="mt-4 block rounded-lg bg-action py-2 text-center text-xs font-semibold text-action-ink hover:bg-action-hover"
                   >
                     Upgrade to {p.name}
                   </a>
                 ) : (
-                  <div className="mt-4 py-2 text-center text-xs text-zinc-300">—</div>
+                  <div className="mt-4 py-2 text-center text-xs text-muted">—</div>
                 )}
               </Card>
             );
           })}
         </div>
-        <p className="mt-4 text-xs text-zinc-400">
+        <p className="mt-4 text-xs text-muted">
           Self-serve checkout is rolling out. Until then, upgrades are activated by
           email — usually within a few hours. Hitting a limit never breaks anything:
           sends resume tomorrow, AI falls back to templates, and Lead Finder resumes

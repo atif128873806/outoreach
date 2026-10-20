@@ -2,36 +2,40 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { LogoMark } from "./Logo";
+import Icon, {type IconName} from "./Icon";
+import { SITE } from "@/lib/site";
 
 /**
  * The product is one feature: find businesses that need you, with the proof.
  * Everything else lives behind `outreachEnabled` and is unlinked by default.
  */
 const PRODUCT_NAV = [
-  { href: "/leads", label: "Find leads", icon: "⌕" },
-  { href: "/watches", label: "New businesses", icon: "＋" },
-  { href: "/contacts", label: "My leads", icon: "☰" },
-  { href: "/billing", label: "Plan & usage", icon: "◇" },
-  { href: "/settings", label: "Settings", icon: "⚙" },
-  { href: "/docs", label: "Help & docs", icon: "?" },
+  { href: "/leads", label: "Find leads", icon: "search" },
+  { href: "/watches", label: "New businesses", icon: "plus" },
+  { href: "/contacts", label: "My leads", icon: "leads" },
+  { href: "/billing", label: "Plan & usage", icon: "plan" },
+  { href: "/settings", label: "Settings", icon: "settings" },
+  { href: "/docs", label: "Help & docs", icon: "help" },
 ];
 
 /** The full app, shown only when a deployment opts back into outreach. */
 const OUTREACH_NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: "▦" },
-  { href: "/leads", label: "Find leads", icon: "⌕" },
-  { href: "/contacts", label: "My leads", icon: "☰" },
-  { href: "/campaigns", label: "Campaigns", icon: "✉" },
-  { href: "/messages", label: "Message Center", icon: "◎" },
-  { href: "/billing", label: "Plan & Usage", icon: "◇" },
-  { href: "/settings", label: "Settings", icon: "⚙" },
-  { href: "/docs", label: "Help & Docs", icon: "?" },
+  { href: "/dashboard", label: "Dashboard", icon: "grid" },
+  { href: "/leads", label: "Find leads", icon: "search" },
+  { href: "/contacts", label: "My leads", icon: "leads" },
+  { href: "/campaigns", label: "Campaigns", icon: "mail" },
+  { href: "/messages", label: "Message Center", icon: "mail" },
+  { href: "/billing", label: "Plan & Usage", icon: "plan" },
+  { href: "/settings", label: "Settings", icon: "settings" },
+  { href: "/docs", label: "Help & Docs", icon: "help" },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [menuOpen,setMenuOpen]=useState(false);
+  const menuToggle=useRef<HTMLButtonElement>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   // Defaults to the single-feature product until the server says otherwise.
@@ -96,38 +100,41 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-60 shrink-0 bg-zinc-950 text-zinc-300 flex flex-col">
-      <div className="px-6 py-6 border-b border-zinc-800">
+    <aside className="workspace-nav flex w-full shrink-0 flex-col bg-canvas text-muted lg:sticky lg:top-0 lg:h-screen lg:w-56" onKeyDown={e=>{if(e.key==='Escape'&&menuOpen){setMenuOpen(false);menuToggle.current?.focus();}}}>
+      <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-4 lg:px-6 lg:py-6">
         <div className="flex items-center gap-2.5">
           <LogoMark className="h-7 w-7 shrink-0" />
           <div>
-            <div className="text-white font-semibold text-lg tracking-tight leading-tight">
-              Outreach Studio
+            <div className="text-ink font-semibold text-lg tracking-tight leading-tight">
+              {SITE.name}
             </div>
-            <div className="text-xs text-zinc-500">
+            <div className="text-xs text-muted">
               {outreachEnabled ? "AI outreach automation" : "Lead intelligence"}
             </div>
           </div>
         </div>
+        <button ref={menuToggle} type="button" aria-expanded={menuOpen} aria-controls="product-navigation" aria-label={menuOpen?'Close workspace navigation':'Open workspace navigation'} onClick={()=>setMenuOpen(!menuOpen)} className="rounded-lg border border-field p-2.5 text-ink lg:hidden"><Icon name={menuOpen?'close':'menu'}/></button>
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav id="product-navigation" aria-label="Product navigation" className={`${menuOpen?'block':'hidden'} space-y-1 px-3 py-3 lg:block lg:flex-1 lg:py-4`}>
         {nav.map((item) => {
           const active = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+              onClick={()=>setMenuOpen(false)}
+              aria-current={active ? "page" : undefined}
+              className={`flex shrink-0 items-center gap-3 rounded-lg px-3 py-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent ${
                 active
-                  ? "bg-zinc-800 text-white font-medium"
-                  : "hover:bg-zinc-900 hover:text-white"
+                  ? "bg-raised text-ink font-medium"
+                  : "hover:bg-raised hover:text-ink"
               }`}
             >
-              <span className="w-5 text-center">{item.icon}</span>
-              <span className="flex-1">{item.label}</span>
+              <Icon name={item.icon as IconName} className="h-5 w-5 shrink-0"/>
+              <span className="flex-1 whitespace-nowrap">{item.label}</span>
               {item.href === "/watches" && unseen > 0 && (
                 <span
-                  className="rounded-full bg-sky-500 px-1.5 py-0.5 text-[10px] font-semibold text-white"
+                  className="rounded-full bg-accent-action px-1.5 py-0.5 text-[10px] font-semibold text-ink"
                   title={`${unseen} new ${unseen === 1 ? "business" : "businesses"}`}
                 >
                   {unseen > 99 ? "99+" : unseen}
@@ -139,25 +146,25 @@ export default function Sidebar() {
         {isAdmin && (
           <Link
             href="/admin"
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+            className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition-colors ${
               pathname.startsWith("/admin")
-                ? "bg-zinc-800 text-white font-medium"
-                : "hover:bg-zinc-900 hover:text-white"
+                ? "bg-raised text-ink font-medium"
+                : "hover:bg-raised hover:text-ink"
             }`}
           >
-            <span className="w-5 text-center">★</span>
+            <Icon name="shield" className="h-5 w-5"/>
             Admin
           </Link>
         )}
       </nav>
-      <div className="px-6 py-4 border-t border-zinc-800">
+      <div className={`${menuOpen?"flex":"hidden"} min-w-0 items-center justify-between gap-4 border-t border-line px-6 py-4 lg:block`}>
         {email && (
-          <div className="mb-1.5 flex items-center gap-1.5">
-            <span className="truncate text-xs text-zinc-400" title={email}>
+          <div className="flex min-w-0 items-center gap-1.5 lg:mb-1.5">
+            <span className="truncate text-xs text-muted" title={email}>
               {email}
             </span>
             {isAdmin && (
-              <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium text-zinc-300">
+              <span className="shrink-0 rounded bg-raised px-1.5 py-0.5 text-[10px] font-medium text-muted">
                 owner
               </span>
             )}
@@ -165,7 +172,7 @@ export default function Sidebar() {
         )}
         <button
           onClick={signOut}
-          className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors"
+          className="shrink-0 text-xs text-muted hover:text-ink transition-colors"
         >
           Sign out
         </button>

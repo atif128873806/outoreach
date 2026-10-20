@@ -280,6 +280,8 @@ export async function finishSearchJob(job: JobRow, result: JobResult | null, err
       finished_at = now(), worker_token = NULL, lease_until = NULL WHERE id = $5`,
       [result ? "done" : "failed", result ? JSON.stringify(result) : null,
         result?.leads.length ?? 0, error, job.id]);
+    const { recordPilotJobEventSafely }=await import("./pilot-journey");
+    await recordPilotJobEventSafely(tx,job.user_id,job.id,result?(result.leads.length?'search_results':'search_empty'):'search_failed');
     return true;
   });
 }
@@ -383,6 +385,8 @@ export async function pumpSearchJobs(): Promise<void> {
   try {
     if (Date.now() >= nextCleanup) {
       await recoverSearchJobs();
+      const {bestEffortPilot,cleanupPilotJourneys}=await import("./pilot-journey");
+      await bestEffortPilot(cleanupPilotJourneys);
       nextCleanup = Date.now() + 3_600_000;
     } else {
       await failStaleRunningJobs();
@@ -410,15 +414,19 @@ export async function pumpSearchJobs(): Promise<void> {
  * better than a user watching "In progress" for ever.
  */
 async function failStaleRunningJobs(): Promise<number> {
-  const { q } = await import("./db");
-  const rows = await q(
-    `UPDATE search_jobs SET status = 'failed',
+  const { getDb } = await import("./db");
+  return (await getDb()).transaction(async tx => {
+    const rows = await tx.query<{id:number;user_id:number}>(
+      `UPDATE search_jobs SET status = 'failed',
        error = 'Search interrupted. Please queue it again.', finished_at = now(),
        worker_token = NULL, lease_until = NULL
-     WHERE status = 'running' AND (
+       WHERE status = 'running' AND (
        lease_until <= clock_timestamp() OR (lease_until IS NULL AND (started_at IS NULL OR started_at < now() - interval '10 minutes'))
-     ) RETURNING id`);
-  return rows.length;
+       ) RETURNING id,user_id`);
+    const {recordPilotJobEventSafely}=await import("./pilot-journey");
+    for(const row of rows)await recordPilotJobEventSafely(tx,row.user_id,row.id,"search_failed");
+    return rows.length;
+  });
 }
 
 /** Recover expired leases only. Never replay work that may already be metered. */

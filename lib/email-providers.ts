@@ -23,7 +23,7 @@ export const PROVIDER_PRESETS: Record<string, ProviderPreset> = {
     appPasswordUrl: "https://myaccount.google.com/apppasswords",
     guide: [
       "Google blocks normal passwords for apps — you need an App Password (16 characters).",
-      "Open the App Passwords page (button below), create one named “Outreach Studio”, and paste it as the SMTP password.",
+      "Open the App Passwords page (button below), create one named “LeadBoffin”, and paste it as the SMTP password.",
       "If you don't see App Passwords, enable 2-Step Verification first (Google Account → Security).",
     ],
   },

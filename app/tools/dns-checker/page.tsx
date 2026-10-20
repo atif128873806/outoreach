@@ -18,18 +18,18 @@ export default function DnsCheckerPage() {
       <DnsCheckerClient />
 
       {/* conversion banner */}
-      <div className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-zinc-950 px-6 py-5">
+      <div className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-canvas px-6 py-5">
         <div>
-          <div className="font-semibold text-white">
-            Records missing? Outreach Studio walks you through fixing them
+          <div className="font-semibold text-ink">
+            Records missing? LeadBoffin walks you through fixing them
           </div>
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-muted">
             Then sends your outreach at a safe pace with warm-up, caps, and send windows built in.
           </p>
         </div>
         <Link
           href="/signup"
-          className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-zinc-900 hover:bg-zinc-100"
+          className="rounded-xl bg-surface px-5 py-2.5 text-sm font-semibold text-ink hover:bg-raised"
         >
           Start free
         </Link>
@@ -51,7 +51,7 @@ export default function DnsCheckerPage() {
           <li>
             <b>SPF:</b> add a TXT record on your root domain. Your email host&apos;s
             docs give the exact value — it looks like{" "}
-            <code className="rounded bg-zinc-100 px-1 text-[13px]">v=spf1 a mx include:… ~all</code>.
+            <code className="rounded bg-raised px-1 text-[13px]">v=spf1 a mx include:… ~all</code>.
           </li>
           <li>
             <b>DKIM:</b> enable signing in your email panel (cPanel: Email
@@ -59,9 +59,9 @@ export default function DnsCheckerPage() {
             then publish the key it gives you as a TXT record.
           </li>
           <li>
-            <b>DMARC:</b> add a TXT record on <code className="rounded bg-zinc-100 px-1 text-[13px]">_dmarc.yourdomain.com</code>{" "}
+            <b>DMARC:</b> add a TXT record on <code className="rounded bg-raised px-1 text-[13px]">_dmarc.yourdomain.com</code>{" "}
             starting with{" "}
-            <code className="rounded bg-zinc-100 px-1 text-[13px]">v=DMARC1; p=none;</code>{" "}
+            <code className="rounded bg-raised px-1 text-[13px]">v=DMARC1; p=none;</code>{" "}
             — tighten the policy once your own mail passes.
           </li>
           <li>
@@ -69,7 +69,7 @@ export default function DnsCheckerPage() {
           </li>
           <li>
             Want the full picture — warm-up schedules, volume rules, monitoring? Read the{" "}
-            <Link href="/guides/cold-email-deliverability" className="text-blue-600 underline">
+            <Link href="/guides/cold-email-deliverability" className="text-accent underline">
               complete deliverability guide
             </Link>
             .
@@ -82,11 +82,11 @@ export default function DnsCheckerPage() {
           Perfect DNS won&apos;t save spammy content, and great content
           won&apos;t save an unauthenticated domain. Run your email copy through
           our free{" "}
-          <Link href="/tools/spam-checker" className="text-blue-600 underline">
+          <Link href="/tools/spam-checker" className="text-accent underline">
             spam checker
           </Link>{" "}
           too — then send at a human pace with daily caps and warm-up, which is
-          exactly what Outreach Studio automates.
+          exactly what LeadBoffin automates.
         </p>
       </Section>
     </PublicShell>

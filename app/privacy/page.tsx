@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: `How ${SITE.name} collects, uses, and protects data.`,
 };
 
-const UPDATED = "August 9, 2026";
+const UPDATED = "October 6, 2026";
 
 export default function PrivacyPage() {
   return (
@@ -24,7 +24,7 @@ export default function PrivacyPage() {
           leads you collect — and in the contact lists you upload, where the optional
           outreach features are enabled — you are the controller and we process it on your
           behalf. Contact:{" "}
-          <a href={`mailto:${SITE.supportEmail}`} className="text-blue-600 underline">
+          <a href={`mailto:${SITE.supportEmail}`} className="text-accent underline">
             {SITE.supportEmail}
           </a>
           .
@@ -112,7 +112,7 @@ export default function PrivacyPage() {
           opting out is enforced permanently and automatically, and you may not remove or
           work around it. If you received unwanted contact that references {SITE.name},
           contact us at{" "}
-          <a href={`mailto:${SITE.supportEmail}`} className="text-blue-600 underline">
+          <a href={`mailto:${SITE.supportEmail}`} className="text-accent underline">
             {SITE.supportEmail}
           </a>{" "}
           and we will investigate.
@@ -121,18 +121,17 @@ export default function PrivacyPage() {
 
       <Section heading="6. Cookies">
         <p>
-          We use one strictly necessary cookie: your session (an HMAC-signed token that
-          keeps you logged in for 30 days). No advertising or cross-site tracking cookies.
+          Account and separate administrator sessions use necessary cookies. A preference cookie remembers your analytics choice for 90 days. Only after you allow pilot analytics, a first-party journey cookie lasts up to 30 days. It connects preview/page views to signup, searches, result actions and upgrade-link interest; after signup it links to your account. No advertising or cross-site analytics cookies.
         </p>
       </Section>
 
       <Section heading="7. Retention and deletion">
         <p>
-          Your data is kept while your account is active. Deleting your account removes your
+          Optional pilot journey records contain event types, times, audience and owned search references, not passwords, contact payloads, full URLs or referrers. They are removed after 90 days from journey creation. Withdraw using Analytics preferences at the bottom of the page to delete that browser journey from the live database immediately. Existing operational search/account records are separate. Your account data is kept while your account is active. Deleting your account removes your
           contacts, campaigns, messages, settings, and credentials from the live database.
           Server backups age out on a rolling schedule. To request deletion or a copy of
           your data, email{" "}
-          <a href={`mailto:${SITE.supportEmail}`} className="text-blue-600 underline">
+          <a href={`mailto:${SITE.supportEmail}`} className="text-accent underline">
             {SITE.supportEmail}
           </a>
           .
@@ -162,7 +161,7 @@ export default function PrivacyPage() {
         <p>
           We will post updates here and, for material changes, notify you by email or
           in-app. See also our{" "}
-          <Link href="/terms" className="text-blue-600 underline">Terms of Service</Link>.
+          <Link href="/terms" className="text-accent underline">Terms of Service</Link>.
         </p>
       </Section>
     </PublicShell>

@@ -19,7 +19,7 @@ const FOOTER_GROUPS = [
     label: "Product",
     links: [
       ["Features", "/features"],
-      ["Product demo", "/demo"],
+      ["Live sample", "/demo"],
       ["Pricing", "/pricing"],
       ["Documentation", "/docs"],
     ],
@@ -61,40 +61,40 @@ export default function PublicFooter() {
   return (
     <footer
       id="site-footer"
-      className="border-t border-zinc-800 bg-zinc-950 text-zinc-400"
+      className="border-t border-line bg-canvas text-muted"
     >
-      <div className="mx-auto max-w-6xl px-6 pt-16 pb-8">
+      <div className="page-width pt-16 pb-8">
         <div className="grid gap-12 lg:grid-cols-[1.35fr_4fr] lg:gap-10">
           <div className="max-w-sm">
             <Link
               href="/"
-              className="inline-flex items-center gap-2.5 font-semibold tracking-tight text-white"
+              className="inline-flex items-center gap-2.5 font-semibold tracking-tight text-ink"
               aria-label={`${SITE.name} home`}
             >
               <LogoTile className="h-9 w-9" />
-              <span className="text-base">{SITE.name}</span>
+              <span className="text-2xl">{SITE.name}</span>
             </Link>
-            <p className="mt-5 text-sm leading-6 text-zinc-400">
-              Find real local businesses pulled live from the web, see exactly
-              what is wrong with each one&apos;s website, and approach them with
-              the reason already in hand.
+            <p className="mt-5 text-sm leading-6 text-muted">
+              Find London businesses from public sources, review available website
+              findings, and qualify a shortlist for your own outreach. Matching
+              fresh records can be reused from cache.
             </p>
-            <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-zinc-200">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
+            <div className="mt-6 border-t border-line pt-5">
+              <div className="flex items-center gap-2 text-sm font-medium text-ink">
+                <span className="h-2 w-2 rounded-full bg-success" aria-hidden />
                 Evidence, not guesses
               </div>
-              <p className="mt-2 text-xs leading-5 text-zinc-500">
-                Every finding is measured rather than inferred, and a perfectly
-                healthy website is never sold to its owner as broken.
+              <p className="mt-2 text-xs leading-5 text-muted">
+                Review the dated evidence and source coverage, then confirm an
+                issue before quoting it to a business owner.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4 lg:gap-8">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:gap-8">
             {groups.map((group) => (
               <nav key={group.label} aria-label={`${group.label} footer links`}>
-                <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-200">
+                <h2 className="text-sm font-medium text-ink">
                   {group.label}
                 </h2>
                 <ul className="mt-5 space-y-3.5 text-sm">
@@ -102,7 +102,7 @@ export default function PublicFooter() {
                     <li key={href}>
                       <Link
                         href={href}
-                        className="leading-5 transition-colors hover:text-white"
+                        className="leading-5 transition-colors hover:text-ink"
                       >
                         {label}
                       </Link>
@@ -114,26 +114,26 @@ export default function PublicFooter() {
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col gap-5 border-t border-zinc-800 pt-7 text-xs text-zinc-500 md:flex-row md:items-center md:justify-between">
+        <div className="mt-14 flex flex-col gap-5 border-t border-line pt-7 text-xs text-muted md:flex-row md:items-center md:justify-between">
           <div className="leading-5">
             © {new Date().getFullYear()} {SITE.name}. Operated by {SITE.operator}.
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
             <a
               href={`mailto:${SITE.supportEmail}`}
-              className="transition-colors hover:text-zinc-200"
+              className="transition-colors hover:text-ink"
             >
               {SITE.supportEmail}
             </a>
-            <Link href="/terms" className="transition-colors hover:text-zinc-200">
+            <Link href="/terms" className="transition-colors hover:text-ink">
               Terms
             </Link>
-            <Link href="/privacy" className="transition-colors hover:text-zinc-200">
+            <Link href="/privacy" className="transition-colors hover:text-ink">
               Privacy
             </Link>
             <Link
               href="/refund-policy"
-              className="transition-colors hover:text-zinc-200"
+              className="transition-colors hover:text-ink"
             >
               Refund policy
             </Link>

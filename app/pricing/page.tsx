@@ -6,7 +6,7 @@ import { PLANS, UPGRADE_BONUS_LEADS, FILTER_ORDER, FILTER_LABELS } from "@/lib/p
 
 export const metadata: Metadata = {
   title: `Pricing — ${SITE.name}`,
-  description: `Priced on audited leads per month. See which business filters each plan unlocks — start free, no card.`,
+  description: `Current returned-lead allowances per month. See which business filters each plan unlocks — start free, no card.`,
 };
 
 function Check() {
@@ -18,7 +18,7 @@ function Check() {
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600"
+      className="mt-0.5 h-4 w-4 shrink-0 text-success"
       aria-hidden
     >
       <path d="M20 6L9 17l-5-5" />
@@ -41,9 +41,9 @@ const CARDS = [
     cta: "Create your free account",
     highlight: false,
     features: [
-      `${free.leadsPerMonth} audited leads / month`,
-      "Score, findings and the reason to reach out on every lead",
-      "Decision-maker lookup included in your lead allowance",
+      `${free.leadsPerMonth} returned leads / month`,
+      "Available public details and dated website findings",
+      "Decision-maker lookups use your lead allowance",
       "Export to CSV, or save leads to work through",
     ],
     footnote: "No credit card required",
@@ -53,7 +53,7 @@ const CARDS = [
     cta: "Get Starter",
     highlight: false,
     features: [
-      `${starter.leadsPerMonth} audited leads / month (≈100 a week)`,
+      `${starter.leadsPerMonth} returned leads / month (≈100 a week)`,
       `+${UPGRADE_BONUS_LEADS} bonus leads in your first week`,
       "Everything in Free",
       "Practical for a full week of prospecting, not a taster",
@@ -66,7 +66,7 @@ const CARDS = [
     cta: "Get Pro",
     highlight: true,
     features: [
-      `${pro.leadsPerMonth!.toLocaleString("en-US")} audited leads / month`,
+      `${pro.leadsPerMonth!.toLocaleString("en-US")} returned leads / month`,
       `+${UPGRADE_BONUS_LEADS} bonus leads in your first week`,
       "Everything in Starter",
       "The no-website hunt, which costs us a lookup per business",
@@ -96,7 +96,7 @@ const BILLING_FAQS = [
   },
   {
     q: "What counts as a lead?",
-    a: "Every audited business the search hands you, plus each decision-maker lookup you run. Leads already in your list are hidden from later searches and don't count twice.",
+    a: "Each returned business uses the allowance, as does a decision-maker lookup. New searches can use the allowance even when source data is cached. Reopening a completed search during seven-day retention is free.",
   },
   {
     q: "Why are the filters split across plans?",
@@ -111,48 +111,48 @@ const BILLING_FAQS = [
 export default function PricingPage() {
   return (
     <PublicShell
-      title="Priced on leads you can actually work"
-      subtitle="Every plan includes the audit: a score, what's wrong with the site, and the words to open with. The paid tiers buy volume and sharper filters."
+      title="Choose your research depth."
+      subtitle="Start with the free allowance. Paid tiers add volume and filters; website audits and public contact details depend on source coverage."
       wide
     >
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="pricing-comparison grid gap-6 md:grid-cols-3">
         {CARDS.map(({ plan, cta, highlight, features, footnote }) => (
           <div
             key={plan.id}
-            className={`relative rounded-2xl p-8 ${
-              highlight ? "border-2 border-zinc-900" : "border border-zinc-200"
+            className={`pricing-plan relative rounded-xl p-8 ${
+              highlight ? "border-2 border-field" : "border border-line"
             }`}
           >
             {highlight && (
-              <span className="absolute -top-3 left-8 rounded-full bg-zinc-900 px-3 py-1 text-xs font-semibold text-white">
-                Best value
+              <span className="absolute -top-3 left-8 rounded-full bg-action px-3 py-1 text-xs font-semibold text-action-ink">
+                Full filter access
               </span>
             )}
             <h2 className="font-semibold">{plan.name}</h2>
             <div className="mt-4 flex items-baseline gap-2">
               <span className="text-4xl font-semibold">${plan.priceMonthlyUsd}</span>
-              <span className="text-sm text-zinc-400">
+              <span className="text-sm text-muted">
                 {plan.priceMonthlyUsd === 0 ? "forever" : "/ month"}
               </span>
             </div>
-            <p className="mt-3 text-sm text-zinc-500">{plan.tagline}</p>
+            <p className="mt-3 text-sm text-muted">{plan.tagline}</p>
 
             {/* What you can search for — the part people actually choose on. */}
-            <div className="mt-5 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+            <div className="mt-5 text-xs font-medium text-muted">
               Who you can search for
             </div>
-            <ul className="mt-2.5 space-y-2 border-b border-zinc-100 pb-4 text-sm">
+            <ul className="mt-2.5 space-y-2 border-b border-line pb-4 text-sm">
               {FILTER_ROWS.map((f) => {
                 const on = plan.filters.includes(f.id);
                 return (
                   <li
                     key={f.id}
-                    className={`flex gap-2.5 ${on ? "text-zinc-700" : "text-zinc-400"}`}
+                    className={`flex gap-2.5 ${on ? "text-ink" : "text-muted"}`}
                   >
                     {on ? (
                       <Check />
                     ) : (
-                      <span className="mt-0.5 h-4 w-4 shrink-0 text-center text-zinc-300" aria-hidden>
+                      <span className="mt-0.5 h-4 w-4 shrink-0 text-center text-muted" aria-hidden>
                         —
                       </span>
                     )}
@@ -162,7 +162,7 @@ export default function PricingPage() {
               })}
             </ul>
 
-            <ul className="mt-4 space-y-2.5 text-sm text-zinc-600">
+            <ul className="mt-4 space-y-2.5 text-sm text-muted">
               {features.map((f) => (
                 <li key={f} className="flex gap-2.5">
                   <Check />
@@ -174,49 +174,49 @@ export default function PricingPage() {
               href="/signup"
               className={`mt-8 block rounded-xl px-4 py-3 text-center text-sm font-semibold transition-all ${
                 highlight
-                  ? "bg-zinc-900 text-white shadow-md hover:-translate-y-0.5 hover:bg-zinc-700 hover:shadow-lg"
-                  : "border border-zinc-300 text-zinc-800 hover:bg-zinc-50"
+                  ? "bg-action text-action-ink hover:bg-action-hover"
+                  : "border border-field text-ink hover:bg-canvas"
               }`}
             >
               {cta}
             </Link>
-            <p className="mt-3 text-center text-xs text-zinc-400">{footnote}</p>
+            <p className="mt-3 text-center text-xs text-muted">{footnote}</p>
           </div>
         ))}
       </div>
 
-      <p className="mt-6 text-center text-xs text-zinc-400">
+      <p className="mt-6 text-center text-xs text-muted">
         Paid plans are activated personally while self-serve checkout is being prepared.
         Create a free account and request an upgrade from the app; every price and payment
         method is confirmed before you pay.
       </p>
 
       {/* Billing FAQ */}
-      <div className="mx-auto mt-16 max-w-3xl">
-        <h2 className="text-center text-2xl font-semibold tracking-tight">
+      <div className="mx-auto mt-20 max-w-3xl">
+        <h2 className="text-3xl font-medium tracking-tight">
           Billing questions
         </h2>
-        <div className="mt-8 space-y-3">
+        <div className="mt-8">
           {BILLING_FAQS.map((f) => (
             <details
               key={f.q}
-              className="group rounded-xl border border-zinc-200 bg-white p-5 transition-shadow open:shadow-md open:shadow-zinc-900/5"
+              className="group border-t border-line py-6"
             >
               <summary className="flex cursor-pointer list-none items-center justify-between font-medium">
                 {f.q}
-                <span className="ml-4 text-zinc-400 transition-transform duration-200 group-open:rotate-45">
+                <span className="ml-4 text-muted transition-transform duration-200 group-open:rotate-45">
                   +
                 </span>
               </summary>
-              <p className="mt-3 text-sm leading-relaxed text-zinc-500">{f.a}</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted">{f.a}</p>
             </details>
           ))}
         </div>
-        <p className="mt-8 text-center text-sm text-zinc-400">
+        <p className="mt-8 text-center text-sm text-muted">
           The fine print, in plain language:{" "}
-          <Link href="/terms" className="underline hover:text-zinc-600">Terms</Link> ·{" "}
-          <Link href="/privacy" className="underline hover:text-zinc-600">Privacy</Link> ·{" "}
-          <Link href="/refund-policy" className="underline hover:text-zinc-600">Refunds</Link>
+          <Link href="/terms" className="underline hover:text-muted">Terms</Link> ·{" "}
+          <Link href="/privacy" className="underline hover:text-muted">Privacy</Link> ·{" "}
+          <Link href="/refund-policy" className="underline hover:text-muted">Refunds</Link>
         </p>
       </div>
     </PublicShell>

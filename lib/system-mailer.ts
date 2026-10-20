@@ -1,5 +1,7 @@
 import nodemailer from "nodemailer";
 import { digestEmail } from "./digest";
+import { SITE } from "./site";
+import { getAppLandingPath, isOutreachEnabled } from "./product";
 
 /**
  * System (transactional) mailer — sends product emails like the welcome
@@ -35,7 +37,7 @@ export function getSystemSmtp(): SystemSmtp | null {
     user,
     pass,
     fromEmail: process.env.SYSTEM_FROM_EMAIL?.trim() || user,
-    fromName: process.env.SYSTEM_FROM_NAME?.trim() || "Outreach Studio",
+    fromName: process.env.SYSTEM_FROM_NAME?.trim() || SITE.name,
     insecureTls: process.env.SYSTEM_SMTP_INSECURE_TLS === "true",
   };
 }
@@ -112,25 +114,25 @@ export async function sendVerificationEmail(
   const first = (name || "").trim().split(/\s+/)[0] || "there";
   const text = `Hi ${first},
 
-Confirm your email address to unlock sending with Outreach Studio.
+Confirm your email address for your ${SITE.name} account.
 
 Open this link:
 ${verifyUrl}
 
 The link is valid for 48 hours. If you didn't create an account, you can ignore this email.
 
-The Outreach Studio team`;
+The ${SITE.name} team`;
 
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#18181b;">
   <div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin-bottom:4px;">Confirm your email</div>
-  <p style="color:#52525b;font-size:14px;line-height:1.6;margin:0 0 8px;">Hi ${first}, click the button below to verify this address and unlock sending.</p>
+  <p style="color:#52525b;font-size:14px;line-height:1.6;margin:0 0 8px;">Hi ${esc(first)}, click the button below to verify the email address for your ${SITE.name} account.</p>
   ${BUTTON_HTML(verifyUrl, "Verify my email")}
   <p style="color:#71717a;font-size:12px;line-height:1.6;margin:0;">Or paste this link into your browser:<br/><span style="word-break:break-all;color:#2563eb;">${verifyUrl}</span></p>
-  ${FOOT_HTML("The link is valid for 48 hours. If you didn't create an account at Outreach Studio, you can safely ignore this email.")}
+  ${FOOT_HTML(`The link is valid for 48 hours. If you didn't create an account at ${SITE.name}, you can safely ignore this email.`)}
 </div>`;
 
   try {
-    await sendSystemMail({ to, subject: "Confirm your email — Outreach Studio", text, html });
+    await sendSystemMail({ to, subject: `Confirm your email — ${SITE.name}`, text, html });
     console.log(`[system-mailer] verification email sent to ${to}`);
   } catch (err) {
     console.error(`[system-mailer] verification email to ${to} failed:`, err);
@@ -146,25 +148,25 @@ export async function sendPasswordResetEmail(
   const first = (name || "").trim().split(/\s+/)[0] || "there";
   const text = `Hi ${first},
 
-Someone requested a password reset for your Outreach Studio account.
+Someone requested a password reset for your ${SITE.name} account.
 
 Reset your password here (valid for 60 minutes):
 ${resetUrl}
 
 If this wasn't you, ignore this email — your password stays unchanged.
 
-The Outreach Studio team`;
+The ${SITE.name} team`;
 
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#18181b;">
   <div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin-bottom:4px;">Reset your password</div>
-  <p style="color:#52525b;font-size:14px;line-height:1.6;margin:0 0 8px;">Hi ${first}, click the button below to choose a new password. The link is valid for 60 minutes.</p>
+  <p style="color:#52525b;font-size:14px;line-height:1.6;margin:0 0 8px;">Hi ${esc(first)}, click the button below to choose a new password. The link is valid for 60 minutes.</p>
   ${BUTTON_HTML(resetUrl, "Choose a new password")}
   <p style="color:#71717a;font-size:12px;line-height:1.6;margin:0;">Or paste this link into your browser:<br/><span style="word-break:break-all;color:#2563eb;">${resetUrl}</span></p>
   ${FOOT_HTML("If you didn't request this, you can safely ignore this email — your password stays unchanged.")}
 </div>`;
 
   try {
-    await sendSystemMail({ to, subject: "Reset your password — Outreach Studio", text, html });
+    await sendSystemMail({ to, subject: `Reset your password — ${SITE.name}`, text, html });
     console.log(`[system-mailer] password-reset email sent to ${to}`);
   } catch (err) {
     console.error(`[system-mailer] password-reset email to ${to} failed:`, err);
@@ -175,19 +177,28 @@ The Outreach Studio team`;
 export async function sendWelcomeEmail(to: string, name: string, verifyUrl?: string): Promise<void> {
   const url = appUrl();
   const first = (name || "").trim().split(/\s+/)[0] || "there";
-  const dash = url ? `${url}/dashboard` : "your dashboard";
+  const landing = url ? `${url}${getAppLandingPath()}` : "";
+  const outreach = isOutreachEnabled();
+  const intro = outreach
+    ? "Here's how to get your first campaign out the door:"
+    : "Here's how to build your first business shortlist:";
+  const steps = outreach ? [
+    ["Find leads", "Search a niche and city, then review the available business details and contact routes."],
+    ["Connect your mailbox", "Add SMTP under Settings so campaigns send from your own address."],
+    ["Write & schedule", "Describe your offer and prepare your campaign messages."],
+  ] : [
+    ["Search a niche and location", "Choose the businesses and area you want to explore."],
+    ["Review the evidence", "Check public business details, available contact routes, website findings and freshness."],
+    ["Save or export your shortlist", "Keep the useful results and qualify each business before contacting it."],
+  ];
 
   const text = `Hi ${first},
 
-Welcome to Outreach Studio — your account is ready.
+Welcome to ${SITE.name} — your account is ready.
 
-Here's how to get your first campaign out the door:
+${intro}
 
-1. Find leads — search a niche and city, and get businesses with emails, socials, and company intel included.
-2. Connect your mailbox — add your SMTP under Settings so campaigns send from your own address. Until then, sends are simulated so you can test safely.
-3. Write & schedule — describe your offer once; the AI writes a personal message for every contact, then tracks opens, clicks, and replies.
-
-AI writing is included free — no API key required to get started.
+${steps.map(([label, detail], index) => `${index + 1}. ${label} — ${detail}`).join("\n")}
 ${
   verifyUrl
     ? `
@@ -196,32 +207,29 @@ ${verifyUrl}
 `
     : ""
 }
-${url ? `Open your dashboard: ${dash}` : ""}
+${landing ? `Open ${SITE.name}: ${landing}` : ""}
 
-Happy sending,
-The Outreach Studio team`;
+Happy ${outreach ? "sending" : "searching"},
+The ${SITE.name} team`;
 
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#18181b;">
-  <div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin-bottom:4px;">Welcome to Outreach Studio</div>
-  <p style="color:#52525b;font-size:14px;line-height:1.6;margin:0 0 20px;">Hi ${first}, your account is ready. Here's how to get your first campaign out the door.</p>
+  <div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin-bottom:4px;">Welcome to ${SITE.name}</div>
+  <p style="color:#52525b;font-size:14px;line-height:1.6;margin:0 0 20px;">Hi ${esc(first)}, your account is ready. ${intro}</p>
   <table style="width:100%;border-collapse:collapse;font-size:14px;color:#3f3f46;">
-    <tr><td style="padding:10px 0;border-top:1px solid #eee;"><b>1. Find leads</b> — search a niche and city; get businesses with emails, socials, and company intel included.</td></tr>
-    <tr><td style="padding:10px 0;border-top:1px solid #eee;"><b>2. Connect your mailbox</b> — add SMTP in Settings to send from your own address. Until then, sends are simulated so you can test safely.</td></tr>
-    <tr><td style="padding:10px 0;border-top:1px solid #eee;"><b>3. Write &amp; schedule</b> — describe your offer once; the AI writes a personal message per contact and tracks opens, clicks, and replies.</td></tr>
+    ${steps.map(([label, detail], index) => `<tr><td style="padding:10px 0;border-top:1px solid #eee;"><b>${index + 1}. ${esc(label)}</b> — ${esc(detail)}</td></tr>`).join("\n")}
   </table>
-  <p style="color:#16a34a;font-size:13px;margin:16px 0 0;">✓ AI writing is included free — no API key required to get started.</p>
   ${
     verifyUrl
-      ? `${BUTTON_HTML(verifyUrl, "Verify my email")}<p style="color:#71717a;font-size:12px;line-height:1.6;margin:-12px 0 16px;">Confirming your address unlocks real sending and free AI writing. Or paste this link:<br/><span style="word-break:break-all;color:#2563eb;">${verifyUrl}</span></p>`
-      : url
-        ? `<div style="margin:24px 0;"><a href="${dash}" style="background:#18181b;color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 22px;border-radius:8px;display:inline-block;">Open your dashboard</a></div>`
+      ? `${BUTTON_HTML(verifyUrl, "Verify my email")}<p style="color:#71717a;font-size:12px;line-height:1.6;margin:-12px 0 16px;">Confirm the email address for your account. Or paste this link:<br/><span style="word-break:break-all;color:#2563eb;">${verifyUrl}</span></p>`
+      : landing
+        ? BUTTON_HTML(landing, outreach ? "Open your dashboard" : "Find leads")
         : ""
   }
-  <p style="color:#a1a1aa;font-size:12px;line-height:1.6;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">You're receiving this because an account was created with this email at Outreach Studio.</p>
+  <p style="color:#a1a1aa;font-size:12px;line-height:1.6;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">You're receiving this because an account was created with this email at ${SITE.name}.</p>
 </div>`;
 
   try {
-    await sendSystemMail({ to, subject: "Welcome to Outreach Studio 👋", text, html });
+    await sendSystemMail({ to, subject: `Welcome to ${SITE.name}`, text, html });
     console.log(`[system-mailer] welcome email sent to ${to}`);
   } catch (err) {
     console.error(`[system-mailer] welcome email to ${to} failed:`, err);

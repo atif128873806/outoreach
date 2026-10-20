@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { IBM_Plex_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AppShell from "./components/AppShell";
+import PilotAnalytics from "./components/PilotAnalytics";
+import { SITE } from "@/lib/site";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const plexSans = IBM_Plex_Sans({
+  variable: "--font-product-sans",
+  weight: ["400", "500", "600"],
+  display: "swap",
   subsets: ["latin"],
 });
 
@@ -15,23 +19,23 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Outreach Studio — find businesses that need you, with the proof",
-    template: "%s · Outreach Studio",
+    default: `${SITE.name} — London business shortlists with evidence`,
+    template: `%s · ${SITE.name}`,
   },
   description:
-    "Search a niche and a city and get real businesses pulled live from the web — each one with its website audited, a score, and the specific problems worth pitching against.",
+    "Find London businesses using public sources and fresh cached data. Review available website evidence, then save or export your shortlist.",
   openGraph: {
-    title: "Outreach Studio — find businesses that need you, with the proof",
+    title: `${SITE.name} — London business shortlists with evidence`,
     description:
-      "Real businesses pulled live from the web, each one audited: what's wrong with its site, what it scores, and the exact reason to reach out.",
-    siteName: "Outreach Studio",
+      "London business discovery for agencies, accountants and local sales teams, with public details and available website findings.",
+    siteName: SITE.name,
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Outreach Studio — find businesses that need you, with the proof",
+    title: `${SITE.name} — London business shortlists with evidence`,
     description:
-      "Find local businesses with no website, or one that's outdated and broken — with the evidence attached to every lead.",
+      "Build a London business shortlist with public-source details, available website findings and clear freshness.",
   },
 };
 
@@ -44,10 +48,11 @@ export default function RootLayout({
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${plexSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
         <AppShell>{children}</AppShell>
+        <PilotAnalytics />
       </body>
     </html>
   );

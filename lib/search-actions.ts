@@ -22,6 +22,8 @@ export async function recordSearchAction(userId: number, jobId: number, action: 
       (job_id,user_id,niche,location,source,action,lead_count)
       SELECT id,user_id,niche,location,source,$3,lead_count FROM search_jobs WHERE id=$1 AND user_id=$2
       ON CONFLICT(job_id,action) DO NOTHING`,[jobId,userId,action]);
+    const {recordPilotJobEventSafely}=await import("./pilot-journey");
+    await recordPilotJobEventSafely(db,userId,jobId,action);
     return true;
   };
   return tx ? record(tx) : (await getDb()).transaction(record);

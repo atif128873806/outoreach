@@ -1,6 +1,7 @@
 import { NextRequest,NextResponse } from "next/server";
 import { getAdminId } from "@/lib/admin-auth";
 import { adminFilters,activityData,overviewData,errorsData,usersData,operationsData,metadataCsv } from "@/lib/admin-data";
+import {pilotData} from "@/lib/pilot-data";
 export const runtime="nodejs";
 export async function GET(req:NextRequest) {
   if(await getAdminId()==null)return NextResponse.json({error:"Administrator sign-in required"},{status:401});
@@ -11,7 +12,7 @@ export async function GET(req:NextRequest) {
       const data=await activityData(filters,true);
       return new NextResponse(metadataCsv(data.rows),{headers:{"Content-Type":"text/csv; charset=utf-8","Content-Disposition":"attachment; filename=search-metadata.csv","Cache-Control":"no-store"}});
     }
-    const data=await ({overview:overviewData,activity:activityData,errors:errorsData,users:usersData,operations:operationsData}[view])(filters);
+    const data=await ({overview:overviewData,activity:activityData,errors:errorsData,users:usersData,operations:operationsData,pilot:pilotData}[view])(filters);
     return NextResponse.json({view,filters,data,generatedAt:new Date().toISOString()},{headers:{"Cache-Control":"no-store"}});
   } catch {
     console.error("[admin] dashboard query failed");

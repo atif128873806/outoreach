@@ -78,7 +78,7 @@ export default function DashboardPage() {
   }, []);
 
   if (!data) {
-    return <div className="text-zinc-400 text-sm py-20 text-center">Loading…</div>;
+    return <div className="text-muted text-sm py-20 text-center">Loading…</div>;
   }
 
   const { stats, onboarding, mailbox } = data;
@@ -99,14 +99,14 @@ export default function DashboardPage() {
       />
 
       {stats.readyDrafts > 0 && (
-        <Card className="mb-6 p-4 border-purple-200 bg-purple-50 flex items-center justify-between">
-          <div className="text-sm text-purple-900">
+        <Card className="mb-6 p-4 border-accent bg-info flex items-center justify-between">
+          <div className="text-sm text-accent">
             <span className="font-medium">{stats.readyDrafts} Instagram DM draft{stats.readyDrafts === 1 ? "" : "s"}</span>{" "}
             waiting for you to send.
           </div>
           <Link
             href="/messages"
-            className="text-sm font-medium text-purple-700 underline hover:text-purple-900 shrink-0"
+            className="text-sm font-medium text-accent underline hover:text-accent shrink-0"
           >
             Open Message Center →
           </Link>
@@ -114,40 +114,40 @@ export default function DashboardPage() {
       )}
 
       {!onboarding.complete && onboarding.next && (
-        <Card className="mb-6 overflow-hidden border-blue-200">
-          <div className="border-b border-blue-100 bg-blue-50/60 px-5 py-4">
+        <Card className="mb-6 overflow-hidden border-accent">
+          <div className="border-b border-accent bg-info/60 px-5 py-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="font-semibold text-zinc-900">Launch your first safe pilot</div>
-                <div className="mt-0.5 text-xs text-zinc-500">
+                <div className="font-semibold text-ink">Launch your first safe pilot</div>
+                <div className="mt-0.5 text-xs text-muted">
                   One step at a time. Preview your campaign before connecting a mailbox.
                 </div>
               </div>
-              <div className="shrink-0 text-xs font-medium tabular-nums text-blue-700">
+              <div className="shrink-0 text-xs font-medium tabular-nums text-accent">
                 {onboarding.completedCount}/{onboarding.totalSteps} complete
               </div>
             </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-blue-100">
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-info">
               <div
-                className="h-full rounded-full bg-blue-600 transition-all"
+                className="h-full rounded-full bg-accent-action transition-all"
                 style={{ width: `${onboarding.progressPercent}%` }}
               />
             </div>
           </div>
           <div className="p-5">
-            <div className="text-xs font-medium uppercase tracking-wide text-blue-600">
+            <div className="text-xs font-medium uppercase tracking-wide text-accent">
               Your next step
             </div>
-            <div className="mt-1 text-base font-semibold text-zinc-900">
+            <div className="mt-1 text-base font-semibold text-ink">
               {onboarding.next.label}
             </div>
-            <div className="mt-1 text-sm text-zinc-500">{onboarding.next.detail}</div>
+            <div className="mt-1 text-sm text-muted">{onboarding.next.detail}</div>
             <Link href={onboarding.next.href} className={`${btnPrimary} mt-4`}>
               {onboarding.next.action} →
             </Link>
 
-            <details className="mt-5 border-t border-zinc-100 pt-4">
-              <summary className="cursor-pointer text-xs font-medium text-zinc-500 hover:text-zinc-700">
+            <details className="mt-5 border-t border-line pt-4">
+              <summary className="cursor-pointer text-xs font-medium text-muted hover:text-ink">
                 View all onboarding steps
               </summary>
               <ol className="mt-3 space-y-2">
@@ -156,19 +156,19 @@ export default function DashboardPage() {
                     <span
                       className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
                         step.done
-                          ? "bg-emerald-100 text-emerald-700"
+                          ? "bg-success-surface text-success"
                           : step.id === onboarding.next?.id
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-zinc-100 text-zinc-400"
+                            ? "bg-info text-accent"
+                            : "bg-raised text-muted"
                       }`}
                     >
                       {step.done ? "✓" : index + 1}
                     </span>
                     <div>
-                      <div className={step.done ? "text-zinc-400 line-through" : "text-zinc-700"}>
+                      <div className={step.done ? "text-muted line-through" : "text-ink"}>
                         {step.label}
                       </div>
-                      {!step.done && <div className="text-xs text-zinc-400">{step.detail}</div>}
+                      {!step.done && <div className="text-xs text-muted">{step.detail}</div>}
                     </div>
                   </li>
                 ))}
@@ -181,26 +181,26 @@ export default function DashboardPage() {
       {mailbox.configured && (
         <Card
           className={`mb-6 p-4 ${
-            mailboxProblem ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50/50"
+            mailboxProblem ? "border-danger-line bg-danger-surface" : "border-success-line bg-success-surface/50"
           }`}
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="flex items-center gap-2 text-sm font-medium text-zinc-800">
+              <div className="flex items-center gap-2 text-sm font-medium text-ink">
                 Reply detection
                 <span
                   className={`rounded-full px-2 py-0.5 text-[11px] ${
                     mailboxProblem
-                      ? "bg-red-100 text-red-700"
+                      ? "bg-danger-surface text-danger"
                       : mailbox.status === "healthy"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-zinc-100 text-zinc-600"
+                        ? "bg-success-surface text-success"
+                        : "bg-raised text-muted"
                   }`}
                 >
                   {mailboxLabel}
                 </span>
               </div>
-              <div className={`mt-1 text-xs ${mailboxProblem ? "text-red-700" : "text-zinc-500"}`}>
+              <div className={`mt-1 text-xs ${mailboxProblem ? "text-danger" : "text-muted"}`}>
                 {mailbox.status === "error"
                   ? mailbox.error || "The inbox connection failed."
                   : mailbox.status === "stale"
@@ -212,7 +212,7 @@ export default function DashboardPage() {
             </div>
             <Link
               href="/settings#reply-detection"
-              className="text-xs font-medium text-zinc-700 underline hover:text-zinc-950"
+              className="text-xs font-medium text-ink underline hover:text-ink"
             >
               {mailboxProblem ? "Fix connection" : "Mailbox settings"} →
             </Link>
@@ -261,19 +261,19 @@ export default function DashboardPage() {
         <Card className="md:col-span-3 p-5">
           <h2 className="font-medium mb-4">Recent activity</h2>
           {data.recentEmails.length === 0 ? (
-            <p className="text-sm text-zinc-400 py-6 text-center">
+            <p className="text-sm text-muted py-6 text-center">
               No emails processed yet. Create a campaign to get started.
             </p>
           ) : (
-            <ul className="divide-y divide-zinc-100">
+            <ul className="divide-y divide-line">
               {data.recentEmails.map((e) => (
                 <li key={e.id} className="py-2.5 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-sm truncate">
                       <span className="font-medium">{e.business_name || e.contact_email}</span>
-                      <span className="text-zinc-400"> · {e.subject || "(no subject)"}</span>
+                      <span className="text-muted"> · {e.subject || "(no subject)"}</span>
                     </div>
-                    <div className="text-xs text-zinc-400">
+                    <div className="text-xs text-muted">
                       <Link href={`/campaigns/${e.campaign_id}`} className="hover:underline">
                         {e.campaign_name}
                       </Link>{" "}
@@ -291,7 +291,7 @@ export default function DashboardPage() {
         <Card className="md:col-span-2 p-5">
           <h2 className="font-medium mb-4">Upcoming & active</h2>
           {data.upcoming.length === 0 ? (
-            <p className="text-sm text-zinc-400 py-6 text-center">
+            <p className="text-sm text-muted py-6 text-center">
               Nothing scheduled.{" "}
               <Link href="/campaigns" className="underline">
                 Create a campaign
@@ -308,7 +308,7 @@ export default function DashboardPage() {
                     >
                       {c.name}
                     </Link>
-                    <div className="text-xs text-zinc-400">{fmtDate(c.scheduled_at)}</div>
+                    <div className="text-xs text-muted">{fmtDate(c.scheduled_at)}</div>
                   </div>
                   <StatusBadge status={c.status} />
                 </li>
@@ -338,15 +338,15 @@ function Stat({
 }) {
   const color =
     accent === "emerald"
-      ? "text-emerald-600"
+      ? "text-success"
       : accent === "red"
-        ? "text-red-500"
+        ? "text-danger"
         : "";
   return (
     <Card className="p-5">
-      <div className="text-sm text-zinc-500">{label}</div>
+      <div className="text-sm text-muted">{label}</div>
       <div className={`text-3xl font-semibold mt-1 tabular-nums ${color}`}>{value}</div>
-      {sub && <div className="text-xs text-zinc-400 mt-1">{sub}</div>}
+      {sub && <div className="text-xs text-muted mt-1">{sub}</div>}
     </Card>
   );
 }

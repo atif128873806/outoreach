@@ -271,7 +271,7 @@ export default function SettingsPage() {
       />
 
       {message && (
-        <Card className="mb-4 p-3 text-sm text-zinc-700 bg-zinc-50">{message}</Card>
+        <Card className="mb-4 p-3 text-sm text-ink bg-canvas">{message}</Card>
       )}
 
       <div className="space-y-6">
@@ -351,14 +351,14 @@ export default function SettingsPage() {
             * by the whole deployment — worth stating plainly, because the
             * symptom otherwise shows up to a user as "provider is busy".
             */}
-          <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3">
-            <div className="text-sm font-medium text-zinc-800">Web search &amp; person finder</div>
-            <p className="mt-1 text-xs text-zinc-500">
+          <div className="mt-4 rounded-xl border border-line bg-canvas/70 p-3">
+            <div className="text-sm font-medium text-ink">Web search &amp; person finder</div>
+            <p className="mt-1 text-xs text-muted">
               {exaConfigured
                 ? "Runs on this deployment's own search key (EXA_API_KEY) — users never need one."
                 : "Running on a shared free daily allowance (EXA_API_KEY unset). Searches stop until midnight UTC once it is used up."}{" "}
               <span
-                className={exaConfigured ? "font-medium text-emerald-700" : "font-medium text-amber-700"}
+                className={exaConfigured ? "font-medium text-success" : "font-medium text-warning"}
               >
                 {exaConfigured ? "Configured on this deployment." : "Not configured on this deployment."}
               </span>
@@ -373,17 +373,17 @@ export default function SettingsPage() {
               * operator can see whether the deployment is configured, which is
               * otherwise invisible from inside the product.
               */}
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3">
-              <div className="text-sm font-medium text-zinc-800">Companies House (UK)</div>
-              <p className="mt-1 text-xs text-zinc-500">
+            <div className="rounded-xl border border-line bg-canvas/70 p-3">
+              <div className="text-sm font-medium text-ink">Companies House (UK)</div>
+              <p className="mt-1 text-xs text-muted">
                 Newly registered UK companies with the people behind them. Runs on this
                 deployment&apos;s own key (<code>COMPANIES_HOUSE_API_KEY</code>) — users never need
                 one.{" "}
                 <span
                   className={
                     leadSources.includes("companies_house")
-                      ? "font-medium text-emerald-700"
-                      : "font-medium text-amber-700"
+                      ? "font-medium text-success"
+                      : "font-medium text-warning"
                   }
                 >
                   {leadSources.includes("companies_house")
@@ -406,9 +406,9 @@ export default function SettingsPage() {
           />
 
           {/* Quick setup wizard: detect the provider from the email's MX records */}
-          <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/40 p-4">
-            <div className="text-sm font-medium text-zinc-700">⚡ Quick setup</div>
-            <p className="mt-0.5 mb-3 text-xs text-zinc-500">
+          <div className="mt-4 rounded-xl border border-accent bg-info/40 p-4">
+            <div className="text-sm font-medium text-ink">⚡ Quick setup</div>
+            <p className="mt-0.5 mb-3 text-xs text-muted">
               Type the email address you&apos;ll send from — we detect your provider and
               fill every field below. You only paste the password.
             </p>
@@ -438,21 +438,21 @@ export default function SettingsPage() {
                 ))}
               </select>
             </div>
-            {wizMsg && <div className="mt-2 text-sm text-red-500">{wizMsg}</div>}
+            {wizMsg && <div className="mt-2 text-sm text-danger">{wizMsg}</div>}
             {wizProvider && (
-              <div className="mt-3 rounded-lg border border-zinc-200 bg-white p-3.5">
+              <div className="mt-3 rounded-lg border border-line bg-surface p-3.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                  <span className="rounded-full bg-success-surface px-2.5 py-0.5 text-xs font-medium text-success">
                     ✓ {wizProvider.label}
                   </span>
-                  <span className="text-xs text-zinc-400">
+                  <span className="text-xs text-muted">
                     — settings filled in below, just add the password and Save
                   </span>
                 </div>
-                <ul className="mt-2.5 space-y-1.5 text-xs leading-relaxed text-zinc-600">
+                <ul className="mt-2.5 space-y-1.5 text-xs leading-relaxed text-muted">
                   {wizProvider.guide.map((g) => (
                     <li key={g} className="flex gap-2">
-                      <span className="text-zinc-300">•</span>
+                      <span className="text-muted">•</span>
                       {g}
                     </li>
                   ))}
@@ -462,15 +462,15 @@ export default function SettingsPage() {
                     href={wizProvider.appPasswordUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2.5 inline-block rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-700"
+                    className="mt-2.5 inline-block rounded-lg bg-action px-3 py-1.5 text-xs font-semibold text-action-ink hover:bg-action-hover"
                   >
                     Open App Password page ↗
                   </a>
                 )}
 
                 {/* Last step: paste the password, verify the login live, save */}
-                <div className="mt-3 border-t border-zinc-100 pt-3">
-                  <div className="mb-1.5 text-xs font-medium text-zinc-600">
+                <div className="mt-3 border-t border-line pt-3">
+                  <div className="mb-1.5 text-xs font-medium text-muted">
                     Last step — paste the {wizProvider.appPasswordUrl ? "App Password" : "mailbox password"}:
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -489,15 +489,15 @@ export default function SettingsPage() {
                       {verBusy ? "Checking login…" : "Verify & save"}
                     </button>
                   </div>
-                  <p className="mt-1.5 text-[11px] text-zinc-400">
+                  <p className="mt-1.5 text-[11px] text-muted">
                     We log in to the mail server to confirm it works — no email is sent.
                   </p>
                   {verMsg && (
                     <div
                       className={`mt-2 rounded-lg px-3 py-2 text-sm ${
                         verMsg.ok
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-red-50 text-red-600"
+                          ? "bg-success-surface text-success"
+                          : "bg-danger-surface text-danger"
                       }`}
                     >
                       {verMsg.ok ? "✓ " : ""}{verMsg.text}
@@ -542,16 +542,16 @@ export default function SettingsPage() {
             </Field>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-zinc-100">
-            <div className="text-sm font-medium text-zinc-600 mb-2">Send a test email</div>
+          <div className="mt-6 pt-4 border-t border-line">
+            <div className="text-sm font-medium text-muted mb-2">Send a test email</div>
             <div className="flex gap-2 max-w-md">
               <input className={inputCls} value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="you@example.com" />
               <button className={btnSecondary} onClick={sendTest} disabled={testing || !testTo}>
                 {testing ? "Sending…" : "Send test"}
               </button>
             </div>
-            {testMsg && <div className="text-sm text-zinc-500 mt-2">{testMsg}</div>}
-            <div className="text-xs text-zinc-400 mt-2">Save your settings first — the test uses the saved values.</div>
+            {testMsg && <div className="text-sm text-muted mt-2">{testMsg}</div>}
+            <div className="text-xs text-muted mt-2">Save your settings first — the test uses the saved values.</div>
           </div>
         </Card>
 
@@ -578,8 +578,8 @@ export default function SettingsPage() {
             <button className={btnSecondary} onClick={testImap} disabled={imapTesting}>
               {imapTesting ? "Connecting…" : "Test IMAP connection"}
             </button>
-            {imapMsg && <div className="text-sm text-zinc-500 mt-2">{imapMsg}</div>}
-            <div className="text-xs text-zinc-400 mt-2">Save first — the test uses the saved values.</div>
+            {imapMsg && <div className="text-sm text-muted mt-2">{imapMsg}</div>}
+            <div className="text-xs text-muted mt-2">Save first — the test uses the saved values.</div>
           </div>
         </Card>
         </OutreachOnly>
@@ -620,7 +620,7 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
-          {pwMsg && <div className="text-sm text-zinc-500 mt-2">{pwMsg}</div>}
+          {pwMsg && <div className="text-sm text-muted mt-2">{pwMsg}</div>}
         </Card>
 
         {/* Warm-up, send caps and DNS checks protect a sending domain. */}
@@ -635,7 +635,7 @@ export default function SettingsPage() {
               <input className={inputCls} value={settings.daily_send_cap ?? ""} onChange={set("daily_send_cap")} placeholder="50" />
             </Field>
             <div className="flex items-center pt-7">
-              <label className="flex items-center gap-2 text-sm text-zinc-600">
+              <label className="flex items-center gap-2 text-sm text-muted">
                 <input
                   type="checkbox"
                   checked={settings.warmup_enabled === "true"}
@@ -666,31 +666,31 @@ export default function SettingsPage() {
             </Field>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-zinc-100">
-            <div className="text-sm font-medium text-zinc-600 mb-2">DNS deliverability check</div>
-            <div className="text-xs text-zinc-400 mb-3">
+          <div className="mt-6 pt-4 border-t border-line">
+            <div className="text-sm font-medium text-muted mb-2">DNS deliverability check</div>
+            <div className="text-xs text-muted mb-3">
               Checks SPF, DKIM, and DMARC on your From-email domain — the three records that decide inbox vs. spam.
             </div>
             <button className={btnSecondary} onClick={runDnsCheck} disabled={dnsChecking}>
               {dnsChecking ? "Checking…" : "Run DNS check"}
             </button>
-            {dnsError && <div className="text-sm text-red-500 mt-2">{dnsError}</div>}
+            {dnsError && <div className="text-sm text-danger mt-2">{dnsError}</div>}
             {dnsResult && (
               <div className="mt-4">
-                <div className="text-sm text-zinc-600 mb-3">
+                <div className="text-sm text-muted mb-3">
                   Domain <span className="font-medium">{dnsResult.domain}</span> — {dnsResult.summary}
                 </div>
                 <div className="space-y-2">
                   {dnsResult.checks.map((c) => (
-                    <div key={c.name} className="rounded-lg border border-zinc-100 p-3">
+                    <div key={c.name} className="rounded-lg border border-line p-3">
                       <div className="flex items-center gap-2">
-                        <span className={c.pass ? "text-emerald-600" : "text-red-500"}>
+                        <span className={c.pass ? "text-success" : "text-danger"}>
                           {c.pass ? "✓" : "✕"}
                         </span>
                         <span className="font-medium text-sm">{c.name}</span>
-                        <span className="text-xs text-zinc-400">{c.detail}</span>
+                        <span className="text-xs text-muted">{c.detail}</span>
                       </div>
-                      {c.advice && <div className="text-xs text-amber-600 mt-1 ml-6">{c.advice}</div>}
+                      {c.advice && <div className="text-xs text-warning mt-1 ml-6">{c.advice}</div>}
                     </div>
                   ))}
                 </div>
@@ -728,12 +728,12 @@ function SectionTitle({
     <div className="flex items-start justify-between gap-4">
       <div>
         <h2 className="font-medium">{title}</h2>
-        <p className="text-sm text-zinc-400 mt-0.5">{subtitle}</p>
+        <p className="text-sm text-muted mt-0.5">{subtitle}</p>
       </div>
       {badge && (
         <span
           className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            badgeOk ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+            badgeOk ? "bg-success-surface text-success" : "bg-warning-surface text-warning"
           }`}
         >
           {badge}
@@ -754,9 +754,9 @@ function Field({
 }) {
   return (
     <label className="block">
-      <div className="text-sm font-medium text-zinc-600 mb-1.5">{label}</div>
+      <div className="text-sm font-medium text-muted mb-1.5">{label}</div>
       {children}
-      {hint && <div className="text-xs text-zinc-400 mt-1">{hint}</div>}
+      {hint && <div className="text-xs text-muted mt-1">{hint}</div>}
     </label>
   );
 }

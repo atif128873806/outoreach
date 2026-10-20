@@ -78,14 +78,14 @@ export default function TermsPage() {
           included AI generations). Paid plans are currently activated manually after we
           confirm the price, payment method, billing period, and any applicable taxes with
           you before payment. Subscription pricing is shown on the{" "}
-          <Link href="/pricing" className="text-blue-600 underline">pricing page</Link>{" "}
+          <Link href="/pricing" className="text-accent underline">pricing page</Link>{" "}
           and is confirmed again when you request an upgrade.
         </p>
         <p>
           A plan renews only under the terms disclosed with its invoice or payment request.
           You can cancel before the next paid period by contacting support and keep access
           until the end of the period already paid. Refunds are handled per our{" "}
-          <Link href="/refund-policy" className="text-blue-600 underline">refund policy</Link>.
+          <Link href="/refund-policy" className="text-accent underline">refund policy</Link>.
         </p>
       </Section>
 
@@ -94,7 +94,7 @@ export default function TermsPage() {
           You retain all rights to the data you bring — contact lists, campaign briefs,
           messages, and settings. You grant us the limited right to process that data solely
           to operate the Service for you. Handling of personal data is described in the{" "}
-          <Link href="/privacy" className="text-blue-600 underline">privacy policy</Link>.
+          <Link href="/privacy" className="text-accent underline">privacy policy</Link>.
         </p>
         <p>
           For contact data you upload or collect, you are the data controller; we act as a
@@ -157,7 +157,7 @@ export default function TermsPage() {
       <Section heading="12. Contact">
         <p>
           Questions about these terms:{" "}
-          <a href={`mailto:${SITE.supportEmail}`} className="text-blue-600 underline">
+          <a href={`mailto:${SITE.supportEmail}`} className="text-accent underline">
             {SITE.supportEmail}
           </a>
           .

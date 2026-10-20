@@ -1,7 +1,7 @@
 export function safeAdminNext(value: string | null): string {
   try {
     const target=new URL(value??"/admin","https://admin.invalid");
-    if(target.origin!=="https://admin.invalid" || !["/admin","/admin/activity","/admin/errors","/admin/users","/admin/operations"].includes(target.pathname))return "/admin";
+    if(target.origin!=="https://admin.invalid" || !["/admin","/admin/activity","/admin/errors","/admin/users","/admin/operations","/admin/pilot"].includes(target.pathname))return "/admin";
     return target.pathname+target.search;
   }catch{return "/admin";}
 }

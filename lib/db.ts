@@ -411,6 +411,35 @@ CREATE TABLE IF NOT EXISTS search_extractions (
   UNIQUE(job_id, action)
 );
 CREATE INDEX IF NOT EXISTS idx_search_extractions_created ON search_extractions(created_at DESC);
+
+-- Optional, consented pilot journeys. No IP, referrer, full URLs or contact payloads.
+CREATE TABLE IF NOT EXISTS pilot_sessions (
+  id TEXT PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  audience TEXT NOT NULL CHECK (audience IN ('agencies','accountants','sales')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_pilot_sessions_created ON pilot_sessions(created_at);
+CREATE TABLE IF NOT EXISTS pilot_events (
+  id SERIAL PRIMARY KEY,
+  session_id TEXT NOT NULL REFERENCES pilot_sessions(id) ON DELETE CASCADE,
+  event TEXT NOT NULL CHECK (event IN ('landing_view','preview_view','preview_loaded','preview_error',
+    'signup_view','signup_complete','signup_error','search_started','search_results','search_empty',
+    'search_failed','opened','exported','copied','saved','upgrade_interest')),
+  event_key TEXT NOT NULL,
+  job_id INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(session_id,event_key)
+);
+CREATE INDEX IF NOT EXISTS idx_pilot_events_job ON pilot_events(job_id);
+CREATE TABLE IF NOT EXISTS pilot_preview_samples (
+  audience TEXT PRIMARY KEY CHECK (audience IN ('agencies','accountants','sales')),
+  payload TEXT,
+  fetched_at TIMESTAMPTZ,
+  retry_after TIMESTAMPTZ NOT NULL DEFAULT now(),
+  claim TEXT
+);
 `;
 
 async function init(): Promise<Adapter> {

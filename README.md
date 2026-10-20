@@ -1,4 +1,4 @@
-# Outreach Studio
+# LeadBoffin
 
 AI-powered business outreach automation. Import a CSV of business contacts, describe what you're offering, pick a send time — and an AI agent writes a personalized message for every contact and delivers them on schedule at a human-looking pace, across **email and Instagram DM**.
 

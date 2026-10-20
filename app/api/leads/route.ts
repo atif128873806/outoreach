@@ -5,6 +5,7 @@ import { normalizeFilter } from "@/lib/plans";
 import { enqueueSearchJob } from "@/lib/search-jobs";
 import { pumpSearchJobs } from "@/lib/search-jobs";
 import { recordSearchEvent } from "@/lib/search-cache";
+import { PILOT_COOKIE,linkPilotSearch,bestEffortPilot } from "@/lib/pilot-journey";
 
 export const runtime = "nodejs";
 
@@ -95,6 +96,7 @@ export async function POST(req: NextRequest) {
   // deployment fair; the first search of the day should not wait ten seconds for
   // a scheduler to notice it. Deliberately not awaited: this request is done, and
   // the job's outcome belongs to the job's row.
+  await bestEffortPilot(()=>linkPilotSearch(req.cookies.get(PILOT_COOKIE)?.value,userId,queued.job!.id));
   void pumpSearchJobs();
 
   return NextResponse.json({ job: queued.job }, { status: 202 });

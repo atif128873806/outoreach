@@ -1,36 +1,38 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PublicShell, { Section } from "../components/PublicShell";
+import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Documentation — how to use Outreach Studio",
+  title: `Documentation — how to use ${SITE.name}`,
   description:
-    "The complete guide: type a niche and a city, get live businesses (never a stale database) each with a website score and a plain-English list of what is wrong with their site — then export the ones worth contacting.",
+    "Search London business niches and areas, understand source coverage and cache freshness, review available website findings, then save or export your shortlist.",
 };
 
 const TOC = [
-  ["quick-start", "Quick start (2 minutes)"],
+  ["quick-start", "Quick start"],
   ["filters", "The four filters"],
   ["leads", "Finding leads"],
   ["accuracy", "What we refuse to claim"],
+  ["freshness", "Sources, cache & public preview"],
   ["working", "Working the list"],
   ["limits", "Plans & limits"],
   ["troubleshooting", "Troubleshooting"],
 ] as const;
 
 function Code({ children }: { children: React.ReactNode }) {
-  return <code className="rounded bg-zinc-100 px-1.5 py-0.5 text-[13px]">{children}</code>;
+  return <code className="rounded bg-raised px-1.5 py-0.5 text-[13px]">{children}</code>;
 }
 
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-3.5">
-      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">
+      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-action text-xs font-semibold text-action-ink">
         {n}
       </span>
       <div>
-        <div className="text-sm font-semibold text-zinc-800">{title}</div>
-        <div className="mt-1 text-sm leading-relaxed text-zinc-600">{children}</div>
+        <div className="text-sm font-semibold text-ink">{title}</div>
+        <div className="mt-1 text-sm leading-relaxed text-muted">{children}</div>
       </div>
     </div>
   );
@@ -40,16 +42,16 @@ export default function DocsPage() {
   return (
     <PublicShell
       title="Documentation"
-      subtitle="What this tool does, how it decides, and what it deliberately won't claim — honestly written, no fluff."
+      subtitle="Your first search, the available filters, and how to review sources, evidence and freshness."
     >
       {/* TOC */}
-      <nav className="mb-12 rounded-2xl border border-zinc-200 bg-zinc-50/60 p-5">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+      <nav className="mb-12 rounded-2xl border border-line bg-canvas/60 p-5">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
           On this page
         </div>
         <div className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
           {TOC.map(([id, label]) => (
-            <a key={id} href={`#${id}`} className="text-blue-600 hover:underline">
+            <a key={id} href={`#${id}`} className="text-accent hover:underline">
               {label}
             </a>
           ))}
@@ -57,27 +59,27 @@ export default function DocsPage() {
       </nav>
 
       <div id="quick-start" className="scroll-mt-20">
-        <Section heading="Quick start — zero to a shortlist in ~2 minutes">
+        <Section heading="Quick start — your first shortlist">
           <div className="space-y-5">
             <Step n={1} title="Create your account & verify your email">
-              Sign up at <Link href="/signup" className="text-blue-600 underline">/signup</Link>,
+              Sign up at <Link href="/signup" className="text-accent underline">/signup</Link>,
               then click the link in the confirmation email. (Check spam if it doesn&apos;t
               arrive in a minute — then hit &quot;Resend&quot; from the banner in the app.)
             </Step>
             <Step n={2} title="Type a niche and a city">
               In the Lead Finder, both fields are required: a niche
               (&quot;dentists&quot;, &quot;roofers&quot;, &quot;yoga studios&quot;) and a
-              place (&quot;Austin, USA&quot;, &quot;Manchester, UK&quot;). The place is a
+              place (&quot;Croydon, London, UK&quot;, &quot;Manchester, UK&quot;). The place is a
               constraint, not a hint — see{" "}
-              <a href="#accuracy" className="text-blue-600 underline">what we refuse to claim</a>.
+              <a href="#accuracy" className="text-accent underline">what we refuse to claim</a>.
             </Step>
             <Step n={3} title="Pick who you're looking for, then search">
               Choose one of the{" "}
-              <a href="#filters" className="text-blue-600 underline">four filters</a> and how
-              many results you want. Every business comes back with a website score, the
-              concrete problems found, and everything needed to contact them — website, email,
-              phone, Instagram, LinkedIn. Export the list as CSV or save it to{" "}
-              <Link href="/leads" className="text-blue-600 underline">My leads</Link>.
+              <a href="#filters" className="text-accent underline">four filters</a> and how
+              many results you want. Review the public details and dated website findings available for each business.
+              Not every result includes a website, audit or contact details. Export the list
+              as CSV or save it to{" "}
+              <Link href="/contacts" className="text-accent underline">My leads</Link>.
             </Step>
           </div>
         </Section>
@@ -119,8 +121,8 @@ export default function DocsPage() {
       <div id="leads" className="scroll-mt-20">
         <Section heading="Finding leads">
           <p>
-            Results are fetched <b>live, per search</b> — there is no pre-built database sold
-            to you as if it were fresh. Three sources, each with different strengths:
+            Searches reuse matching fresh cached records and fetch missing or expired data
+            from the source. Three sources, each with different strengths:
           </p>
           <ul className="list-disc space-y-1.5 pl-5">
             <li>
@@ -245,7 +247,7 @@ export default function DocsPage() {
       <div id="limits" className="scroll-mt-20">
         <Section heading="Plans & limits">
           <p>
-            See <Link href="/pricing" className="text-blue-600 underline">pricing</Link> for
+            See <Link href="/pricing" className="text-accent underline">pricing</Link> for
             the current numbers. Two things are metered: <b>audited results per calendar
             month</b>, and <b>which filters</b> your plan unlocks. Owner lookups count as
             results.
@@ -293,7 +295,7 @@ export default function DocsPage() {
             </li>
             <li>
               <b>Anything else</b> — email{" "}
-              <Link href="/contact" className="text-blue-600 underline">support</Link>; we
+              <Link href="/contact" className="text-accent underline">support</Link>; we
               usually answer within a business day.
             </li>
           </ul>
@@ -301,20 +303,21 @@ export default function DocsPage() {
       </div>
 
       {/* CTA */}
-      <div className="mt-14 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-zinc-950 px-6 py-5">
+      <div className="mt-14 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-canvas px-6 py-5">
         <div>
-          <div className="font-semibold text-white">Ready to try it?</div>
-          <p className="mt-1 text-sm text-zinc-400">
+          <div className="font-semibold text-ink">Ready to try it?</div>
+          <p className="mt-1 text-sm text-muted">
             Free plan, audited leads every month, no card and no trial clock.
           </p>
         </div>
         <Link
           href="/signup"
-          className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-zinc-900 hover:bg-zinc-100"
+          className="rounded-xl bg-surface px-5 py-2.5 text-sm font-semibold text-ink hover:bg-raised"
         >
           Start free
         </Link>
       </div>
-    </PublicShell>
+    <section id="freshness" className="scroll-mt-24 border-t border-line py-8"><h2 className="text-xl font-semibold">Sources, cache and the London sample</h2><p className="mt-3 text-sm leading-7 text-muted">A search checks reusable records before asking a source for new data. Matching fresh data can be reused; missing or expired data is fetched on demand. This is not an automatic monthly refresh or a promise that all similarly worded searches match.</p><dl className="mt-5 divide-y divide-line text-sm">{[['OpenStreetMap discovery','30 days'],['Web discovery','14 days'],['Companies House discovery','7 days'],['Public contact enrichment','30 days'],['Website audits','7 days'],['Public London sample','7 days']].map(([name,age])=><div key={name} className="flex justify-between gap-4 py-3"><dt>{name}</dt><dd>{age}</dd></div>)}</dl><p className="mt-4 text-sm leading-7 text-muted">Audit dates describe the evidence you are seeing. Reopening a retained completed search is free during its seven-day retention. Starting another search can consume returned-result allowance even when discovery data is cached.</p><p className="mt-4 text-sm leading-7 text-muted">The public preview contains at most three OpenStreetMap business names, sample areas, categories and listed websites. It contains no contact details or audits. Create an account to run your own search; there is no hidden sample dataset unlocked by signup. Map locations and registered offices require qualification before outreach.</p><p className="mt-4 text-sm leading-7 text-muted"><a href="https://www.openstreetmap.org/copyright" className="text-accent underline underline-offset-4">© OpenStreetMap contributors · ODbL</a>. Companies House provides registry facts, not VAT numbers or proof of a business needing your services. Available sources and filters depend on deployment configuration and your current plan.</p></section>
+      </PublicShell>
   );
 }

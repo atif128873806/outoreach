@@ -2,18 +2,20 @@ import { q, q1 } from "./db";
 import { searchCacheStats } from "./search-cache";
 import { isOutreachEnabled, isNewBusinessesEnabled } from "./product";
 
-export type AdminView = "overview" | "activity" | "errors" | "users" | "operations";
-export interface AdminFilters { days: number; page: number; query: string; source: string; outcome: string; userId: number | null; }
-const VIEWS = ["overview","activity","errors","users","operations"];
+export type AdminView = "overview" | "activity" | "errors" | "users" | "operations" | "pilot";
+export interface AdminFilters { days: number; page: number; query: string; source: string; outcome: string; userId: number | null; audience?: string; }
+const VIEWS = ["overview","activity","errors","users","operations","pilot"];
 export function adminFilters(params: URLSearchParams): {view:AdminView;filters:AdminFilters} {
   const view=params.get("view")??"overview";
   const days=Number(params.get("days")??7), page=Number(params.get("page")??1);
   const source=params.get("source")??"",outcome=params.get("outcome")??"";
+  const audience=params.get("audience")??"";
+  if(!["","agencies","accountants","sales"].includes(audience))throw new Error("Invalid audience");
   const user=params.get("userId"),userId=user==null||user===""?null:Number(user);
   if (!VIEWS.includes(view) || ![7,30,90].includes(days) || !Number.isSafeInteger(page) || page<1 || page>10000 ||
     !["","web","osm","companies_house"].includes(source) || !["","ok","empty","rejected","error"].includes(outcome) ||
     (userId!=null && (!Number.isSafeInteger(userId)||userId<1))) throw new Error("Invalid dashboard filters");
-  return {view:view as AdminView,filters:{days,page,source,outcome,userId,query:(params.get("q")??"").trim().slice(0,120)}};
+  return {view:view as AdminView,filters:{days,page,source,outcome,userId,audience,query:(params.get("q")??"").trim().slice(0,120)}};
 }
 export function redactAdminDetail(value: unknown): string {
   return String(value??"").replace(/(bearer\s+)[a-z0-9._~-]+/gi,"$1[redacted]")

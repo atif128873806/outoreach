@@ -1,4 +1,4 @@
-# Outreach Studio — production image
+# LeadBoffin — production image
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./

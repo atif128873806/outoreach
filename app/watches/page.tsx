@@ -228,16 +228,16 @@ export default function WatchesPage() {
     return (
       <div className="max-w-2xl">
         <h1 className="text-2xl font-semibold tracking-tight">New businesses</h1>
-        <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-6">
-          <div className="font-medium text-zinc-800">Watching a search is part of Starter and Pro</div>
-          <p className="mt-2 text-sm leading-relaxed text-zinc-500">
+        <div className="mt-6 rounded-2xl border border-line bg-surface p-6">
+          <div className="font-medium text-ink">Watching a search is part of Starter and Pro</div>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
             Save a niche and a place, and each week we ask the official UK register what has been
             incorporated since you last looked — with the directors named. New businesses are
             collected for you, so you are not checking a list that has not changed.
           </p>
           <Link
             href="/pricing"
-            className="mt-4 inline-block rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+            className="mt-4 inline-block rounded-lg bg-action px-4 py-2 text-sm font-medium text-action-ink hover:bg-action-hover"
           >
             See plans
           </Link>
@@ -251,12 +251,12 @@ export default function WatchesPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">New businesses</h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-muted">
             Save a search and we ask the UK register what has been incorporated since you last
             looked. A business registered this week has no website yet — and often no site at all.
           </p>
           {emailDigest === true && (
-            <p className="mt-2 text-xs text-zinc-400">
+            <p className="mt-2 text-xs text-muted">
               Checked daily, and one email a week per account covering everything new since your
               last one.
             </p>
@@ -265,59 +265,59 @@ export default function WatchesPage() {
         <button
           onClick={check}
           disabled={busy || watchList.length === 0}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+          className="rounded-lg bg-action px-4 py-2 text-sm font-medium text-action-ink hover:bg-action-hover disabled:opacity-50"
         >
           {busy ? "Checking…" : "Check for new"}
         </button>
       </div>
 
       {!registerConfigured && (
-        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <div className="mt-5 rounded-xl border border-warning-line bg-warning-surface p-4 text-sm text-warning">
           This deployment isn&apos;t connected to Companies House, so it can&apos;t watch for new
           businesses. Everything else on the Lead Finder works without it.
         </div>
       )}
 
       {registerConfigured && emailDigest === false && (
-        <div className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">
+        <div className="mt-5 rounded-xl border border-line bg-canvas p-4 text-sm text-muted">
           New registrations are collected here every day — they simply aren&apos;t emailed, because
-          this deployment has no system mailer configured (<code className="rounded bg-zinc-100 px-1 py-0.5 text-[12px]">SYSTEM_SMTP_*</code>).
+          this deployment has no system mailer configured (<code className="rounded bg-raised px-1 py-0.5 text-[12px]">SYSTEM_SMTP_*</code>).
           Open this page, or press <b>Check for new</b>, to collect them.
         </div>
       )}
 
-      <form onSubmit={addWatch} className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
-        <label className="flex flex-col gap-1 text-xs text-zinc-500">
+      <form onSubmit={addWatch} className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-surface p-4">
+        <label className="flex flex-col gap-1 text-xs text-muted">
           Niche
           <input
             value={niche}
             onChange={(e) => setNiche(e.target.value)}
             placeholder="roofers"
-            className="w-44 rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+            className="w-44 rounded-lg border border-field px-3 py-2 text-sm text-ink"
           />
         </label>
-        <label className="flex flex-col gap-1 text-xs text-zinc-500">
+        <label className="flex flex-col gap-1 text-xs text-muted">
           Place (UK)
           <input
             value={location}
             onChange={(e) => setLocation(e.target.value)}
             placeholder="Leeds, UK"
-            className="w-52 rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+            className="w-52 rounded-lg border border-field px-3 py-2 text-sm text-ink"
           />
         </label>
         <button
           type="submit"
           disabled={busy || !niche.trim() || !location.trim()}
-          className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+          className="rounded-lg border border-field px-4 py-2 text-sm font-medium text-ink hover:bg-canvas disabled:opacity-50"
         >
           Watch this search
         </button>
-        <span className="text-xs text-zinc-400">Up to 10 searches. The register is UK-only.</span>
+        <span className="text-xs text-muted">Up to 10 searches. The register is UK-only.</span>
       </form>
 
-      {notice && <div className="mt-4 text-sm text-amber-600">{notice}</div>}
+      {notice && <div className="mt-4 text-sm text-warning">{notice}</div>}
       {errors.length > 0 && (
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+        <div className="mt-4 rounded-xl border border-warning-line bg-warning-surface p-3 text-xs text-warning">
           {errors.map((e) => (
             <div key={e}>{e}</div>
           ))}
@@ -325,13 +325,13 @@ export default function WatchesPage() {
       )}
 
       {watchList.length === 0 && loaded && (
-        <p className="mt-6 text-sm text-zinc-500">
+        <p className="mt-6 text-sm text-muted">
           Nothing watched yet. Add a niche and a place above — the first check runs immediately.
         </p>
       )}
 
       {watchList.length > 0 && loaded && totalShown === 0 && (
-        <p className="mt-6 text-sm text-zinc-500">
+        <p className="mt-6 text-sm text-muted">
           Nothing registered in your searches yet. That is normal — this is a weekly feed, not a
           live one, and a quiet trade in a quiet town can go a fortnight without an incorporation.
         </p>
@@ -339,13 +339,13 @@ export default function WatchesPage() {
 
       <div className="mt-6 space-y-6">
         {groups.map(({ watch, companies }) => (
-          <section key={watch.id} className="rounded-2xl border border-zinc-200 bg-white">
-            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 px-5 py-3">
+          <section key={watch.id} className="rounded-2xl border border-line bg-surface">
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
               <div>
-                <div className="text-sm font-semibold text-zinc-800">
+                <div className="text-sm font-semibold text-ink">
                   {watch.niche} in {watch.location}
                 </div>
-                <div className="text-xs text-zinc-400">
+                <div className="text-xs text-muted">
                   {companies.filter((c) => !c.seen).length > 0
                     ? `${companies.filter((c) => !c.seen).length} new since your last look`
                     : `${companies.length} found in the last few weeks`}
@@ -356,13 +356,13 @@ export default function WatchesPage() {
                   href={`/leads?niche=${encodeURIComponent(watch.niche)}&location=${encodeURIComponent(
                     watch.location
                   )}&source=companies_house&filter=without`}
-                  className="text-sky-700 hover:underline"
+                  className="text-accent hover:underline"
                 >
                   Work these in Lead Finder →
                 </Link>
                 <button
                   onClick={() => removeWatch(watch.id)}
-                  className="text-zinc-400 hover:text-red-600"
+                  className="text-muted hover:text-danger"
                   title="Stop watching this search"
                 >
                   Remove
@@ -371,11 +371,11 @@ export default function WatchesPage() {
             </header>
 
             {companies.length === 0 ? (
-              <p className="px-5 py-4 text-sm text-zinc-400">
+              <p className="px-5 py-4 text-sm text-muted">
                 Nothing registered in this trade here yet.
               </p>
             ) : (
-              <ul className="divide-y divide-zinc-100">
+              <ul className="divide-y divide-line">
                 {companies.map((c) => (
                   <li
                     key={c.company_number}
@@ -383,7 +383,7 @@ export default function WatchesPage() {
                   >
                     <div className="flex flex-wrap items-baseline gap-x-3">
                       {!c.seen && (
-                        <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700">
+                        <span className="rounded-full bg-info px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
                           new
                         </span>
                       )}
@@ -391,23 +391,23 @@ export default function WatchesPage() {
                         href={registerUrl(c.company_number)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-medium text-zinc-800 hover:underline"
+                        className="text-sm font-medium text-ink hover:underline"
                       >
                         {c.business_name}
                       </a>
                       {c.company_number && (
-                        <span className="font-mono text-xs text-zinc-400">{c.company_number}</span>
+                        <span className="font-mono text-xs text-muted">{c.company_number}</span>
                       )}
-                      <span className="text-xs text-zinc-400">{whenPhrase(c.incorporated_on)}</span>
+                      <span className="text-xs text-muted">{whenPhrase(c.incorporated_on)}</span>
                     </div>
                     {c.directors && (
-                      <div className="mt-1 text-xs text-zinc-600">
-                        <span className="text-zinc-400">Director:</span> {c.directors}
+                      <div className="mt-1 text-xs text-muted">
+                        <span className="text-muted">Director:</span> {c.directors}
                       </div>
                     )}
-                    {c.address && <div className="mt-0.5 text-xs text-zinc-400">{c.address}</div>}
+                    {c.address && <div className="mt-0.5 text-xs text-muted">{c.address}</div>}
                     {extraNotes(c.notes) && (
-                      <div className="mt-0.5 text-xs text-zinc-400">{extraNotes(c.notes)}</div>
+                      <div className="mt-0.5 text-xs text-muted">{extraNotes(c.notes)}</div>
                     )}
                   </li>
                 ))}
@@ -417,7 +417,7 @@ export default function WatchesPage() {
         ))}
       </div>
 
-      <p className="mt-8 text-xs leading-relaxed text-zinc-400">
+      <p className="mt-8 text-xs leading-relaxed text-muted">
         Every row comes from the official UK company register, which publishes who runs a company
         but not its website. That is why a row here is a name, a place and a director rather than a
         site audit — open it in the Lead Finder to confirm whether the business has a website before

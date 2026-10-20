@@ -9,13 +9,13 @@ export const metadata: Metadata = {
 };
 
 function Code({ children }: { children: React.ReactNode }) {
-  return <code className="rounded bg-zinc-100 px-1.5 py-0.5 text-[13px] break-all">{children}</code>;
+  return <code className="rounded bg-raised px-1.5 py-0.5 text-[13px] break-all">{children}</code>;
 }
 
 function WarStory({ children }: { children: React.ReactNode }) {
   return (
-    <div className="my-4 rounded-xl border-l-4 border-blue-300 bg-blue-50/50 px-4 py-3 text-sm leading-relaxed text-zinc-600">
-      <span className="font-semibold text-blue-700">From the trenches: </span>
+    <div className="my-4 rounded-xl border border-line bg-info px-4 py-3 text-sm leading-relaxed text-muted">
+      <span className="font-semibold text-accent">From the trenches: </span>
       {children}
     </div>
   );
@@ -58,7 +58,7 @@ export default function DeliverabilityGuide() {
         </p>
         <p>
           <Code>v=spf1 a mx include:_spf.google.com ~all</Code>{" "}
-          <span className="text-zinc-400">(Google Workspace example — your email host&apos;s docs
+          <span className="text-muted">(Google Workspace example — your email host&apos;s docs
           have the exact include for your provider)</span>
         </p>
         <p>
@@ -87,13 +87,13 @@ export default function DeliverabilityGuide() {
         </WarStory>
         <p>
           <b>Check yourself right now</b> — our free{" "}
-          <Link href="/tools/dns-checker" className="text-blue-600 underline">
+          <Link href="/tools/dns-checker" className="text-accent underline">
             SPF/DKIM/DMARC checker
           </Link>{" "}
           reads your domain and tells you exactly what&apos;s missing, with fix-it snippets. No
           signup.
         </p>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted">
           Two gotchas that cost us hours: (1) in Namecheap-style DNS panels the Host field for a
           root TXT record is <Code>@</Code>, not your domain name — and nothing saves until you
           hit &quot;Save all changes&quot;; (2) DKIM values are very long — a truncated paste
@@ -135,7 +135,7 @@ export default function DeliverabilityGuide() {
           </li>
         </ul>
         <WarStory>
-          This is why Outreach Studio has warm-up ramps, daily caps, hourly throttles, and
+          This is why LeadBoffin has warm-up ramps, daily caps, hourly throttles, and
           send windows built in and turned on by default — we treat them as safety equipment,
           not power-user options.
         </WarStory>
@@ -157,7 +157,7 @@ export default function DeliverabilityGuide() {
         </ul>
         <p>
           Paste any draft into our free{" "}
-          <Link href="/tools/spam-checker" className="text-blue-600 underline">
+          <Link href="/tools/spam-checker" className="text-accent underline">
             spam checker
           </Link>{" "}
           — it flags exactly what filters will, in your browser, no signup.
@@ -196,19 +196,19 @@ export default function DeliverabilityGuide() {
         </ul>
       </Section>
 
-      <div className="mt-12 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-zinc-950 px-6 py-5">
+      <div className="mt-12 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-canvas px-6 py-5">
         <div>
-          <div className="font-semibold text-white">
+          <div className="font-semibold text-ink">
             Or let the platform enforce all ten for you
           </div>
-          <p className="mt-1 text-sm text-zinc-400">
-            Outreach Studio ships with warm-up ramps, caps, windows, spam checks, DNS
+          <p className="mt-1 text-sm text-muted">
+            LeadBoffin ships with warm-up ramps, caps, windows, spam checks, DNS
             verification, and automatic bounce handling — on by default. Free plan, no card.
           </p>
         </div>
         <Link
           href="/signup"
-          className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-zinc-900 hover:bg-zinc-100"
+          className="rounded-xl bg-surface px-5 py-2.5 text-sm font-semibold text-ink hover:bg-raised"
         >
           Start free
         </Link>

@@ -25,14 +25,14 @@ export default function HeroFilm() {
     <div className="group relative">
       <video
         ref={videoRef}
-        className="relative block aspect-video w-full rounded-2xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/10"
+        className="relative block aspect-video w-full rounded-2xl border border-line bg-surface shadow-2xl shadow-black/10"
         poster="/launch-film.jpg"
         preload="metadata"
         autoPlay
         muted
         loop
         playsInline
-        aria-label="Outreach Studio in 22 seconds: finding leads with emails, AI writing a personal email, sending at a human pace, and replies arriving sorted"
+        aria-label="LeadBoffin in 22 seconds: finding leads with emails, AI writing a personal email, sending at a human pace, and replies arriving sorted"
       >
         <source src="/launch-film.mp4" type="video/mp4" />
       </video>
@@ -42,7 +42,7 @@ export default function HeroFilm() {
         onClick={toggleSound}
         aria-label={muted ? "Turn sound on" : "Turn sound off"}
         aria-pressed={!muted}
-        className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full border border-zinc-200/80 bg-white/85 px-3.5 py-2 text-xs font-medium text-zinc-700 shadow-lg shadow-zinc-900/10 backdrop-blur transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-xl"
+        className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full border border-line/80 bg-surface/85 px-3.5 py-2 text-xs font-medium text-ink shadow-lg shadow-black/10 backdrop-blur transition-all hover:-translate-y-0.5 hover:bg-surface hover:shadow-xl"
       >
         {muted ? (
           <>

@@ -3,7 +3,7 @@
  * Override per deployment with env vars so the code stays generic.
  */
 export const SITE = {
-  name: "Outreach Studio",
+  name: "LeadBoffin",
   url: process.env.APP_URL || "https://outreach.sakodev.com",
   supportEmail: process.env.SUPPORT_EMAIL || "support@sakodev.com",
   /** The legal entity or person operating the service (shown in Terms/Privacy). */

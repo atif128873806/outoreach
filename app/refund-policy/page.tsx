@@ -19,7 +19,7 @@ export default function RefundPolicyPage() {
       <Section heading="14-day money-back guarantee">
         <p>
           If {SITE.name} Pro isn&apos;t right for you, email{" "}
-          <a href={`mailto:${SITE.supportEmail}`} className="text-blue-600 underline">
+          <a href={`mailto:${SITE.supportEmail}`} className="text-accent underline">
             {SITE.supportEmail}
           </a>{" "}
           within <b>14 days of your first payment</b> and we&apos;ll refund it in full — no
@@ -57,7 +57,7 @@ export default function RefundPolicyPage() {
         <p>
           We may decline refunds where the guarantee is being abused (for example repeated
           purchase-and-refund cycles) or where the account violated our{" "}
-          <a href="/terms" className="text-blue-600 underline">Terms of Service</a>{" "}
+          <a href="/terms" className="text-accent underline">Terms of Service</a>{" "}
           (for example spam abuse). Statutory consumer rights in your country are not
           affected by this policy.
         </p>

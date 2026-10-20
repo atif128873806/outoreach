@@ -46,7 +46,7 @@ export default function VerifyEmailBanner() {
   }
 
   return (
-    <div id="verify-email" className="scroll-mt-6 mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+    <div id="verify-email" className="scroll-mt-6 mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-warning-line bg-warning-surface px-4 py-3 text-sm text-warning">
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -73,17 +73,17 @@ export default function VerifyEmailBanner() {
         )}
       </span>
       {status === "sent" ? (
-        <span className="font-medium text-emerald-700">Sent — check your inbox ✓</span>
+        <span className="font-medium text-success">Sent — check your inbox ✓</span>
       ) : (
         <button
           onClick={resend}
           disabled={status === "sending"}
-          className="rounded-lg border border-amber-300 bg-white px-3 py-1 font-medium hover:bg-amber-100 disabled:opacity-50"
+          className="rounded-lg border border-warning-line bg-surface px-3 py-1 font-medium hover:bg-warning-surface disabled:opacity-50"
         >
           {status === "sending" ? "Sending…" : "Resend email"}
         </button>
       )}
-      {status === "error" && <span className="text-red-600">{message}</span>}
+      {status === "error" && <span className="text-danger">{message}</span>}
     </div>
   );
 }

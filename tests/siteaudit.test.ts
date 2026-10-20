@@ -613,7 +613,7 @@ test("detectTech identifies platforms and marketing tags", () => {
   assert.deepEqual(detectTech(""), { pixels: [] });
 });
 
-test("the number of checks advertised is the number of checks that run", () => {
+test("any advertised check count agrees with the audit engine", () => {
   // /features tells visitors "N checks per website". That number was stale by two
   // the moment it was written, which is what a hand-maintained count does — so it
   // is read back from the engine here. Adding a check to lib/siteaudit.ts now
@@ -627,7 +627,9 @@ test("the number of checks advertised is the number of checks that run", () => {
 
   const page = fs.readFileSync(new URL("../app/features/page.tsx", import.meta.url), "utf8");
   const match = page.match(/\["(\d+)", "checks per website"\]/);
-  assert.ok(match, "the features page no longer states a checks-per-website number");
+  // The London page describes evidence without promising a fixed count. Keep
+  // guarding the number if a future marketing change advertises it again.
+  if (!match) return;
   assert.equal(
     Number(match[1]),
     distinct.size,

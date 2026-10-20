@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { SITE } from "../lib/site.ts";
 
 /**
  * The product is sold as lead intelligence. Sending still exists behind the
@@ -85,11 +86,10 @@ test("no public page advertises the parked New businesses feature", () => {
 
 test("the browser title describes lead intelligence, not outreach", () => {
   const layout = fs.readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
-  const title = layout.match(/default:\s*"([^"]+)"/)?.[1] ?? "";
+  const title = (layout.match(/default:\s*["`]([^"`]+)["`]/)?.[1] ?? "").replace("${SITE.name}", SITE.name);
   assert.ok(title.length > 0, "no default title found");
-  // The brand name is allowed to say "Outreach Studio"; the promise next to it
-  // is what must describe lead intelligence.
-  const promise = title.replace(/outreach studio/gi, "");
+  // Assess the product promise independently of the selected brand.
+  const promise = title.replace(SITE.name, "");
   assert.ok(/business|lead|prospect/i.test(promise), `title doesn't describe finding businesses: ${title}`);
   assert.ok(
     !/outreach|campaign|email|inbox|smtp/i.test(promise),

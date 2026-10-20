@@ -17,7 +17,7 @@ export default function ToolsDropdown() {
     <div className="group relative">
       <button
         type="button"
-        className="flex items-center gap-1 text-zinc-500 transition-colors hover:text-zinc-900 group-focus-within:text-zinc-900"
+        className="flex items-center gap-1 text-muted transition-colors hover:text-ink group-focus-within:text-ink"
         aria-haspopup="true"
       >
         Free tools
@@ -36,37 +36,37 @@ export default function ToolsDropdown() {
       </button>
       {/* pt-3 bridge keeps hover alive between trigger and panel */}
       <div className="invisible absolute left-1/2 z-50 -translate-x-1/2 pt-3 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-        <div className="w-72 rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl shadow-zinc-900/10">
+        <div className="w-72 rounded-2xl border border-line bg-surface p-2 shadow-xl shadow-black/10">
           <Link
             href="/tools/spam-checker"
-            className="block rounded-xl px-3.5 py-3 transition-colors hover:bg-zinc-50"
+            className="block rounded-xl px-3.5 py-3 transition-colors hover:bg-canvas"
           >
-            <div className="flex items-center gap-2 text-sm font-medium text-zinc-800">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+            <div className="flex items-center gap-2 text-sm font-medium text-ink">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning-surface text-warning">
                 ⚠
               </span>
               Email spam checker
             </div>
-            <p className="mt-1 pl-9 text-xs leading-relaxed text-zinc-400">
+            <p className="mt-1 pl-9 text-xs leading-relaxed text-muted">
               Paste your email, see what spam filters flag — runs in your browser
             </p>
           </Link>
           <Link
             href="/tools/dns-checker"
-            className="block rounded-xl px-3.5 py-3 transition-colors hover:bg-zinc-50"
+            className="block rounded-xl px-3.5 py-3 transition-colors hover:bg-canvas"
           >
-            <div className="flex items-center gap-2 text-sm font-medium text-zinc-800">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+            <div className="flex items-center gap-2 text-sm font-medium text-ink">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-success-surface text-success">
                 ✓
               </span>
               SPF / DKIM / DMARC checker
             </div>
-            <p className="mt-1 pl-9 text-xs leading-relaxed text-zinc-400">
+            <p className="mt-1 pl-9 text-xs leading-relaxed text-muted">
               Check the 3 DNS records that decide inbox vs. spam — any domain
             </p>
           </Link>
-          <div className="mt-1 border-t border-zinc-100 px-3.5 py-2.5 text-[11px] text-zinc-400">
-            Free · no signup · by Outreach Studio
+          <div className="mt-1 border-t border-line px-3.5 py-2.5 text-[11px] text-muted">
+            Free · no signup · by LeadBoffin
           </div>
         </div>
       </div>

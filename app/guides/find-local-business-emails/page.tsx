@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 function Ex({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[13px]">{children}</span>
+    <span className="rounded bg-raised px-1.5 py-0.5 text-[13px]">{children}</span>
   );
 }
 
@@ -53,7 +53,7 @@ export default function LocalEmailsGuide() {
           emails — a 50-lead list is an afternoon. Fine for your first 20 prospects; brutal
           weekly.
         </p>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted">
           Tip: many sites hide emails from scrapers as <Ex>info [at] company [dot] com</Ex> or
           images — that&apos;s why naive copy-paste misses them.
         </p>
@@ -85,7 +85,7 @@ export default function LocalEmailsGuide() {
 
       <Section heading="Method 4 — Automated lead finding (30 seconds, this is what we build)">
         <p>
-          Outreach Studio&apos;s Lead Finder runs the whole loop from Method 1–2 automatically:
+          LeadBoffin&apos;s Lead Finder runs the whole loop from Method 1–2 automatically:
           type a niche + city, and it searches business sources (AI web search, OpenStreetMap,
           and the official UK register for companies with no site yet), <b>visits every website</b>, and extracts emails — including the{" "}
           <Ex>[at]/[dot]</Ex>-obfuscated ones — plus Instagram, LinkedIn, phone, and company
@@ -115,8 +115,8 @@ export default function LocalEmailsGuide() {
         </ul>
         <p>
           The free plan includes 50 lead results a month — enough to test whether the quality
-          beats your manual afternoon. <Link href="/signup" className="text-blue-600 underline">Try it free</Link>{" "}
-          or see <Link href="/features" className="text-blue-600 underline">how the whole pipeline works</Link>.
+          beats your manual afternoon. <Link href="/signup" className="text-accent underline">Try it free</Link>{" "}
+          or see <Link href="/features" className="text-accent underline">how the whole pipeline works</Link>.
         </p>
       </Section>
 
@@ -145,7 +145,7 @@ export default function LocalEmailsGuide() {
             {isOutreachEnabled() && (
               <>
                 {" "}Full setup:{" "}
-                <Link href="/guides/cold-email-deliverability" className="text-blue-600 underline">
+                <Link href="/guides/cold-email-deliverability" className="text-accent underline">
                   the deliverability guide
                 </Link>
                 .
@@ -155,18 +155,18 @@ export default function LocalEmailsGuide() {
         </ul>
       </Section>
 
-      <div className="mt-12 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-zinc-950 px-6 py-5">
+      <div className="mt-12 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-canvas px-6 py-5">
         <div>
-          <div className="font-semibold text-white">
+          <div className="font-semibold text-ink">
             From &quot;dentists in Austin&quot; to a contactable list in 30 seconds
           </div>
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-muted">
             50 free lead results a month, emails and personalization intel included. No card.
           </p>
         </div>
         <Link
           href="/signup"
-          className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-zinc-900 hover:bg-zinc-100"
+          className="rounded-xl bg-surface px-5 py-2.5 text-sm font-semibold text-ink hover:bg-raised"
         >
           Find your first leads
         </Link>

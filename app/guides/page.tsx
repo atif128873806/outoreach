@@ -45,17 +45,17 @@ export default function GuidesIndex() {
           <Link
             key={g.href}
             href={g.href}
-            className="block rounded-2xl border border-zinc-200 p-6 transition-all hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-lg hover:shadow-zinc-900/5"
+            className="block rounded-2xl border border-line p-6 transition-all hover:-translate-y-0.5 hover:border-field hover:shadow-lg hover:shadow-black/5"
           >
             <div className="flex items-center gap-2 text-xs">
-              <span className="rounded-full bg-blue-50 px-2.5 py-0.5 font-medium text-blue-700">
+              <span className="rounded-full bg-info px-2.5 py-0.5 font-medium text-accent">
                 {g.tag}
               </span>
-              <span className="text-zinc-400">{g.time}</span>
+              <span className="text-muted">{g.time}</span>
             </div>
             <h2 className="mt-2.5 text-xl font-semibold tracking-tight">{g.title}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-500">{g.blurb}</p>
-            <span className="mt-3 inline-block text-sm font-medium text-blue-600">
+            <p className="mt-2 text-sm leading-relaxed text-muted">{g.blurb}</p>
+            <span className="mt-3 inline-block text-sm font-medium text-accent">
               Read the guide →
             </span>
           </Link>
@@ -65,13 +65,13 @@ export default function GuidesIndex() {
       {/* Both tools test the email you are about to send, so they belong to the
           outreach half and go with it. */}
       {outreach && (
-        <div className="mt-10 rounded-2xl border border-zinc-200 bg-zinc-50/60 p-6">
-          <div className="text-sm font-semibold text-zinc-700">Free tools that pair with these guides</div>
+        <div className="mt-10 rounded-2xl border border-line bg-canvas/60 p-6">
+          <div className="text-sm font-semibold text-ink">Free tools that pair with these guides</div>
           <div className="mt-3 flex flex-wrap gap-3 text-sm">
-            <Link href="/tools/dns-checker" className="text-blue-600 underline hover:text-blue-700">
+            <Link href="/tools/dns-checker" className="text-accent underline hover:text-accent">
               SPF / DKIM / DMARC checker
             </Link>
-            <Link href="/tools/spam-checker" className="text-blue-600 underline hover:text-blue-700">
+            <Link href="/tools/spam-checker" className="text-accent underline hover:text-accent">
               Email spam checker
             </Link>
           </div>

@@ -102,7 +102,7 @@ export default function CampaignsPage() {
       )}
 
       {campaigns.length === 0 ? (
-        <Card className="p-12 text-center text-sm text-zinc-400">
+        <Card className="p-12 text-center text-sm text-muted">
           No campaigns yet. Create one to start reaching out.
         </Card>
       ) : (
@@ -112,7 +112,7 @@ export default function CampaignsPage() {
             const pct = c.total ? Math.round((done / c.total) * 100) : 0;
             return (
               <Link key={c.id} href={`/campaigns/${c.id}`} className="block">
-                <Card className="p-5 hover:border-zinc-300 transition-colors">
+                <Card className="p-5 hover:border-field transition-colors">
                   <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0">
                       <div className="flex items-center gap-3">
@@ -120,32 +120,32 @@ export default function CampaignsPage() {
                         <ChannelBadge channel={c.channel} />
                         <StatusBadge status={c.status} />
                       </div>
-                      <div className="text-xs text-zinc-400 mt-1">
+                      <div className="text-xs text-muted mt-1">
                         {c.category_filter ? `Audience: ${c.category_filter}` : "All contacts"} ·{" "}
                         {fmtDate(c.scheduled_at)} · {c.throttle_per_hour}/hr
                         {c.followup_count > 0 && ` · ${c.followup_count} follow-up${c.followup_count > 1 ? "s" : ""}`}
                       </div>
                       {c.channel === "email" && c.sent > 0 && (
-                        <div className="text-xs text-zinc-500 mt-1.5">
+                        <div className="text-xs text-muted mt-1.5">
                           {Math.round((c.opened / c.sent) * 100)}% opened · {Math.round((c.clicked / c.sent) * 100)}% clicked ·{" "}
-                          <span className="text-emerald-600 font-medium">{c.replied} replied</span>
+                          <span className="text-success font-medium">{c.replied} replied</span>
                         </div>
                       )}
                     </div>
                     <div className="text-right shrink-0">
                       <div className="text-sm tabular-nums">
-                        <span className="text-emerald-600 font-medium">{c.sent}</span>
-                        <span className="text-zinc-400"> / {c.total} sent</span>
+                        <span className="text-success font-medium">{c.sent}</span>
+                        <span className="text-muted"> / {c.total} sent</span>
                         {c.ready > 0 && (
-                          <span className="text-purple-600"> · {c.ready} drafts</span>
+                          <span className="text-accent"> · {c.ready} drafts</span>
                         )}
                         {c.failed > 0 && (
-                          <span className="text-red-500"> · {c.failed} failed</span>
+                          <span className="text-danger"> · {c.failed} failed</span>
                         )}
                       </div>
-                      <div className="w-40 h-1.5 bg-zinc-100 rounded-full mt-2 overflow-hidden">
+                      <div className="w-40 h-1.5 bg-raised rounded-full mt-2 overflow-hidden">
                         <div
-                          className="h-full bg-zinc-900 rounded-full transition-all"
+                          className="h-full bg-action rounded-full transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -309,7 +309,7 @@ function NewCampaignForm({
       <h2 className="font-medium mb-4">New campaign</h2>
 
       <div className="mb-4">
-        <div className="text-sm font-medium text-zinc-600 mb-1.5">Channel</div>
+        <div className="text-sm font-medium text-muted mb-1.5">Channel</div>
         <div className="flex gap-2">
           <ChannelOption
             active={channel === "email"}
@@ -353,7 +353,7 @@ function NewCampaignForm({
                   key={p.label}
                   type="button"
                   onClick={() => setDescription(p.text)}
-                  className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs text-zinc-600 hover:border-zinc-400"
+                  className="rounded-full border border-line bg-canvas px-2.5 py-1 text-xs text-muted hover:border-field"
                 >
                   {p.label}
                 </button>
@@ -369,7 +369,7 @@ function NewCampaignForm({
               type="button"
               onClick={improve}
               disabled={improving || !description.trim()}
-              className="mt-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700 hover:border-violet-400 disabled:opacity-50"
+              className="mt-2 rounded-full border border-accent bg-info px-3 py-1 text-xs font-medium text-accent hover:border-accent disabled:opacity-50"
             >
               {improving ? "Improving…" : "✨ Improve with AI"}
             </button>
@@ -467,7 +467,7 @@ function NewCampaignForm({
 
           {channel === "email" && (
             <div>
-              <label className="flex items-center gap-2 text-sm text-zinc-600">
+              <label className="flex items-center gap-2 text-sm text-muted">
                 <input
                   type="checkbox"
                   checked={abTest}
@@ -475,14 +475,14 @@ function NewCampaignForm({
                 />
                 A/B test subject lines
               </label>
-              <div className="text-xs text-zinc-400 mt-1 ml-6">
+              <div className="text-xs text-muted mt-1 ml-6">
                 Half the contacts get a benefit-statement subject (A), half a curiosity-question subject (B) — open rates per arm show on the campaign page.
               </div>
             </div>
           )}
 
           <div>
-            <label className="flex items-center gap-2 text-sm text-zinc-600">
+            <label className="flex items-center gap-2 text-sm text-muted">
               <input
                 type="checkbox"
                 checked={testBatch > 0}
@@ -490,13 +490,13 @@ function NewCampaignForm({
               />
               Start with a test batch
             </label>
-            <div className="text-xs text-zinc-400 mt-1 ml-6">
+            <div className="text-xs text-muted mt-1 ml-6">
               {channel === "email"
                 ? "Sends only the first few emails, then pauses automatically so you can check the results before the rest goes out."
                 : "Drafts only the first few messages, then pauses so you can review the AI's writing before the rest are generated."}
             </div>
             {testBatch > 0 && (
-              <div className="mt-2 ml-6 flex items-center gap-2 text-sm text-zinc-600">
+              <div className="mt-2 ml-6 flex items-center gap-2 text-sm text-muted">
                 Batch size:
                 {[5, 10].map((n) => (
                   <button
@@ -505,8 +505,8 @@ function NewCampaignForm({
                     onClick={() => setTestBatch(n)}
                     className={`rounded-lg px-3 py-1 text-xs font-medium ${
                       testBatch === n
-                        ? "bg-zinc-900 text-white"
-                        : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                        ? "bg-action text-action-ink"
+                        : "bg-raised text-muted hover:bg-raised"
                     }`}
                   >
                     {n}
@@ -517,7 +517,7 @@ function NewCampaignForm({
           </div>
 
           <div>
-            <label className="flex items-center gap-2 text-sm text-zinc-600">
+            <label className="flex items-center gap-2 text-sm text-muted">
               <input
                 type="checkbox"
                 checked={windowEnabled}
@@ -534,7 +534,7 @@ function NewCampaignForm({
                 >
                   {hourOptions}
                 </select>
-                <span className="text-sm text-zinc-400">to</span>
+                <span className="text-sm text-muted">to</span>
                 <select
                   className={inputCls}
                   value={windowEnd}
@@ -548,30 +548,30 @@ function NewCampaignForm({
         </div>
 
         <div>
-          <div className="text-sm font-medium text-zinc-600 mb-2">
+          <div className="text-sm font-medium text-muted mb-2">
             Sample {channelNoun}
           </div>
-          <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 min-h-64">
+          <div className="rounded-lg border border-dashed border-field bg-canvas p-4 min-h-64">
             {preview ? (
               <div>
-                <div className="text-xs text-zinc-400 mb-2">
+                <div className="text-xs text-muted mb-2">
                   Preview for {preview.contact.business_name || preview.contact.email}
                   {preview.contact.instagram && ` (@${preview.contact.instagram})`}
                   {!preview.contact.instagram && preview.contact.category && ` (${preview.contact.category})`}
                 </div>
                 {preview.note && (
-                  <div className="text-xs text-amber-600 mb-2">{preview.note}</div>
+                  <div className="text-xs text-warning mb-2">{preview.note}</div>
                 )}
                 {preview.subject && (
                   <div className="text-sm font-medium mb-2">{preview.subject}</div>
                 )}
-                <div className="text-sm whitespace-pre-wrap text-zinc-700">{preview.body}</div>
+                <div className="text-sm whitespace-pre-wrap text-ink">{preview.body}</div>
                 {preview.spamWarnings && preview.spamWarnings.length > 0 ? (
-                  <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                    <div className="text-xs font-medium text-amber-800 mb-1">
+                  <div className="mt-3 rounded-lg border border-warning-line bg-warning-surface p-3">
+                    <div className="text-xs font-medium text-warning mb-1">
                       Deliverability check — {preview.spamWarnings.length} warning{preview.spamWarnings.length > 1 ? "s" : ""}
                     </div>
-                    <ul className="text-xs text-amber-700 space-y-0.5 list-disc list-inside">
+                    <ul className="text-xs text-warning space-y-0.5 list-disc list-inside">
                       {preview.spamWarnings.map((w, i) => (
                         <li key={i}>{w}</li>
                       ))}
@@ -579,14 +579,14 @@ function NewCampaignForm({
                   </div>
                 ) : (
                   channel === "email" && (
-                    <div className="mt-3 text-xs text-emerald-600">
+                    <div className="mt-3 text-xs text-success">
                       ✓ Deliverability check passed — no spam-filter red flags
                     </div>
                   )
                 )}
               </div>
             ) : (
-              <p className="text-sm text-zinc-400 text-center pt-20">
+              <p className="text-sm text-muted text-center pt-20">
                 {previewing
                   ? "Writing a sample…"
                   : "Fill in the description, then generate a sample to see what will be written."}
@@ -610,12 +610,12 @@ function NewCampaignForm({
             </button>
           )}
           {previewSentMsg && (
-            <div className="text-xs text-zinc-500 mt-2 text-center">{previewSentMsg}</div>
+            <div className="text-xs text-muted mt-2 text-center">{previewSentMsg}</div>
           )}
         </div>
       </div>
 
-      {error && <div className="text-sm text-red-500 mt-4">{error}</div>}
+      {error && <div className="text-sm text-danger mt-4">{error}</div>}
 
       <div className="mt-5 flex justify-end">
         <button className={btnPrimary} onClick={submit} disabled={busy}>
@@ -647,12 +647,12 @@ function ChannelOption({
       onClick={onClick}
       className={`flex-1 rounded-lg border px-4 py-3 text-left transition-colors ${
         active
-          ? "border-zinc-900 bg-zinc-50 ring-1 ring-zinc-900"
-          : "border-zinc-200 hover:border-zinc-400"
+          ? "border-action bg-canvas ring-1 ring-action"
+          : "border-line hover:border-field"
       }`}
     >
       <div className="text-sm font-medium">{title}</div>
-      <div className="text-xs text-zinc-400 mt-0.5">{desc}</div>
+      <div className="text-xs text-muted mt-0.5">{desc}</div>
     </button>
   );
 }
@@ -668,9 +668,9 @@ function Field({
 }) {
   return (
     <label className="block">
-      <div className="text-sm font-medium text-zinc-600 mb-1.5">{label}</div>
+      <div className="text-sm font-medium text-muted mb-1.5">{label}</div>
       {children}
-      {hint && <div className="text-xs text-zinc-400 mt-1">{hint}</div>}
+      {hint && <div className="text-xs text-muted mt-1">{hint}</div>}
     </label>
   );
 }

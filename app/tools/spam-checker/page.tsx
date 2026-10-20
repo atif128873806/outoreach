@@ -18,18 +18,18 @@ export default function SpamCheckerPage() {
       <SpamCheckerClient />
 
       {/* conversion banner */}
-      <div className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-zinc-950 px-6 py-5">
+      <div className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-canvas px-6 py-5">
         <div>
-          <div className="font-semibold text-white">
-            Outreach Studio runs this check on every email — automatically
+          <div className="font-semibold text-ink">
+            LeadBoffin runs this check on every email — automatically
           </div>
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-muted">
             Plus AI that writes clean, personal cold emails in the first place. Free plan, no card.
           </p>
         </div>
         <Link
           href="/signup"
-          className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-zinc-900 hover:bg-zinc-100"
+          className="rounded-xl bg-surface px-5 py-2.5 text-sm font-semibold text-ink hover:bg-raised"
         >
           Try it free
         </Link>
@@ -37,7 +37,7 @@ export default function SpamCheckerPage() {
 
       <Section heading="What this tool checks">
         <p>
-          The same lint Outreach Studio runs before any campaign sends: known
+          The same lint LeadBoffin runs before any campaign sends: known
           spam-trigger phrases (&quot;act now&quot;, &quot;risk-free&quot;,
           &quot;100% free&quot;…), exclamation-mark and ALL-CAPS abuse, repeated
           punctuation, link count, subject-line length, and money amounts in the
@@ -49,7 +49,7 @@ export default function SpamCheckerPage() {
         <p>
           Three things decide inbox placement: your domain&apos;s authentication
           (SPF, DKIM, DMARC — check yours with our{" "}
-          <Link href="/tools/dns-checker" className="text-blue-600 underline">
+          <Link href="/tools/dns-checker" className="text-accent underline">
             free DNS checker
           </Link>
           ), your sending behavior (volume, pace, bounce rate), and your content
@@ -68,7 +68,7 @@ export default function SpamCheckerPage() {
           <li>Always include a working unsubscribe option</li>
           <li>
             The full playbook — authentication, warm-up, volume, monitoring — is in the{" "}
-            <Link href="/guides/cold-email-deliverability" className="text-blue-600 underline">
+            <Link href="/guides/cold-email-deliverability" className="text-accent underline">
               deliverability guide
             </Link>
             .

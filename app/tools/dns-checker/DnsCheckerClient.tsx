@@ -43,10 +43,10 @@ export default function DnsCheckerClient() {
   }
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-line bg-surface p-6 shadow-sm">
       <form onSubmit={run} className="flex flex-wrap gap-2">
         <input
-          className="min-w-0 flex-1 rounded-lg border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:border-zinc-400"
+          className="min-w-0 flex-1 rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-field"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="yourcompany.com — or paste your email address"
@@ -54,35 +54,35 @@ export default function DnsCheckerClient() {
         <button
           type="submit"
           disabled={busy || !input.trim()}
-          className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 disabled:opacity-50"
+          className="rounded-lg bg-action px-5 py-2.5 text-sm font-semibold text-action-ink hover:bg-action-hover disabled:opacity-50"
         >
           {busy ? "Checking…" : "Check my domain"}
         </button>
       </form>
 
-      {error && <div className="mt-4 text-sm text-red-500">{error}</div>}
+      {error && <div className="mt-4 text-sm text-danger">{error}</div>}
 
       {result && (
         <div className="mt-6">
-          <div className="text-sm text-zinc-600">
+          <div className="text-sm text-muted">
             Domain <span className="font-semibold">{result.domain}</span> — {result.summary}
           </div>
           <div className="mt-4 space-y-2.5">
             {result.checks.map((c) => (
-              <div key={c.name} className="rounded-xl border border-zinc-100 p-4">
+              <div key={c.name} className="rounded-xl border border-line p-4">
                 <div className="flex items-center gap-2.5">
                   <span
                     className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-                      c.pass ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"
+                      c.pass ? "bg-success-surface text-success" : "bg-danger-surface text-danger"
                     }`}
                   >
                     {c.pass ? "✓" : "✕"}
                   </span>
                   <span className="font-semibold">{c.name}</span>
-                  <span className="truncate text-xs text-zinc-400">{c.detail}</span>
+                  <span className="truncate text-xs text-muted">{c.detail}</span>
                 </div>
                 {c.advice && (
-                  <div className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-700">
+                  <div className="mt-2 rounded-lg bg-warning-surface px-3 py-2 text-xs leading-relaxed text-warning">
                     Fix: {c.advice}
                   </div>
                 )}
